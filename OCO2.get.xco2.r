@@ -199,7 +199,6 @@ oco2.get.xco2<-function(ident,sel,site,new.trajdat,combine.profile,new.trajpath,
 	######
   #-------------------------------------------------- 8. calculate the TOTAL modeled XCO2 ---------------------------------------------------------------------------- #
 	if(length(sel)>=3){
-
 		# 9. GRAB observed XCO2 for each sounding
 		sel.xco2.oco<-oco2.info[[2]]$xco2.oco
 		cat(paste("TOTAL retrieved COLUMN CO2:", signif(sel.xco2.oco,5), "ppm\n"))
@@ -211,8 +210,7 @@ oco2.get.xco2<-function(ident,sel,site,new.trajdat,combine.profile,new.trajpath,
 
 		# add results in a txt file, i.e., OCO-2 observed XCO2, diff between observed and simulated XCO2
 		result<-c(result,sel.xco2.oco,total.sim.xco2,diff.xco2)
-
 	}
 
-return(result)
+	return(result)
 }
