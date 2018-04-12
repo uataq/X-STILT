@@ -3,8 +3,8 @@
 #---------------------------------------------- STEPS involved -------------------------------------------------------------------- #
 # 1) interpolate modeled ground heights based on meteorological fields;
 #	2) read in .RData files for trajec,
-#	   interpolate satellite profiles (averaging kernel, pressure weighting and prior profiles), return "combine.profile",
-#    call "weight.trajecfootv2()" to weight trajec-level footprints using interpolated satellite profiles;
+#	interpolate satellite profiles (averaging kernel, pressure weighting and prior profiles), return "combine.profile",
+# call "weight.trajecfootv2()" to weight trajec-level footprints using interpolated satellite profiles;
 # 3) call "get.foot()" and "odiac.anthro()" to generate 2D column footprint and get anthropogenic XCO2 enhancements;
 # 4) call "ctnrt.biov2()" to get biospheric XCO2 changes;
 # 5) call "ctnrt.oceanv2()" to get oceanic XCO2 changes;
@@ -48,37 +48,34 @@
 #######################################################################################################################
 
 oco2.get.xco2<-function(ident,sel,site,timestr,ocopath,recp.lat,recp.lon,recp.info,agl.info,orig.trajpath,new.trajpath,
-												ak.weight=T,pw.weight=T,min.lon,max.lon,min.lat,max.lat,foottimes=c(0,72),ct.version="2017",
-												odiac.co2,dmassTF=T,storeTF=F,new.intpath,new.ncdfpath){
+	ak.weight=T,pw.weight=T,min.lon,max.lon,min.lat,max.lat,foottimes=c(0,72),ct.version="2017",odiac.co2,dmassTF=T,storeTF=F,new.intpath,new.ncdfpath){
 
-	#------------------------------------------------------------------------------------------------------------------------------ #
-	# 1. get OCO2 info from traj info, requires get.oco2info() from "OCO2.get.oco2info.r"
-	ocofile<-list.files(pattern=as.character(timestr),path=ocopath)
-	oco2.info<-get.oco2info(ocopath=ocopath, ocofile=ocofile, recp.lat=recp.lat, recp.lon=recp.lon)
-	oco2.profiles<-oco2.info[[1]]
+  #------------------------------------------------------------------------------------------------------------------------------ #
+  # 1. get OCO2 info from traj info, requires get.oco2info() from "OCO2.get.oco2info.r"
+  ocofile<-list.files(pattern=as.character(timestr),path=ocopath)
+  oco2.info<-get.oco2info(ocopath=ocopath, ocofile=ocofile, recp.lat=recp.lat, recp.lon=recp.lon)
+  oco2.profiles<-oco2.info[[1]]
 
-	# initialize result
-	id<-as.character(oco2.info[[2]]$find.id)	# OCO-2 ID
-	result<-c(id, recp.lat, recp.lon)	# store ID, recptor/sounding lat/lon
+  # initialize result
+  id<-as.character(oco2.info[[2]]$find.id)	# OCO-2 ID
+  result<-c(id, recp.lat, recp.lon)	# store ID, recptor/sounding lat/lon
 
-	# WRF or GDAS path and files for interpolating the modeled grdhgt from metfile
-	cat("oco2.get.xco2():Interpolating Ground Height from met fields...\n")
-	recp.grdhgt<-get.grdhgt(met=met,site=site,recp.info=recp.info,nummodel=nummodel)
-	cat(paste("Interpolated Modeled Ground Height:",recp.grdhgt,"meters...\n"))
+  # WRF or GDAS path and files for interpolating the modeled grdhgt from metfile
+  cat("oco2.get.xco2():Interpolating Ground Height from met fields...\n")
+  recp.grdhgt<-get.grdhgt(met=met,site=site,recp.info=recp.info,nummodel=nummodel)
+  cat(paste("Interpolated Modeled Ground Height:",recp.grdhgt,"meters...\n"))
 
   #------------------------------------------------------------------------------------------------------------------------------ #
   # 2. read in traj and apply ak and pw profiles onto original trajs, #orig.trajdat<-getr.old(orig.outname[i],path=orig.trajpath)
-	ident<-substr(ident,1,nchar(ident)-6)
+  ident<-substr(ident,1,nchar(ident)-6)
   orig.trajdat<-getr(ident,path=orig.trajpath)
-	# selTF for only use 2-days trajs
-	#if(selTF){sel.trajdat<-orig.trajdat[orig.trajdat[,"time"]>= nhrs*60,];orig.trajdat<-sel.trajdat}
 
-	### start weighting trajec-level footprint...call weight.trajecfootv2()
-	# new.trajpath: path for storing weighted trajectory
-	cat("oco2.get.xco2():Start weighting trajec-level footprint based on satellite profiles...\n")
-	adjust.profilev2<-weight.trajecfootv2(ident=ident, trajdat=orig.trajdat, recp.info=recp.info, agl.info=agl.info,
-                                  			oco.ak.norm=oco2.profiles$ak.norm, oco.pw=oco2.profiles$pw, oco.pres=oco2.profiles$pres, oco.apriori=oco2.profiles$apriori,
-                                  			recp.grdhgt=recp.grdhgt, new.trajpath=new.trajpath, ak.weight=ak.weight, pw.weight=pw.weight)
+  ### start weighting trajec-level footprint...call weight.trajecfootv2()
+  # new.trajpath: path for storing weighted trajectory
+  cat("oco2.get.xco2():Start weighting trajec-level footprint based on satellite profiles...\n")
+  adjust.profilev2<-weight.trajecfootv2(ident=ident, trajdat=orig.trajdat, recp.info=recp.info, agl.info=agl.info,
+                    oco.ak.norm=oco2.profiles$ak.norm, oco.pw=oco2.profiles$pw, oco.pres=oco2.profiles$pres, oco.apriori=oco2.profiles$apriori,
+                    recp.grdhgt=recp.grdhgt, new.trajpath=new.trajpath, ak.weight=ak.weight, pw.weight=pw.weight)
 
   ## returns the ak pw profiles at for all levels & the weighted footprint
 	combine.profile<-adjust.profilev2[[1]]	# all profile info, ak, pw, apriori
@@ -99,8 +96,8 @@ oco2.get.xco2<-function(ident,sel,site,timestr,ocopath,recp.lat,recp.lon,recp.in
 
 		cat("oco2.get.xco2():Generating footprint that matches anthropogenic emissions...\n")
 		foot.anthro<-get.foot(ident=ident,foot.overwrite=TRUE,part=new.trajdat,trajpath=new.trajpath,footpath=new.intpath,
-													foottimes=foottimes,zlim=c(0,0),dmassTF=dmassTF,fluxweighting=NULL,coarse=1,
-													numpix.x=numpix.x,numpix.y=numpix.y,lon.ll=min.lon,lat.ll=min.lat,lon.res=lon.res,lat.res=lat.res,storeTF=storeTF)
+								foottimes=foottimes,zlim=c(0,0),dmassTF=dmassTF,fluxweighting=NULL,coarse=1,
+								numpix.x=numpix.x,numpix.y=numpix.y,lon.ll=min.lon,lat.ll=min.lat,lon.res=lon.res,lat.res=lat.res,storeTF=storeTF)
 
 		# 3.2. CALL the subroutine for matching ODIAC emission with xfoot, and sum the matrix to obtain "dxco2.anthro"
 		cat("oco2.get.xco2():Calculating the dCO2 from anthro using ODIAC...\n")
