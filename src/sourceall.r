@@ -18,11 +18,19 @@ source(paste(stiltrpath, "assignr.r", sep=""))
 source(paste(stiltrpath, "existsr.r", sep=""))
 source(paste(stiltrpath, "distance.r", sep=""))
 source(paste(stiltrpath, "getr.r", sep=""))
+source(paste(stiltrpath, "getgridp.r", sep=""))
+source(paste(stiltrpath, "julian.r", sep=""))
+source(paste(stiltrpath, "month.day.year.r", sep=""))
+source(paste(stiltrpath, "day.of.week.r", sep=""))
+
 source(paste(stiltrpath, "Trajec.r", sep=""))
 source(paste(stiltrpath, "Trajecfoot.r", sep=""))
 source(paste(stiltrpath, "Trajecflux.r", sep=""))
 source(paste(stiltrpath, "Trajecmod.r", sep=""))
-source(paste(stiltrpath, "Trajecmulti.r", sep=""))  # updated version for generating multiple receptors in one hymodelc
+
+# updated version for generating multiple receptors in one hymodelc
+source(paste(stiltrpath, "Trajecmulti.r", sep=""))
+
 source(paste(stiltrpath, "Trajecvprm.r", sep=""))
 source(paste(stiltrpath, "trajwind.r", sep=""))
 source(paste(stiltrpath, "weekdayhr.r", sep=""))
@@ -36,20 +44,23 @@ source(paste(xpath, "ident.to.info.r", sep=""))
 source(paste(xpath, "get.grdhgt.r", sep=""))
 source(paste(xpath, "find.metfile.r", sep=""))
 source(paste(xpath, "run.backward.trajec.r", sep=""))  # run backward trajec
+source(paste(xpath, "find.create.dir.r", sep=""))
 
+# get satellite profiles given receptor lat/lon
+source(paste(xpath, "OCO2.get.oco2info.r", sep=""))
 
-source(paste(xpath, "OCO2.get.oco2info.r", sep=""))  # get satellite profiles given receptor lat/lon
+source(paste(xpath, "OCO2.get.foot.r", sep=""))
 source(paste(xpath, "OCO2.find.overpass.r", sep=""))
-source(paste(xpath, "OCO2.get.xco2.r", sep=""))
 source(paste(xpath, "OCO2.get.weight.funcv2.r", sep=""))
 source(paste(xpath, "OCO2.weight.trajecfootv2.r", sep=""))
+
+source(paste(xpath, "OCO2.odiac.anthro.r", sep=""))
 source(paste(xpath, "OCO2.CT-NRT.oceanv2.r", sep=""))
 source(paste(xpath, "OCO2.CT-NRT.biov2.r", sep=""))
-source(paste(xpath, "OCO2.get.foot.r", sep=""))
 source(paste(xpath, "OCO2.CT-NRT.background.r", sep=""))
 source(paste(xpath, "OCO2.apriori.r", sep=""))
+
 source(paste(xpath, "ODIAC.trajfoot.r", sep=""))
-source(paste(xpath, "ODIAC.subroutine.r", sep=""))
 source(paste(xpath, "ODIAC.uncert.subroutine.r", sep=""))
 source(paste(xpath, "CT-NRT.bio.trajfoot.r", sep=""))
 source(paste(xpath, "CT-NRT.bg.trajfoot.r", sep=""))
