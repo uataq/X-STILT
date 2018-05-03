@@ -16,7 +16,7 @@
 #              (sumTF=T) or time-varying 3D footprint (sumTF=T), DW, 02/10/2017
 
 get.foot <- function(ident, foot.overwrite=FALSE, trajdat, trajpath, footpath,
-	                   foottimes, zlim=c(zbot,ztop), dmassTF, coarse=1,
+	                   foottimes, zlim=c(0, 0), dmassTF, coarse=1,
 									   fluxweighting=NULL, numpix.x, numpix.y, storeTF=FALSE,
 									   lon.ll, lat.ll,lon.res,lat.res){
 

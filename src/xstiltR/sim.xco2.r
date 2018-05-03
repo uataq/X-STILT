@@ -63,14 +63,10 @@
 # update two subroutines for bio and ocean, 09/15/2017
 # add ak.weight --> no need to weight through AK and apriori=0, DW, 02/06/2018
 # use namelist instead of individual variables, DW, 05/02/2018
+# combine oceanic and biospheric fluxes, DW, 05/03/2018
 ###############################################################################
 
-,sel,site,
-orig.trajpath,new.trajpath,new.intpath,new.ncdfpath
-min.lon,max.lon,min.lat,max.lat,foottimes=c(0,72),
-ct.version="2017",dmassTF=T,storeTF=F
-
-sim.xco2<-function(namelist, recp.info, odiac.co2){
+sim.xco2 <- function(namelist, recp.info, odiac.co2){
 
   #--------------------------------------------------------------------------- #
   # 1. get OCO-2 info given recp.info
@@ -87,17 +83,31 @@ sim.xco2<-function(namelist, recp.info, odiac.co2){
   oco2.dat <- oco2.info[[2]]      # include obs xco2, other info
   id <- as.numeric(as.character(oco2.dat$find.id))	# OCO-2 ID
 
-  # get spatial domain for footprint
+  # get LOWER LEFT and lat/lon domain for footprint
 	lon.ll <- namelist$minlon
 	lat.ll <- namelist$minlat
+  dlat <- namelist$maxlat - lat.ll
+  dlon <- namelist$maxlon - lon.ll
+
+  # write headers in txt file
+  filenm <- file.path(namelist$txtpath, namelist$txtname)
+
+  # headers for txtfile
+  headers <- c("SoundingID", "recp.lat", "recp.lon", "sim.grdhgt",
+                paste("xco2.", namelist$sel, sep=""),
+               "obs.xco2", "sim.xco2", "diff.xco2")
+  ncol <- length(headers)
+  write(headers, file=filenm, sep=",", ncol=ncol)
 
   # loop over each receptor...
   for (i in 1:nrow(recp.info)){
 
+    cat(paste("#------", signif(i/length(recp.info)*100,3), "% Done ------- #\n"))
+
 		## get receptor info, in vector form
 		tmp.lat <- recp.info$recp.lat[i]  # receptor lat
 		tmp.lon <- recp.info$recp.lon[i]  # receptor lon
-		tmp.ident <- recp.info$ident[i]   # Rdata filename of STILT trajec
+		tmp.ident <- recp.info$recp.ident[i]   # Rdata filename of STILT trajec
 		tmp.grdhgt <- recp.info$recp.grdhgt[i]   # get modeled ground heights
     tmp.recp.info <- recp.info[i,]
     tmp.agl.info <- agl.info[i,]
@@ -135,12 +145,12 @@ sim.xco2<-function(namelist, recp.info, odiac.co2){
 		#------------------------ 3. ANTHROPOGENIC  ------------------------------ #
 		if(!is.na(match("anthro", namelist$sel))){
 
+			cat("\nsim.xco2(): Dealing with enhancements due to FFCO2 emissions...\n")
+
 			# 3.1. GENERATE 2D footprint based on the above weighted traj,
 			# call get.foot() from "OCO2.get.foot.r"
-			lat.res <- namelist$lat.res.anthro
-			lon.res <- namelist$lon.res.anthro
-			numpix.x <- (namelist$maxlon - lon.ll)/lon.res
-			numpix.y <- (namelist$maxlat - lat.ll)/lat.res
+			lat.res <- namelist$lat.res.anthro; numpix.y <- dlat/lat.res
+			lon.res <- namelist$lon.res.anthro; numpix.x <- dlon/lon.res
 
 			# compute footprint time stamps, if only 2 elements in "foottimes",
 			# we need to return the time-integrated 2D footprint (xfoot),
@@ -149,16 +159,12 @@ sim.xco2<-function(namelist, recp.info, odiac.co2){
 			# if >2 elements in "foottimes", return time-varying 3D footprint (foot)
 			# when coupling with hourly ODIAC
 			if(namelist$hourlyTF)foottimes <- seq(0,abs(namelist$max.hour),1)
-
-			cat("sim.xco2(): Generating footprint that matches FFCO2 emissions...\n")
-			foot.anthro <- get.foot(ident=tmp.ident, foot.overwrite=T,
-				                      trajdat=wgt.trajdat, fluxweighting=NULL, coarse=1,
-															trajpath=namelist$wgt.trajpath, zlim=c(0,0),
-				                      footpath=namelist$foot.path, foottimes=foottimes,
-									            dmassTF=namelist$dmassTF, numpix.x=numpix.x,
-														  storeTF=namelist$storeTF, numpix.y=numpix.y,
-														  lon.ll=lon.ll, lat.ll=lat.ll,
-														  lon.res=lon.res, lat.res=lat.res)
+			foot.anthro <-get.foot(ident=tmp.ident,foot.overwrite=T, lat.res=lat.res,
+				                     trajdat=wgt.trajdat,trajpath=namelist$wgt.trajpath,
+				                     footpath=namelist$foot.path, foottimes=foottimes,
+									           dmassTF=namelist$dmassTF, numpix.x=numpix.x,
+														 storeTF=namelist$storeTF, numpix.y=numpix.y,
+														 lon.ll=lon.ll, lat.ll=lat.ll, lon.res=lon.res)
 
 			# 3.2. CALL the subroutine for matching ODIAC emission with xfoot,
 			#      and sum the matrix to obtain "dxco2.anthro"
@@ -166,7 +172,7 @@ sim.xco2<-function(namelist, recp.info, odiac.co2){
 			xco2.anthro <- odiac.anthro(foot=foot.anthro, odiac.co2=odiac.co2,
 				                          ident=tmp.ident, storeTF=namelist$storeTF,
 																	ncdfpath=namelist$xco2.path)
-			cat(paste("sim.xco2(): XCO2.anthro: ", signif(xco2.anthro, 4), "ppm\n\n"))
+			cat(paste("sim.xco2(): XCO2.anthro: ", signif(xco2.anthro, 4), "ppm\n"))
 
 			# store result and sum up total XCO2
 			total.sim.xco2 <- total.sim.xco2 + xco2.anthro
@@ -174,125 +180,150 @@ sim.xco2<-function(namelist, recp.info, odiac.co2){
 		}	# end "anthro" contribution
 
 
-		#---------------------- 4. BIOSPERHIC ------------------------------------ #
-		if(!is.na(match("bio", namelist$sel))){
+		#-------------------- 4. BIOSPERHIC + OCEANIC ---------------------------- #
+		if(!is.na(match("bio", namelist$sel))|!is.na(match("ocean", namelist$sel))){
+
+			cat("\nsim.xco2(): Dealing with XCO2 changes due to CT-NRT bio/ocean...\n")
 
 			# 4.1. GENERATE 2D footprint that matches CT
-			lat.res <- namelist$lat.res.bio
-			lon.res <- namelist$lon.res.bio
-			numpix.x <- (namelist$maxlon - lon.ll)/lon.res
-			numpix.y <- (namelist$maxlat - lat.ll)/lat.res
-      foottimes <- seq(0,abs(namelist$max.hour),1)
-
-			cat("sim.xco2(): Generating footprint that matches CT-NRT bio...\n")
-			foot.bio <- get.foot(ident=tmp.ident, foot.overwrite=T, coarse=1,
-				                   trajdat=wgt.trajdat, fluxweighting=NULL, zlim=c(0,0),
-													 trajpath=namelist$wgt.trajpath, foottimes=foottimes,
-				                   footpath=namelist$foot.path,
+			lat.res <- namelist$lat.res.ct; numpix.y <- dlat/lat.res
+			lon.res <- namelist$lon.res.ct; numpix.x <- dlon/lon.res
+      foottimes <- seq(0, abs(namelist$max.hour), 1)
+			foot.ct <- get.foot(ident=tmp.ident, foot.overwrite=T,
+				                   trajdat=wgt.trajdat, trajpath=namelist$wgt.trajpath,
+													 foottimes=foottimes, footpath=namelist$foot.path,
 									         dmassTF=namelist$dmassTF, storeTF=namelist$storeTF,
-													 numpix.x=numpix.x, numpix.y=numpix.y,
-													 lon.ll=lon.ll, lat.ll=lat.ll,
-													 lon.res=lon.res, lat.res=lat.res)
+													 numpix.x=numpix.x, numpix.y=numpix.y, lon.ll=lon.ll,
+                           lat.ll=lat.ll, lon.res=lon.res, lat.res=lat.res)
 
 			# 4.2. CALL the subroutine for matching biosperhic fluxes with footprint,
-			# and sum the matrix to obtain "dxco2.bio"
-
-			source(file.path(workdir, "src/sourceall.r"))  # source all functions
+			#      and sum the matrix to obtain "xco2.bio" or "xco2.ocean"
 			cat("sim.xco2(): Calculating the dCO2 from bio using CT-NRT...\n")
-			xco2.bio <- ctnrt.biov2(ident=tmp.ident, recp.info=tmp.recp.info,
-				                      ct.version=namelist$ct.version,
-															ctpath=namelist$ctflux.path,
-				                      storeTF=namelist$storeTF, foot=foot.bio,
-															ncdfpath=namelist$xco2.path)
-			cat(paste("sim.xco2(): XCO2.bio: ", signif(xco2.bio, 4), "ppm\n\n"))
+			xco2.ct <- ctnrt.bio.ocean(ident=tmp.ident, recp.info=tmp.recp.info,
+				                         ct.version=namelist$ct.version,
+															   ctpath=namelist$ctflux.path,
+				                         storeTF=namelist$storeTF, foot=foot.ct,
+															   ncdfpath=namelist$xco2.path)
+
+      xco2.bio <- xco2.ct[1]; xco2.ocean <- xco2.ct[2]
+			cat(paste("sim.xco2(): XCO2.bio: ", signif(xco2.bio, 4), "ppm\n"))
+      cat(paste("sim.xco2(): XCO2.ocean: ", signif(xco2.ocean, 4), "ppm\n\n"))
 			# if foot hours differ from CT hours, the subroutine will return NA values
 
 			# 4.3. store result and sum up total XCO2
-			total.sim.xco2 <- total.sim.xco2 + xco2.bio
-			tmp.result <- c(tmp.result, xco2.bio)
-		}	# end "bio" sel
+			total.sim.xco2 <- total.sim.xco2 + xco2.bio + xco2.ocean
+			tmp.result <- c(tmp.result, xco2.bio, xco2.ocean)
+		}	# end "bio" and "ocean" sections
 
-		###########
-		#--------------------- 5. OCEANIC ---------------------------------------- #
-		if(!is.na(match("ocean", namelist$sel))){
 
-			# 5.1. GENERATE 2D footprint based on the above newly weighted traj
-			# no need to store 1 deg footprint
-			cat("sim.xco2(): Generating footprint that matches CT-NRT ocean...\n")
-
-			# if we already have biospheric footprint (same as oceanic footprint)
-			if(!is.na(match("bio",namelist$sel)*match("ocean",namelist$sel))){
-				foot.ocean<-foot.bio
-			}else{
-				# update DW, 04/11/2018
-				lon.res<-1
-				lat.res<-1
-				numpix.x<-(max.lon-min.lon)/lon.res+1
-				numpix.y<-(max.lat-min.lat)/lat.res+1
-				foot.ocean<-get.foot(ident=ident, foot.overwrite=TRUE,part=wgt.trajdat, trajpath=new.trajpath,footpath=new.intpath,
-														 foottimes=foottimes,zlim=c(0,0),fluxweighting=NULL,coarse=1,
-														 numpix.x=numpix.x,numpix.y=numpix.y,lon.ll=min.lon,lat.ll=min.lat,lon.res=lon.res,lat.res=lat.res, storeTF=storeTF)
-			}
-
-			# 5.2. CALL the subroutine for matching biosperhic fluxes with footprint, and sum the matrix to obtain "dxco2.bio"
-			cat("oco2.get.xco2():Calculating the dCO2 from oceanic fluxes using CT-NRT...\n")
-			dxco2.ocean<-ctnrt.oceanv2(ident=ident, foot=foot.ocean, storeTF=storeTF, res=lon.res, ncdfpath=new.ncdfpath) 	# store the foot*emission in newncdfpath
-			cat(paste("Column dCO2 from oceanic fluxes: ", signif(dxco2.ocean, 4), "ppm\n\n"))
-			# if foot hours differ from CT hours, the subroutine will return NA values
-
-			# 5.3. store result and sum up total XCO2
-			total.sim.xco2<-total.sim.xco2+dxco2.ocean
-			tmp.result<-c(tmp.result,dxco2.ocean)
-
-		}	# end "ocean" sel
-
-		#------------------------------------------------ 6. ENDPOINTS for boundary conditions ------------------------------------------------------------------------------ #
+		#----------------- 5. ENDPOINTS for boundary conditions ------------------ #
 		if(!is.na(match("edp", namelist$sel))){
 
-			# 6.1. CALL the subroutine for calculating background CO2 (AK PW weighted CO2 concentration derived from CT-NRT at endpoints)
-			# sum all to obtain "XCO2.edp", remember to use weighted traj "wgt.trajdat"
-			edp.info<-ctnrt.background(ident=ident, trajdat=wgt.trajdat, combine.profile=combine.prof)
-			xco2.edp<-edp.info[[2]]
+			# 5.1. CALL the subroutine for calculating background CO2
+      # (AK PW weighted CO2 concentration derived from CT-NRT at endpoints)
+			# sum all to get "XCO2.edp", remember to use weighted traj "wgt.trajdat"
+			edp.info <- ctnrt.traj.edp(ident=tmp.ident, trajdat=wgt.trajdat,
+                                 recp.info=tmp.recp.info,
+                                 combine.profile=combine.prof,
+                                 ct.version=namelist$ct.version,
+															   ctpath=namelist$ctmole.path)
+
+    	xco2.edp<-edp.info[[2]]
 			combine.prof<-edp.info[[1]]
-			cat(paste("Column CO2 background using CT-NRT: ", signif(xco2.edp,5), "ppm\n\n"))
+			cat(paste("XCO2 boundary condition: ", signif(xco2.edp,5), "ppm\n\n"))
 
 			# 6.2. store result and sum up total XCO2
-			total.sim.xco2<-total.sim.xco2+xco2.edp
-			tmp.result<-c(tmp.result,xco2.edp)
+			total.sim.xco2 <- total.sim.xco2 + xco2.edp
+			tmp.result <- c(tmp.result, xco2.edp)
 		}	# end "edp" sel
 
-		#------------------------------------------------ 7. APRIORI contributions from OCO-2 ------------------------------------------------------------------------------ #
+		#-------------- 6. APRIORI contributions from OCO-2 ---------------------- #
 		if(!is.na(match("apriori", namelist$sel))){
 
-			# 7.1 CALL the subroutine for calculating the contribution of CO2 from a priori profile (I - AK), sum all to obtain "XCO2.apriori"
-			xco2.prior<-oco2.apriori(combine.profile=combine.prof)
-			cat(paste("Contribution from CO2 apriori profiles:", signif(xco2.prior,5),"ppm\n\n"))
+			# 6.1 CALL the subroutine for calculating the contribution of CO2 from
+      # a priori profile (I - AK), sum all to obtain "XCO2.apriori"
+			xco2.prior <- oco2.apriori(combine.profile=combine.prof)
+			cat(paste("XCO2 prior portion:", signif(xco2.prior,5), "ppm\n\n"))
 
-			# 7.2. store result and sum up total XCO2
-			total.sim.xco2<-total.sim.xco2+xco2.prior
-			tmp.result<-c(tmp.result,xco2.prior)
+			# 6.2. store result and sum up total XCO2
+			total.sim.xco2 <- total.sim.xco2 + xco2.prior
+			tmp.result <- c(tmp.result, xco2.prior)
 		}	# end "apriori" sel
 
 		######
-		#-------------------------------------------------- 8. calculate the TOTAL modeled XCO2 ---------------------------------------------------------------------------- #
-		if(length(namelist$sel)>=3){
-			# 8.1. GRAB observed XCO2 for each sounding
-			sel.xco2.oco<-oco2.info[[2]]$xco2.oco
-			cat(paste("TOTAL retrieved COLUMN CO2:", signif(sel.xco2.oco,5), "ppm\n"))
+		#---------------- 7. calculate the TOTAL modeled XCO2 -------------------- #
+		if(length(namelist$sel) >= 3){
 
-			# 8.2. SUM all contributions to get the final total simulated retrieved XCO2.ak, which can be compared with retrieved XCO2 from OCO-2
-			cat(paste("TOTAL simulated COLUMN CO2:", signif(total.sim.xco2,5), "ppm\n"))
-			diff.xco2<-total.sim.xco2-sel.xco2.oco	# sim - obs
+			# 7.1. GRAB observed XCO2 for each sounding
+			tmp.obs.xco2 <- oco2.dat$xco2[i]
+			cat(paste("TOTAL retrieved XCO2:", signif(tmp.obs.xco2, 5), "ppm\n"))
+
+			# 7.2. SUM all contributions to get the final total simulated
+      # retrieved XCO2.ak, which can be compared with retrieved XCO2 from OCO-2
+			cat(paste("TOTAL modeled XCO2:", signif(total.sim.xco2, 5), "ppm\n\n"))
+			diff.xco2 <- total.sim.xco2 - tmp.obs.xco2	           # sim - obs
 			# end calculating the total and model-data mismatch
 
-			# 8.3. add results in a txt file, i.e., OCO-2 observed XCO2, diff between observed and simulated XCO2
-			tmp.result<-c(tmp.result,sel.xco2.oco,total.sim.xco2,diff.xco2)
+			# 7.3. add results in a txt file,
+      # i.e., OCO-2 observed XCO2, diff between observed and simulated XCO2
+			tmp.result <- c(tmp.result, tmp.obs.xco2, total.sim.xco2, diff.xco2)
 		}
+
+    # write in txtfile...
+    write(tmp.result, file=filenm, append=T, sep=",", ncol=ncol)
 	}
 
-
-	return(result)
+  cat(paste("Model result in", filenm,"\n\n"))
+  cat("End of X-STILT XCO2 simulations!\n")
+	#return(result)
 }
 
 
 # end of subroutine
+
+
+
+### old code
+if(F){
+
+	#--------------------- 5. OCEANIC ---------------------------------------- #
+	if(!is.na(match("ocean", namelist$sel))){
+
+		# 5.1. GENERATE 2D footprint based on the above newly weighted traj
+		# no need to store 1 deg footprint
+
+		# if we already have biospheric footprint (same as oceanic footprint)
+		if(!is.na(match("bio", namelist$sel) * match("ocean", namelist$sel))){
+			foot.ocean <- foot.bio
+		}else{
+      lat.res <- namelist$lat.res.ocean; numpix.y <- dlat/lat.res
+			lon.res <- namelist$lon.res.ocean; numpix.x <- dlon/lon.res
+      foottimes <- seq(0, abs(namelist$max.hour), 1)
+
+      cat("sim.xco2(): Generating footprint that matches CT-NRT ocean...\n")
+      foot.ocean <-get.foot(ident=tmp.ident,foot.overwrite=T, lat.res=lat.res,
+				                    trajdat=wgt.trajdat, storeTF=namelist$storeTF,
+				                    footpath=namelist$foot.path, foottimes=foottimes,
+									          dmassTF=namelist$dmassTF, numpix.x=numpix.x,
+                            trajpath=namelist$wgt.trajpath,numpix.y=numpix.y,
+													  lon.ll=lon.ll, lat.ll=lat.ll, lon.res=lon.res)
+		}
+
+		# 5.2. CALL the subroutine for matching biosperhic fluxes with footprint,
+    #      and sum the matrix to obtain "xco2.bio"
+		cat("sim.xco2(): Calculating the dCO2 from CT-NRT oceanic fluxes...\n")
+		xco2.ocean <- ctnrt.oceanv2(ident=tmp.ident, foot=foot.ocean,
+                                ct.version=namelist$ct.version,
+                                ctpath=namelist$ctflux.path,
+                                storeTF=namelist$storeTF, res=lon.res,
+                                ncdfpath=namelist$xco2.path)
+		cat(paste("XCO2 from oceanic fluxes: ", signif(xco2.ocean, 4), "ppm\n\n"))
+		# if foot hours differ from CT hours, the subroutine will return NA values
+
+		# 5.3. store result and sum up total XCO2
+		total.sim.xco2<-total.sim.xco2+dxco2.ocean
+		tmp.result<-c(tmp.result,dxco2.ocean)
+
+	}	# end "ocean" sel
+
+}
