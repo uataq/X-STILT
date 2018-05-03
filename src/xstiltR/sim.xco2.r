@@ -102,7 +102,7 @@ sim.xco2 <- function(namelist, recp.info, odiac.co2){
   # loop over each receptor...
   for (i in 1:nrow(recp.info)){
 
-    cat(paste("#------", signif(i/length(recp.info)*100,3), "% Done ------- #\n"))
+    cat(paste("#------", signif(i/nrow(recp.info)*100,3), "% Done ------- #\n"))
 
 		## get receptor info, in vector form
 		tmp.lat <- recp.info$recp.lat[i]  # receptor lat
@@ -114,7 +114,7 @@ sim.xco2 <- function(namelist, recp.info, odiac.co2){
     tmp.wgt.prof <- wgt.profile[[i]]  # get weighting profiles
 
 		## initialize result, store sounding ID, recptor lat/lon, ground hgt
-	  tmp.result <- c(id[i], tmp.lat, tmp.lon, tmp.grdhgt)
+	  tmp.result <- c(as.character(id[i]), tmp.lat, tmp.lon, tmp.grdhgt)
 		total.sim.xco2<-0   		# initialize total modeled XCO2
 
 		#------------------------------------------------------------------------- #
