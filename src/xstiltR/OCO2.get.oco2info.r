@@ -1,88 +1,126 @@
-# subroutine to find out the AK*PW, apriori profiles are,
+### subroutine to find out the AK*PW, apriori profiles are,
 # given the lat lon time from model receptors
 # written by Dien Wu, 01/11/2017
 
-# Input variables--
+### Input variables--
 # ocopath, ocofile: oco2 path and file for searching satellite soundings;
 # recp.lat, recp.lon: numeric numbers for receptor lat/lon
-# diff.td: allowable thredshold for difference in lat/lon between given receptors and all satellite soundings
+# diff.td: allowable thredshold for difference in lat/lon between
+#          given receptors and all satellite soundings
 
-get.oco2info<-function(ocopath,ocofile,recp.lat,recp.lon,diff.td=1E-4){
+### updates--
+# allow for vector form of recp.lat and recp.lon, DW, 05/02/2018
+
+get.oco2info <- function(ocopath, ocofile, recp.lat, recp.lon, diff.td=1E-4){
 
 # load libraries
 library(ncdf4)
 
 # grabbing OCO-2 info
-ocodat<-nc_open(paste(ocopath,ocofile,sep=""))
+ocodat <- nc_open(file.path(ocopath,ocofile))
 
 # grabbing OCO-2 levels, lat, lon
 # level 1 to 20, for space-to-surface, level 20 is the bottom level
 # may need to reverse later
-oco.level<-ncvar_get(ocodat,"levels")
-oco.lat<-ncvar_get(ocodat,"latitude")
-oco.lon<-ncvar_get(ocodat,"longitude")
+oco.level <- ncvar_get(ocodat, "levels")
+oco.lat <- ncvar_get(ocodat, "latitude")
+oco.lon <- ncvar_get(ocodat, "longitude")
 
 # grabbing warn levels
-warnlevel<-ncvar_get(ocodat,"warn_level")
+warnlevel <- ncvar_get(ocodat, "warn_level")
 
 # grabbing time for STILT receptors
-id<-as.character(ncvar_get(ocodat,"sounding_id"))	# YYYY MM DD HH mm ss m (millisecond) f (footprint)
+# YYYY MM DD HH mm ss m (millisecond) f (footprint)
+id <- as.character(ncvar_get(ocodat, "sounding_id"))
 
-# locate the OCO2 data using lat, lon, when diff are both the smallest
-diff.lat<-abs(oco.lat-recp.lat)
-diff.lon<-abs(oco.lon-recp.lon)
+all.prof <- list(); all.info <- NULL
 
-# try to find the closest sounding lat/lon, given receptor lat/lon and allowable difference thredshold, "diff.td"
-lat.index<-which(diff.lat < diff.td)
-lon.index<-which(diff.lon < diff.td)
-loc.index<-intersect(lat.index, lon.index)  # only if lat/lon indices are the same
-if(length(loc.index)!=1){cat("get.oco2info():cannot find the receptor lat lon from this OCO2 file...");next}
+# loop over all receptors
+for(r in 1:length(recp.lat)){
 
-# return the oco2 lat, lon, ak, pw, apriori, profiles
-find.lat<-oco.lat[loc.index]
-find.lon<-oco.lon[loc.index]
-find.id<-id[loc.index]
+  # locate the OCO2 data using lat, lon, when diff are both the smallest
+  diff.lat <- abs(oco.lat - recp.lat[r])
+  diff.lon <- abs(oco.lon - recp.lon[r])
 
-## grab column co2, averaging kernel, pressure weight and a priori CO2 profiles, only for TARGET REGION
-# dimensions--[levels, soundingID]
-# averaging kernel (non-dim)
-ak.norm<-ncvar_get(ocodat,"xco2_averaging_kernel")[,loc.index];ak.norm[ak.norm==-999999]<-NA
-attributes(ak.norm)$names<-oco.level
+  # try to find the closest sounding lat/lon,
+  # given receptor lat/lon and allowable difference thredshold, "diff.td"
+  lat.index <- which(diff.lat < diff.td)
+  lon.index <- which(diff.lon < diff.td)
 
-# pressure weighting (non-dim)
-pw<-ncvar_get(ocodat,"pressure_weight")[,loc.index];pw[pw==-999999]<-NA
-attributes(pw)$names<-oco.level
+  # only if lat/lon indices are the same
+  loc.index <- intersect(lat.index, lon.index)
 
-# pressure in hPa
-pres<-ncvar_get(ocodat,"pressure_levels")[,loc.index];pres[pres==-999999]<-NA
-attributes(pres)$names<-oco.level
+  # cannot find the sounding according to receptor lat/lon
+  # if so, loose "diff.td", or check OCO-2 version, or input lat/lon
+  if(length(loc.index)!=1){
+    cat("get.oco2info(): cannot find the receptor lat/lon from OCO-2 file...")
+    next
+  }
 
-# CO2.apriori in ppm
-apriori<-ncvar_get(ocodat,"co2_profile_apriori")[,loc.index];apriori[apriori==-999999]<-NA
-attributes(apriori)$names<-oco.level
+  # return the oco2 lat, lon, ak, pw, apriori, profiles
+  find.lat <- oco.lat[loc.index]
+  find.lon <- oco.lon[loc.index]
+  find.id  <- id[loc.index]
 
-### combine all OCO-2 vertical profiles
-all.profiles<-data.frame(ak.norm, pw, pres, apriori)
+  ## grab column co2, averaging kernel, pressure weight and prior CO2 profiles,
 
-# ground height measured in OCO-2 in meter ASL
-grdhgt<-ncvar_get(ocodat,"Sounding/altitude")[loc.index];grdhgt[grdhgt==-999999]<-NA  # [sounding ID]
+  # dimensions--[levels, soundingID]
+  # normalized averaging kernel (unitless)
+  ak.norm <- ncvar_get(ocodat, "xco2_averaging_kernel")[, loc.index]
 
-# retrieved XCO2 and its uncertainty
-xco2.oco<-ncvar_get(ocodat,"xco2")[loc.index];xco2.oco[xco2.oco==-999999]<-NA
-xco2.uncert.oco<-ncvar_get(ocodat,"xco2_uncertainty")[loc.index];xco2.uncert.oco[xco2.uncert.oco==-999999]<-NA
+  # pressure weighting (unitless)
+  pw <- ncvar_get(ocodat, "pressure_weight")[, loc.index]
 
-# temp at 700mb
-#t_700<-ncvar_get(ocodat,"Retrieval/T700")[loc.index];t_700[t_700==-999999]<-NA
+  # pressure in hPa
+  pres <- ncvar_get(ocodat, "pressure_levels")[, loc.index]
 
-# satellite footprint
-footprint<-ncvar_get(ocodat,"Sounding/footprint")[loc.index];footprint[footprint==-999999]<-NA
+  # CO2.apriori in ppm
+  apriori <- ncvar_get(ocodat, "co2_profile_apriori")[, loc.index]
 
-# retrieved surface pressure
-psfc<-ncvar_get(ocodat,"Retrieval/psurf")[loc.index];psfc[psfc==-999999]<-NA
+  # dimensions--[soundingID]
+  # ground height measured in OCO-2 in meter ASL
+  grdhgt <- ncvar_get(ocodat, "Sounding/altitude")[loc.index]
 
-# combine all variables
-other.info<-data.frame(grdhgt, psfc, footprint, xco2.oco, xco2.uncert.oco, find.id, find.lat, find.lon)
+  # retrieved XCO2 and its uncertainty
+  xco2 <- ncvar_get(ocodat, "xco2")[loc.index]
+  xco2.uncert <- ncvar_get(ocodat, "xco2_uncertainty")[loc.index]
+
+  # satellite footprint
+  footprint<-ncvar_get(ocodat,"Sounding/footprint")[loc.index]
+
+  #t_700 <- ncvar_get(ocodat, "Retrieval/T700")[loc.index] # temp at 700mb
+  psfc<-ncvar_get(ocodat,"Retrieval/psurf")[loc.index] # retrieved sfc pressure
+
+  # check whether is missing data
+  pw[pw == -999999] <- NA
+  xco2[xco2 == -999999] <- NA
+  pres[pres == -999999] <- NA
+  psfc[psfc == -999999] <- NA
+  #t_700[t_700 == -999999] <- NA
+  grdhgt[grdhgt == -999999] <- NA
+  apriori[apriori == -999999] <- NA
+  ak.norm[ak.norm == -999999] <- NA
+  footprint[footprint==-999999]<-NA
+  xco2.uncert[xco2.uncert == -999999]<-NA
+
+  # assign vertical dimnames
+  attributes(ak.norm)$names <- oco.level
+  attributes(pw)$names <- oco.level
+  attributes(pres)$names <- oco.level
+  attributes(apriori)$names<-oco.level
+
+  ### combine all OCO-2 vertical profiles
+  tmp.prof <- data.frame(ak.norm, pw, pres, apriori)  # vertical profiles
+
+  # combine all variables, just one number
+  tmp.info <- data.frame(grdhgt, psfc, footprint, xco2, xco2.uncert, find.id,
+                         find.lat, find.lon)
+
+  all.prof[[r]] <- tmp.prof
+  all.info <- rbind(all.info, tmp.info)
+}
 
 # return both profiles and variables
-return(list(all.profiles, other.info))
+return(list(all.prof, all.info))
+
 } # end of subroutine

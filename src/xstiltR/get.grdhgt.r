@@ -2,35 +2,60 @@
 # DW, 10/20/2017
 
 # Inputs variables:
-# recp.info: output from ident.to.info(), including receptor time, lat, lon (recp.info) and release levels (agl.info)
+# 1) "recp.info" from ident.to.info(),
+# including receptor time, lat, lon (recp.info) and release levels (agl.info)
+# 2) "nummodel" for copy number
+# 3) "outpath, metpath, metfile" for trajwind()...
 
-# Amendments --
+# Updates --
 # add 0.5 deg GDAS, DW, 01/25/2018
-# add another approach to interpolate ground height, using Fortran function "profile", call profileARL() written by John, DW, 01/29/2018
-# interpolate ground heights of multiple receptors, vector forms of lat/lon/agl, DW, 04/18/2018
+# interpolate ground heights from multiple receptors,
+# add vector forms of lat/lon/agl, DW, 05/02/2018
 
-get.grdhgt<-function(recp.info,nummodel,agl=10,nhrs=-1,rundir="/uufs/chpc.utah.edu/common/home/lin-group1/wde/STILT_modeling/STILT_Exe/",
-                     grdhgt.path="/uufs/chpc.utah.edu/common/home/lin-group4/wde/STILT_output/OCO-2/trajwind/Riyadh/",
-										 metpath="/uufs/chpc.utah.edu/common/home/u0947337/",metfile){
+get.grdhgt <- function(recp.info, nummodel, agl=10, nhrs=-1, rundir, outpath,
+                       site, metpath, metfile){
 
 	# METHOD 1--call fortran code profile() for directly extracting ground height
-	#profile.info<-profileARL(LAT=recp.info$recp.lat,LON=recp.info$recp.lon,metdir=metpath,metfile=metfile,ttoff=0)
+	# profile.info<-profileARL(LAT=recp.info$recp.lat, LON=recp.info$recp.lon,
+  #                          metdir=metpath,metfile=metfile,ttoff=0)
 
 	# METHOD 2--use trajwind() for interpolating ground height
-	# backward for 1hour, if nhrs is negative, u, v winds are backward wind speed and directions
+  # if nhrs is negative, u, v winds are backward wind speed and directions
 	# but, we are interpolating the ground height, so no need to flip it
   # feed lat,lon,agl as vectors, same dimension; still one outname !!!
-	trajwind.info<-trajwind(yr=unique(recp.info$recp.year-2000),mon=unique(recp.info$recp.mon),day=unique(recp.info$recp.day),hr=unique(recp.info$recp.hour),
-                          lat=recp.info$recp.lat,lon=recp.info$recp.lon,agl=rep(10,nrow(recp.info)),nhrs=nhrs,
-													metlib=metpath,metfile=metfile,rundir=rundir,outpath=grdhgt.path,nummodel=nummodel,
-													metd=c("fnl","awrf"),varsout=c("time","index","lon","lat","agl","grdht","zi","temp","pres"))
+  varsout <- c("time","index","lon","lat","agl","grdht","zi","temp","pres")
 
-  recp.info$recp.grdhgt<-trajwind.info[,"grdht"]  # ground height in meters
-  recp.info$recp.ubar<-trajwind.info[,"ubar"]*nhrs/abs(nhrs)  # if nhrs<0, flip sign of winds
-  recp.info$recp.vbar<-trajwind.info[,"vbar"]*nhrs/abs(nhrs)
+  # vector of AGLs
+  agl <- rep(10, nrow(recp.info))  # if multiple receptor lat/lon
 
-  recp.info$recp.zi<-trajwind.info[,"zi"]  # PBL heights in meters
-  recp.info$recp.temp<-trajwind.info[,"temp"]  # temp in K
-  recp.info$recp.pres<-trajwind.info[,"pres"]  # pressure in mb
+  outname <- paste(unique(recp.info$timestr), "_", site, sep="")
+
+  # if outpath did not end with "/"
+  if(substr(outpath, nchar(outpath), nchar(outpath))!="/"){
+    outpath <- paste(outpath, "/",sep="")
+  }
+
+  # yr, mon, day, hr should be the same,
+  # trajwind() can return matrix if lat/lon/agl is in vector form
+	trajwind.info <- trajwind(yr =unique(recp.info$recp.year - 2000),
+                            mon=unique(recp.info$recp.mon),
+                            day=unique(recp.info$recp.day),
+                            hr =unique(recp.info$recp.hour), outname = outname,
+                            lat=recp.info$recp.lat, lon=recp.info$recp.lon,
+                            agl=agl, nhrs=nhrs, metlib=metpath, metfile=metfile,
+                            rundir=rundir, outpath=outpath, varsout=varsout,
+                            nummodel=nummodel, metd=c("fnl","awrf"))
+
+  # add trajwind() output onto original "recp.info"
+  recp.info$recp.grdhgt <- trajwind.info[, "grdht"]  # ground height in meters
+
+  # if nhrs<0, flip sign of winds, m/s
+  recp.info$recp.ubar <- trajwind.info[, "ubar"] * sign(nhrs)
+  recp.info$recp.vbar <- trajwind.info[, "vbar"] * sign(nhrs)
+
+  recp.info$recp.zi   <- trajwind.info[, "zi"]    # PBL heights in meters
+  recp.info$recp.temp <- trajwind.info[, "temp"]  # temp in K
+  recp.info$recp.pres <- trajwind.info[, "pres"]  # pressure in mb
+
 	return(recp.info)
 }
