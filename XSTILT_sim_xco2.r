@@ -44,8 +44,6 @@ if(site == "PRD")   {minlon<-10; maxlon<-50; minlat<-20; maxlat<-130}
 # total 5 components, no wildfire component for now, but can be easily added
 ss  <- c(1,2,3,4,5)
 sel <- c("anthro", "bio", "ocean", "edp", "apriori")[ss]
-headers <- paste("xco2.", sel, sep="")  # headers for txtfile
-
 cat("# ----------- STEP 1: city, tracks selected ...\n")
 
 #------------------------------ STEP 2 --------------------------------------- #
@@ -140,7 +138,7 @@ metfile <- find.metfile(timestr=track.timestr, nhrs= -1, metpath=metpath,
                         met=met, trajecTF=F) # do not change trajecTF=F !!!
 
 #### get ground height info, it there's none, call get.grdhgt() to get info
-filenm <- paste("trajwind_recp_info_", site, "_", timestr, sep="")
+filenm <- paste("trajwind_recp_info_", site, "_", timestr, ".txt", sep="")
 if(length(list.files(path=outpath, pattern=filenm))!=0){
 
   filenm <- file.path(outpath, filenm)
@@ -204,8 +202,8 @@ ct.version <- c("v2016-1", "v2017")[2]
 # yet, no CT-NRTv2017 files before 2015/12/12
 if(substr(timestr,1,8) < "20151212")ct.version <- c("v2016-1", "v2017")[1]
 
-ctflux.path <- file.path(inpath, "CT-NRT", ct.version, "fluxes", "optimized")
-ctmole.path <- file.path(inpath, "CT-NRT", ct.version, "molefractions")
+ctflux.path <- file.path(inpath,"CT-NRT",ct.version,"fluxes","optimized")
+ctmole.path <- file.path(inpath,"CT-NRT",ct.version,"molefractions","co2_total")
 
 ## create txt files for results and
 vv<-"v5"  # diff version, avoid overwriting
@@ -221,8 +219,6 @@ cat("# ----------- STEP 5: get prior emissions/fluxes ...\n")
 
 #------------------------------ STEP 6 --------------------------------------- #
 #### INPUT X-STILT PARAMETERS FOR GENERATING FOOTPRINT
-zbot <- 0
-ztop <- 0			        # Set to 0 if we want the surface influence volume
 max.hour <- -72       # change if not 3 days backward
 
 # horizontal resolution of ODIAC
@@ -230,12 +226,8 @@ lon.res.anthro <- 1/120
 lat.res.anthro <- lon.res.anthro
 
 # horizontal resolution of CT-NRT
-lon.res.bio <- 1
-lat.res.bio <- lon.res.bio
-
-# horizontal resolution of CT-NRT
-lon.res.ocean <- 1
-lat.res.ocean <- lon.res.ocean
+lon.res.ct <- 1
+lat.res.ct <- lon.res.ct
 
 cat("# ----------- STEP 6: X-STILT footprint setup ...\n")
 
@@ -246,16 +238,13 @@ namelist <- list(met=met, site=site, timestr=timestr, filestr=filestr, sel=sel,
                  minlat=minlat, maxlat=maxlat, minlon=minlon, maxlon=maxlon,
                  ocopath=ocopath, ak.weight=ak.weight, pw.weight=pw.weight,
                  orig.trajpath=orig.trajpath, wgt.trajpath=wgt.trajpath,
-	               foot.path=foot.path, xco2.path=xco2.path,
-                 ct.version=ct.version, ctflux.path=ctflux.path,
-                 ctmole.path=ctmole.path, selTF=selTF, dmassTF=dmassTF,
-                 columnTF=columnTF, uncertTF=uncertTF, forwardTF=forwardTF,
-                 biascorrTF=biascorrTF, hourlyTF=hourlyTF, storeTF=storeTF,
-                 txtpath=txtpath, txtname=txtname, headers=headers, zbot=zbot,
-                 ztop=ztop, max.hour=max.hour,
-                 lat.res.anthro=lat.res.anthro, lon.res.anthro=lon.res.anthro,
-                 lat.res.bio=lat.res.bio, lon.res.bio=lon.res.bio,
-                 lat.res.ocean=lat.res.ocean, lon.res.ocean=lon.res.ocean)
+	               foot.path=foot.path, xco2.path=xco2.path,ct.version=ct.version,
+                 ctflux.path=ctflux.path, ctmole.path=ctmole.path, selTF=selTF,
+                 dmassTF=dmassTF, columnTF=columnTF, uncertTF=uncertTF,
+                 forwardTF=forwardTF, biascorrTF=biascorrTF, hourlyTF=hourlyTF,
+                 storeTF=storeTF, txtpath=txtpath, txtname=txtname,
+                 max.hour=max.hour,lat.res.ct=lat.res.ct,lon.res.ct=lon.res.ct,
+                 lat.res.anthro=lat.res.anthro, lon.res.anthro=lon.res.anthro)
 
 # store namelist and trajlist as RData file
 filename <- paste("simlist_", site, "_", track.timestr, ".txt", sep="")
@@ -268,9 +257,9 @@ cat("# ----------- STEP 7: Namelist created/stored ...\n")
 # start X-STILT runs, call oco2.get.xco2()
 recp.info$recp.ident <- orig.outname
 
+cat("\n\n# ----------- STEP 8: Simulation started ...\n")
 sim.xco2(namelist=namelist, recp.info=recp.info, odiac.co2=odiac.co2)
 
 
 
-
-# end of namelist
+# end of script
