@@ -21,16 +21,16 @@ assignr <- function(xname, value, path="", printTF=FALSE, gz=F){
      assign(x=xname, value=value, pos=1)
 
      # change paste() to file.path(), DW, 05/02/2018
-     rfile <- file.path(path, xname)
+     rfile <- file.path(path, paste(xname, ".RData", sep=""))
      #save(list=xname, file=paste(path,xname,".RData",sep=""))
      save(list=xname, file=rfile)
      remove(list=xname, pos=1)
 
      if(gz){
-       unix(paste("gzip ",rfile,".RData",sep=""))
-       xname<-paste(xname,".gz",sep="")
+       unix(paste("gzip ", rfile, sep=""))
+       xname<-paste(xname,".gz", sep="")
      }
-     
-     if (printTF) cat(rfile, ".RData created\n", sep="")
+
+     if (printTF) cat(rfile, " created\n", sep="")
 
 }

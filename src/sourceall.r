@@ -12,7 +12,7 @@ go <- graphics.off
 sourcepath <- "./src"
 
 ### --------------------- required STILT subroutines ---------------------- ###
-stiltrpath <- file.path(sourcepath,"stiltR/")
+stiltrpath <- file.path(sourcepath, "stiltR/")
 
 # basic subroutines
 source(paste(stiltrpath, "unix.r", sep=""))
@@ -34,9 +34,6 @@ source(paste(stiltrpath, "getgridp.r", sep=""))
 
 # basic subroutine to generate STILT footprint
 source(paste(stiltrpath, "Trajecfoot.r", sep=""))
-#source(paste(stiltrpath, "Trajecflux.r", sep=""))
-#source(paste(stiltrpath, "Trajecmod.r", sep=""))
-#source(paste(stiltrpath, "Trajecvprm.r", sep=""))
 
 # updated version for generating multiple receptors in one hymodelc
 source(paste(stiltrpath, "Trajecmulti.r", sep=""))
@@ -46,15 +43,22 @@ source(paste(stiltrpath, "trajwind.r", sep=""))
 
 
 ### -------------------- main subroutines for XSTILT ---------------------- ###
-xpath <- file.path(sourcepath,"xstiltR/")
+xpath <- file.path(sourcepath, "xstiltR/")
 
 # subroutines to get receptor info, ground height and meteo files
 source(paste(xpath, "ident.to.info.r", sep=""))
 source(paste(xpath, "get.grdhgt.r", sep=""))
 source(paste(xpath, "find.metfile.r", sep=""))
+source(paste(xpath, "get.SIGUVERR.r", sep=""))
+source(paste(xpath, "grab.oco2.r", sep=""))
+
+source(paste(xpath, "ggplot.forward.trajec.r", sep=""))
+source(paste(xpath, "ggplot.map.r", sep=""))
+source(paste(xpath, "default.col.r", sep=""))
 
 # topmost subroutine to generate backward trajec
 source(paste(xpath, "run.backward.trajec.r", sep=""))
+source(paste(xpath, "run.forward.trajec.r", sep=""))
 source(paste(xpath, "find.create.dir.r", sep=""))
 
 # topmost subroutine for XCO2 simulation
@@ -75,16 +79,13 @@ source(paste(xpath, "OCO2.weight.trajecfootv2.r", sep=""))
 source(paste(xpath, "OCO2.odiac.anthro.r", sep=""))
 source(paste(xpath, "OCO2.ctnrt.bio.ocean.r", sep=""))
 source(paste(xpath, "OCO2.ctnrt.traj.edp.r", sep=""))
-#source(paste(xpath, "OCO2.CT-NRT.oceanv2.r", sep=""))
-#source(paste(xpath, "OCO2.CT-NRT.biov2.r", sep=""))
-#source(paste(xpath, "OCO2.CT-NRT.background.r", sep=""))
 source(paste(xpath, "OCO2.apriori.r", sep=""))
 
 # X-STILT error analysis related --
-source(paste(xpath, "ODIAC.trajfoot.r", sep=""))
-source(paste(xpath, "ODIAC.uncert.subroutine.r", sep=""))
-source(paste(xpath, "CT-NRT.bio.trajfoot.r", sep=""))
-source(paste(xpath, "CT-NRT.bg.trajfoot.r", sep=""))
+#source(paste(xpath, "ODIAC.trajfoot.r", sep=""))
+#source(paste(xpath, "ODIAC.uncert.subroutine.r", sep=""))
+#source(paste(xpath, "CT-NRT.bio.trajfoot.r", sep=""))
+#source(paste(xpath, "CT-NRT.bg.trajfoot.r", sep=""))
 
 # subroutines for bootstrap --
 source(paste(xpath, "OCO2.bootstrap.level.r", sep=""))

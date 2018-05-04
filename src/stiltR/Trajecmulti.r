@@ -1,55 +1,14 @@
-if(F){
-  t=1
-  yr=recp.yr-2000
-  mon=recp.mon
-  day=recp.day
-  hr=recp.hr
-  dxyp=dxyp
-  dzp=0
-  lat=tmp.lat
-  lon=tmp.lon
-  agl=agl
-  outname=ident
-  nhrs=nhrs
-  numpar=npar
-  nummodel=nummodel
 
-  metd=c("fnl","awrf")
-  metfile=metfile
-  metlib=metpath
-  conv=F
-  doublefiles=T
-  overwrite=TRUE
-  outpath=trajpath
-  varsout=varstrajec
-  rundir=rundir
-  setup.list=list(DELT=2,VEGHT=0.5)
-  siguverr=siguverr
-  TLuverr=TLuverr
-  zcoruverr=zcoruverr
-  horcoruverr=horcoruverr
-  emisshrs=1/100
-  mn=0
-  write.r=TRUE
-  ziscale=NULL
-  sigzierr=NULL
-  TLzierr=NULL
-  horcorzierr=NULL
-
-}
-
-
-
-Trajecmulti<-function(yr=02,mon=8,day=1,hr=6,mn=0,lat=42.536,lon=-72.172,agl=30,nhrs=-48,
-                      dxyp=0.,dzp=0.,
-                      numpar=100,metlib="/deas/group/stilt/Metdata/",
-                      metd="edas",doublefiles=F,metfile=NULL,conv=F,ziscale=NULL,
-                      siguverr=NULL,TLuverr=NULL,zcoruverr=NULL,horcoruverr=NULL,
-                      varsout=c("time","index","lat","lon","agl","grdht","foot","temp0","swrad","zi","dens","dmass"),
-                      rundir=NULL,nummodel=NULL,outname=NULL,outpath="",overwrite=T,emisshrs=1/100,
-                      sourcepath="./",debugTF=TRUE,max.counter=NULL,
-                      sigzierr=NULL,TLzierr=NULL,horcorzierr=NULL,zsg.name=NULL,create.X0=FALSE,setup.list=list(),
-                      hymodelc.exe=NULL,write.r=TRUE,write.nc=FALSE){
+Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172,
+                        agl=30, nhrs=-48, dxyp=0., dzp=0.,
+                        numpar=100, metlib="/deas/group/stilt/Metdata/",
+                        metd="edas", doublefiles=F, metfile=NULL, conv=F, ziscale=NULL,
+                        siguverr=NULL,TLuverr=NULL,zcoruverr=NULL,horcoruverr=NULL,
+                        varsout=c("time","index","lat","lon","agl","grdht","foot","temp0","swrad","zi","dens","dmass"),
+                        rundir=NULL,nummodel=NULL,outname=NULL,outpath="",overwrite=T,emisshrs=1/100,
+                        sourcepath="./",debugTF=TRUE,max.counter=NULL,
+                        sigzierr=NULL,TLzierr=NULL,horcorzierr=NULL,zsg.name=NULL,create.X0=FALSE,setup.list=list(),
+                        hymodelc.exe=NULL,write.r=TRUE,write.nc=FALSE){
 #Function to run HYSPLIT particle dispersion model and to check distribution of particles
 
 #INPUT:
@@ -163,8 +122,15 @@ Trajecmulti<-function(yr=02,mon=8,day=1,hr=6,mn=0,lat=42.536,lon=-72.172,agl=30,
   setup.list$WINDERRTF <- i #flag used for wind/pblh error modeling
 
   #translate variable names from R to fortran
-  r.names<-c("time","sigmaw","TL",  "lon", "lat", "agl", "grdht","index","cldidx","temp","temp0","sampt","foot","shtf","lhtf","tcld","dmass","dens","rhf", "sphu","solw","lcld","zloc","swrad","wbar","zi",  "totrain","convrain","zconv","pres")
-  f.names<-c("time","sigw",  "tlgr","long","lati","zagl","zsfc", "indx", "icdx",  "temz","temp", "samt", "foot","shtf","whtf","tcld","dmas", "dens","rhfr","sphu","solw","lcld","zloc","dswf", "wout","mlht","rain",   "crai","zcfx","pres")
+  r.names<-c("time","sigmaw","TL",  "lon", "lat", "agl", "grdht","index",
+             "cldidx","temp","temp0","sampt","foot","shtf","lhtf","tcld",
+             "dmass","dens","rhf", "sphu","solw","lcld","zloc","swrad","wbar",
+             "zi",  "totrain","convrain","zconv","pres")
+  f.names<-c("time","sigw",  "tlgr","long","lati","zagl","zsfc", "indx", "icdx",
+             "temz","temp", "samt", "foot","shtf","whtf","tcld","dmas", "dens",
+             "rhfr","sphu","solw","lcld","zloc","dswf", "wout","mlht","rain",
+             "crai","zcfx","pres")
+
   varsout.f<-f.names[match(varsout,r.names)]
   if(sum(is.na(match(varsout,r.names)))>0)stop(paste("wrong names:",varsout[is.na(match(varsout,r.names))]))
   varsout.r <- varsout
@@ -237,7 +203,8 @@ Trajecmulti<-function(yr=02,mon=8,day=1,hr=6,mn=0,lat=42.536,lon=-72.172,agl=30,
   if(!is.null(sigzierr))names.returninfo<-c(names.returninfo,"sigzierr")
   if(!is.null(TLzierr))names.returninfo<-c(names.returninfo,"TLzierr")
   if(!is.null(horcorzierr))names.returninfo<-c(names.returninfo,"horcorzierr")
-  names.returninfo<-c(names.returninfo,paste("varsout",1:length(varsout.r),sep=""),"nummodel","outpath","overwrite","status","metoutname")
+  names.returninfo<-c(names.returninfo,paste("varsout",1:length(varsout.r),sep=""),
+                      "nummodel","outpath","overwrite","status","metoutname")
 
   names(returninfo)<-names.returninfo
   newnames <- c(dimnames(returninfo.matrix)[[2]], names.returninfo)
