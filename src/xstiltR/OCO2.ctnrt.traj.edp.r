@@ -91,17 +91,17 @@ uni.endp.mon  <- sort(unique(endp.time[,"mon"]))
 # Open all CT files into a list before assigning background CO2
 all.ct.gph <- rep(list(NULL), length(uni.endp.day))
 all.ct.co2 <- all.ct.gph
-ctpattern <- paste(formatC(uni.endp.year, width=2, flag=0), "-",
-                   formatC(uni.endp.mon,  width=2, flag=0), "-",
-                   formatC(uni.endp.day,  width=2, flag=0), ".nc", sep="")
 
-ctfile <- list.files(path = ctpath, pattern = ctpattern)
-
-cat(paste("ctnrt.traj.edp(): Reading from file", ctfile, "...\n"))
 for(f in 1:length(uni.endp.day)){
 
 		# find and open the CT file
-		ctdat<-nc_open(file.path(ctpath, ctfile[f]))
+		ctpattern <- paste(formatC(uni.endp.year, width=2, flag=0), "-",
+		                   formatC(uni.endp.mon, width=2, flag=0), "-",
+		                   formatC(uni.endp.day[f], width=2, flag=0), ".nc", sep="")
+		ctfile <- list.files(path = ctpath, pattern = ctpattern)
+
+		cat(paste("ctnrt.traj.edp(): Reading from file", ctfile, "...\n"))
+		ctdat <- nc_open(file.path(ctpath, ctfile))
 
 		# ---------------- readin CT-NRT for getting molefractions --------------- #
 		# 2 deg in N-S, 3 deg in E-W, move centered lat, lon to lower left

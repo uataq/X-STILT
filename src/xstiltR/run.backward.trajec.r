@@ -54,8 +54,9 @@ run.backward.trajec <- function(namelist, plotTF){
   mode[LF< 20 & OM==3] <- "Sea_Transition"
 
   ## SELECT REGION
-  region.index <- which(ocolat >= namelist$minlat & ocolat < namelist$maxlat &
-                        ocolon >= namelist$minlon & ocolon < namelist$maxlon)
+  lat.lon <- namelist$lat.lon   # minlat, maxlat, minlon, maxlon
+  region.index <- which(ocolat >= lat.lon[1] & ocolat < lat.lon[2] &
+                        ocolon >= lat.lon[3] & ocolon < lat.lon[4])
 
   sel.lat <- ocolat[region.index]
   sel.lon <- ocolon[region.index]
@@ -135,52 +136,46 @@ run.backward.trajec <- function(namelist, plotTF){
 
   # update release AGLs
   if(namelist$columnTF){
-    agl <- c(seq(namelist$minagl, namelist$zi, namelist$dh.lower),
-             seq(namelist$zi+namelist$dh.upper, namelist$maxagl, namelist$dh.upper))
-    nlev <- length(agl)
-    npar <- nlev * dpar   # total number of particles
+    agl <- namelist$agl
+    npar <- namelist$npar   # total number of particles
   }
 
   ### 'lat','lon',&'agl' can be a VECTOR of the same length
   # filter by quality flag, more receptors when XCO2 is high
   sort.lat<-sort(sel.lat[sel.qf==0])
-
-  recp.index <- c(seq(namelist$minlat, namelist$midlat.left, 1/20),
-                  seq(namelist$midlat.left, namelist$midlat.right, 1/40),
-                  seq(namelist$midlat.right, namelist$maxlat, 1/20))
-
+  recp.index <- namelist$recp.index
   recp.lat <- sort.lat[findInterval(recp.index,sort.lat)]
   match.index <- unique(match(recp.lat, sel.lat))
 
   # change order for longitude, and time
-  recp.lat <- signif(sel.lat[match.index],6)
-  recp.lon <- signif(sel.lon[match.index],7)
+  recp.lat <- signif(sel.lat[match.index], 6)
+  recp.lon <- signif(sel.lon[match.index], 7)
   recp.yr  <- yr [match.index]
   recp.mon <- mon[match.index]
   recp.day <- day[match.index]
   recp.hr  <- hr [match.index]
 
-
   # ------------------- Step 3. CREATE outname for trajec -------------------- #
   if(namelist$columnTF){
     # If run with multiple locations, outname needs to be specified first
-    # Set traj name convention, ONLY for uneven AGLs, ONLY for if yr, mon, day, hr are the same
-    # e.g., "2014x12x29x10x24.9836Nx47.0343Ex00000-03000by00100&03500-06000by00500x07400P"
-    outname<-paste(namelist$filestr, formatC(recp.hr[1],width=2,flag=0),"x",
-                   formatC(recp.lat,width=5,format='f',digits=4,flag=0),"Nx",
-                   formatC(recp.lon,width=5,format='f',digits=4,flag=0),"Ex",
-                   formatC(namelist$minagl,width=5,flag=0),"-",
-                   formatC(namelist$zi,width=5,flag=0),"by",
-                   formatC(namelist$dh.lower,width=5,flag=0),"&",
-                   formatC(namelist$zi+namelist$dh.upper,width=5,flag=0),"-",
-                   formatC(max(agl),width=5,flag=0),"by",
-                   formatC(namelist$dh.upper,width=5,flag=0),"x",
-                   formatC(npar,width=5,flag=0),"P",sep="")
+    # Set traj name convention, ONLY for uneven AGLs,
+    # ONLY for if yr, mon, day, hr are the same
+    #"2014x12x29x10x24.9836Nx47.0343Ex00000-03000by00100&03500-06000by00500x07400P"
+    outname<-paste(namelist$filestr,"x", formatC(recp.hr[1],width=2,flag=0),"x",
+                   formatC(recp.lat, width=5,format='f',digits=4,flag=0), "Nx",
+                   formatC(recp.lon, width=5,format='f',digits=4,flag=0), "Ex",
+                   formatC(namelist$minagl, width=5, flag=0), "-",
+                   formatC(namelist$zi, width=5,flag=0), "by",
+                   formatC(namelist$dh[1], width=5, flag=0), "&",
+                   formatC(namelist$zi + namelist$dh[2], width=5,flag=0), "-",
+                   formatC(max(agl), width=5, flag=0), "by",
+                   formatC(namelist$dh[2], width=5, flag=0), "x",
+                   formatC(npar, width=5, flag=0), "P", sep="")
   }else{
     # if fixed agl, no need to assign outname
-    outname<-paste(namelist$filestr, formatC(recp.hr[1],width=2,flag=0),"x",
-                   formatC(signif(recp.lat,6),width=5,format='f',digits=4,flag=0),"Nx",
-                   formatC(signif(recp.lon,7),width=5,format='f',digits=4,flag=0),"Ex",
+    outname<-paste(namelist$filestr,"x",formatC(recp.hr[1],width=2,flag=0),"x",
+                   formatC(recp.lat, width=5,format='f',digits=4,flag=0), "Nx",
+                   formatC(recp.lon, width=5,format='f',digits=4,flag=0), "Ex",
                    formatC(agl,width=5,flag=0),"x",
                    formatC(npar,width=5,flag=0),"P",sep="")
   }  # end if
@@ -214,7 +209,8 @@ run.backward.trajec <- function(namelist, plotTF){
 
     }else{   # column receptors
 
-      # if multiple locations, lat, lon, & agl have to be vectors with the same length!
+      # if multiple locations,
+      # lat, lon, & agl have to be vectors with the same length!
       # multiple heights at the same lat, lon coordinate
       tmp.lat <- rep(recp.lat[t], length(agl))
       tmp.lon <- rep(recp.lon[t], length(agl))

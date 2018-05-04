@@ -31,7 +31,7 @@ ident.to.info <- function(ident){
     # if there is mins in recp time string
     if(length(grep("N", tmp.info[1,5]))==0){
       colnames(tmp.info) <- colnms.mm
-      recp.min <- as.numeric(info[, "min"])
+      recp.min <- as.numeric(tmp.info[, "min"])
     }
     if(tmp.ncol >= 9)dxyp <- as.numeric(gsub("deg", "", tmp.info[, "dxyp"]))
 
