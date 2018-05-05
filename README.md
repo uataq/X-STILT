@@ -1,6 +1,6 @@
 # X-STILT: X-Stochastic Time-Inverted Lagrangian Transport model 
 ## Descriptions:
-Main R scripts and subroutines for X-STILT, modified from the Stochastic Time-Inverted Lagrangian Transport (STILT) model [*Lin et al*., 2003] along with X-STILT error analysis, based on *Wu et al.* [submitted]. 
+Main R scripts and subroutines for X-STILT, modified from the Stochastic Time-Inverted Lagrangian Transport (STILT) model [*Lin et al*., 2003] based on *Wu et al.* [submitted]. 
 
 ## Details:
 - X-STILT runs (column or fixed receptors)
