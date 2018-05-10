@@ -1,6 +1,10 @@
-# create a namelist for running X-STILT trajectories, by DW, 04/18/2018
+# create a namelist for running X-STILT trajectories
+# written by DW, 04/18/2018
+# latest modification on 05/10/2018
+
 # required subroutines:
-# find.metfile(); run.backward.trajec(); run.forward.trajec()
+# find.metfile(); get.SIGUVERR(); find.create.dir(); get.more.namelist();
+# allocate.recp(); write.bash(); run.backward.trajec(); run.forward.trajec()
 
 #### source all functions and load all libraries
 # CHANGE working directory ***
@@ -17,7 +21,7 @@ library(ncdf4); library(ggplot2)
 index <- 4
 site  <- c("Riyadh", "Cairo", "PRD", "Jerusalem")[index]
 met   <- c("1km", "gdas1", "gdas0p5")[3]  # customized WRF, 1 or 0.5deg GDAS
-tt    <- 1                                # which track to model
+tt    <- 3                                # which track to model
 oco2.version <- c("b7rb","b8r")[2]        # OCO-2 version
 
 #### CHOOSE OVERPASSED TIMESTR ***
@@ -55,6 +59,7 @@ windowTF <- F    # whether to release particles every ?? minutes, "dhr" in hours
 uncertTF <- F    # whether add wind error component to generate trajec
 overwrite <- T	      # T:rerun hymodelc, even if particle location object found
                       # F:re-use previously calculated particle location object
+mpcTF <- T            # true for running trajec on multiple STILT copies
 delt <- 2             # fixed timestep [min]; set =0 for dynamic timestep
 
 ### change parameters according to above flags
@@ -62,11 +67,15 @@ nhrs <- -72           # number of hours backward (-) or forward (+)
 if(selTF)nhrs <- -24  # 1day if  selTF
 
 # copy for running trajwind() or trajec()
-#nummodel <- 1
-nummodel <- seq(1,5)
+# can be a vector with values denoting copy numbers
+nummodel <- 1
+if(mpcTF)nummodel <- seq(6,10)
+
+## if release particles from a box
+# +/-dxyp, +/-dxyp around the city center
 dxyp <- NULL
 if(forwardTF){
-  dxyp <- 0.2*2       # +/-dxyp, +/-dxyp around the city center
+  dxyp <- 0.2*2
   nummodel <- 997     # use TN's hymodelc to run forward box trajec
   nhrs <- 12          # number of hours backward (-) or forward (+)
 }
@@ -186,7 +195,7 @@ if(columnTF){
 ## eyeball lat range for enhanced XCO2, or grab from available forward-time runs
 # place denser receptors during this lat range (40pts in 1deg)
 #peak.lat <- c(24.5, 25)  # in deg North (+), required for backward run
-peak.lat <- c(31.5, 32)
+peak.lat <- c(31.7, 32.2)
 bw.bg <- 1/20    # binwidth over small enhancements, e.g., every 20 pts in 1deg
 bw.peak <- 1/40  # binwidth over large enhancements, during "peak.lat"
 
@@ -222,30 +231,30 @@ if(forwardTF == F){
   # plotTF for whether plotting OCO-2 observed data
   namelist <- get.more.namelist(namelist = namelist, plotTF=F)
 
-  # write X-STILT CONTROL r scripts
+  ### prepare for creating run files, each X-STILT CONTROL r scripts,
+  # trajlist & bash files that are needed to generate trajec on computing nodes
   cat("Checking and distributing copies...\n")
-  run.filenm <- "run_XSTILT"
-  allocate.recp(namelist, run.name=run.filenm)
 
-  # set up job info and write bash script
+  # automatically creates RUN, CONTL, TRAJLIST and update namelist
+  namelist <- allocate.recp(namelist)
+
+  ## set up job info and write bash script
   job.time <- "24:00:00"
   num.nodes <- 1
   num.cores <- length(namelist$nummodel)
   account <- "lin-kp"; partition <- "lin-kp"
   email <- "dien.wu@utah.edu"
   email.type <- c("FAIL,BEGIN,END")
-  workdir <- namelist$workdir
-  filenm <- "XSTILT.sh"  # store at workdir
 
-  # write bash file --> config --> run_XSTILT
-  write.bash(job.time, num.nodes, num.cores, account, partition, email,
-             email.type, workdir, filenm, run.filenm)
-
-  cat("Generating backward trajec...\n")
+  # write bash file --> config --> run_XSTILT and update namelist:
+  bash.file <- write.bash(namelist, job.time, num.nodes, num.cores, account,
+                         partition, email, email.type)
 
   # turn on excutable permission
-  system(paste("chmod u+x ./", filenm, sep=""))
-  system(paste("sbatch ", filenm, sep=""))
+  system(paste("chmod u+x ", bash.file, sep=""))
+
+  cat("Generating backward trajec...\n")
+  system(paste("sbatch ", bash.file, sep=""))
   q()
 } # if backward
 
