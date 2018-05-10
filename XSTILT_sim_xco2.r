@@ -15,19 +15,24 @@ library(ncdf4); library(ggplot2)
 
 #------------------------------ STEP 1 --------------------------------------- #
 #### CHOOSE CITIES, TRACKS AND OCO-2 LITE FILE VERSION ***
-index <- 1
-site  <- c("Riyadh","Cairo","PRD")[index]
-met   <- c("1km","gdas1","gdas0p5")[3]    # customized WRF, 1 or 0.5deg GDAS
-tt    <- 2                                # which track to model
-oco2.version <- c("b7rb","b8r")[1]        # OCO-2 version
+index <- 4
+site  <- c("Riyadh", "Cairo", "PRD", "Jerusalem")[index]
+met   <- c("1km", "gdas1", "gdas0p5")[3]    # customized WRF, 1 or 0.5deg GDAS
+tt    <- 1                                # which track to model
+oco2.version <- c("b7rb", "b8r")[2]        # OCO-2 version
 
 # input all track numbers to be modeled, can be YYYYMMDD OR YYYYMMDDHH ***
 riyadh.timestr<- c("20141227", "20141229", "20150128", "20150817", "20151112",
                    "20151216", "20160115", "20160216", "20160725", "20161031")
+jerusalem.timestr <- c("20150615", "20150624", "20150717", "20150726",
+                      "20160601", "20160610", "20160703", "20160712",
+                      "20170417", "20170528", "20170620", "20170629")
 cairo.timestr <- c("20150228", "20150318", "20160224"); prd.timestr<-"20150115"
 
 # final timestr, YYYYMMDD and file strings for trajec
-track.timestr <- c(riyadh.timestr[tt], cairo.timestr[tt], prd.timestr)[index]
+track.timestr <- c(riyadh.timestr[tt], cairo.timestr[tt], prd.timestr,
+                   jerusalem.timestr[tt])[index]
+
 filestr <- paste(substr(track.timestr,1,4), "x", substr(track.timestr,5,6), "x",
                  substr(track.timestr,7,8), sep="")
 
@@ -39,6 +44,7 @@ filestr <- paste(substr(track.timestr,1,4), "x", substr(track.timestr,5,6), "x",
 if(site == "Riyadh"){minlon<-0 ; maxlon<-60; minlat<-0 ; maxlat<-50}
 if(site == "Cairo") {minlon<-0 ; maxlon<-60; minlat<-0 ; maxlat<-50}
 if(site == "PRD")   {minlon<-10; maxlon<-50; minlat<-20; maxlat<-130}
+if(site == "Jerusalem"){minlon<-0 ; maxlon<-60; minlat<-0 ; maxlat<-50}
 
 #### CHOOSE THE CO2 SOURCES/SINKS TO BE MODELED ***
 # total 5 components, no wildfire component for now, but can be easily added
@@ -54,7 +60,7 @@ dmassTF <- T    # dmassTF when generating trajecfoot().
 storeTF <- T    # whether store model results;
                 # e.g., footprint, co2 contribution maps, weighted trajec.
 
-nummodel <- 10	# copy for running trajwind()
+nummodel <- 0	# copy for running trajwind()
 hourlyTF <- F   # true for using hourly ODIAC emissions;
                 # false for using monthly mean emissions.
 columnTF <- T   # whether a column receptor or fixed receptor
@@ -86,11 +92,14 @@ ocopath <- file.path(inpath, ocostr)     # OCO-2 path
 # trajpath: path that stores original non-weighted trajectories
 outpath  <- file.path(workdir, "output")
 trajpath <- file.path(outpath, "Traj")
-orig.trajpath <- file.path(trajpath, "orig_traj")
-orig.trajpath <- "/uufs/chpc.utah.edu/common/home/lin-group1/wde/STILT_output/OCO-2/Traj/Riyadh/gdas0p5/multi_agl/orig_traj/2014122910"
 
-# ncdfpath: path that stores model intermediate (e.g., weighted traj, footprint,
-#           contribution map)
+#orig.trajpath <- file.path(trajpath, "orig_traj")
+orig.trajpath <- file.path(trajpath, "orig_traj", site)
+orig.trajdir <- dir(orig.trajpath, track.timestr)
+orig.trajpath <- file.path(orig.trajpath, orig.trajdir)
+
+### ncdfpath: path that stores model intermediate (e.g., weighted traj,
+#             footprint, contribution map)
 # call find.create.dir() to create one if not found
 ncdfpath <- find.create.dir(path=outpath, dir="NetCDF", workdir=workdir)
 
@@ -112,6 +121,7 @@ xco2.path  <- find.create.dir(path=ncdfpath, dir=xco2.dir, workdir=workdir)
 
 cat("# ----------- STEP 3: input required paths ...\n")
 
+
 #------------------------------ STEP 4 --------------------------------------- #
 #### GET ORIGINAL TRAJEC (NO AK WEIGHTING YET) PATH and FILES ***
 # get trajec files, names and info, using ident.to.info()
@@ -129,13 +139,16 @@ timestr <- unique(recp.info$timestr)
 # where to run trajwind() for model grdhgt, where Copy lies
 rundir <- file.path(homedir, "lin-group1/wde/STILT_modeling/STILT_Exe/")
 
+#### CHANGE METFILES ***
 # path for the ARL format of WRF and GDAS, CANNOT BE TOO LONG ***
-metpath <- "/uufs/chpc.utah.edu/common/home/u0947337/"
-#if(met=="gdas0p5")metpath <- file.path(metpath, "GDAS0p5")
+metpath <- file.path(homedir, "u0947337", "GDAS0p5")
 
 # get metfile for generating backward trajectories
-metfile <- find.metfile(timestr=track.timestr, nhrs= -1, metpath=metpath,
-                        met=met, trajecTF=F) # do not change trajecTF=F !!!
+# met.format: met file convention, e.g., "%Y%m%d_gdas0p5"
+met.format <- "%Y%m%d_gdas0p5"
+#source(file.path(workdir, "src/sourceall.r"))  # source all functions
+metfile <- find.metfile(timestr=timestr, nhrs=-1, metpath=metpath,
+                        met.format=met.format)
 
 #### get ground height info, it there's none, call get.grdhgt() to get info
 filenm <- paste("trajwind_recp_info_", site, "_", timestr, ".txt", sep="")
@@ -164,6 +177,7 @@ if(length(list.files(path=outpath, pattern=filenm))!=0){
 
 cat("# ----------- STEP 4: get all receptor info ...\n")
 
+
 #------------------------------ STEP 5 --------------------------------------- #
 #### choose ODIAC version
 odiac.ver   <- 3		# odiac version, 2 for v2016; 3 for v2017
@@ -175,17 +189,27 @@ odiac.domain <- paste(minlat,"-",maxlat,"N_",minlon,"-",maxlon,"E",sep="")
 if(hourlyTF){
 	odiac.path <- file.path(odiac.path, odiac.vname, "hourly", site)
 	odiac.file <- list.files(path=odiac.path, pattern=odiac.domain)
+  odiac.file <- file.path(odiac.path, odiac.file)
 }else{
 	odiac.path <- file.path(odiac.path, odiac.vname)
   pattern <- paste(substr(timestr,1,6), "_", odiac.domain, ".nc", sep="")
   if(ppTF)pattern <- paste(substr(timestr,1,6),"_",odiac.domain,"_PP.nc",sep="")
 	odiac.file <- list.files(path=odiac.path, pattern=pattern)
+  odiac.file <- file.path(odiac.path, odiac.file)
+}
+
+# if cannot find the correct format of nc file for emissions given selected area
+# and return ODIAC file name with path in front
+if(length(odiac.file)==0){
+  cat("NO ODIAC file found, creating one from tiff ODIAC...\n")
+  odiac.file <- convert.tid2nc.odiac(track.timestr, odiac.vname, odiac.path,
+                                    addTF=ppTF, minlat, maxlat, minlon, maxlon)
 }
 
 ## read in emissions, grab emission grid, [LAT, LON, (HR.back)]
 # lat, lon should have already been converted to LOWER LEFT !!!
 cat("take a while to readin ODIAC CO2 emissions...\n")
-odiac.dat <- nc_open(file.path(odiac.path, odiac.file))
+odiac.dat <- nc_open(odiac.file)
 odiac.co2 <- ncvar_get(odiac.dat, "odiac_co2_emiss") # [lat,lon] or [lat,lon,hr]
 odiac.lat <- ncvar_get(odiac.dat, "lat")
 odiac.lon <- ncvar_get(odiac.dat, "lon")
@@ -200,8 +224,7 @@ if(hourlyTF){
 #### CHOOSE CT-NRT version
 ct.version <- c("v2016-1", "v2017")[2]
 # yet, no CT-NRTv2017 files before 2015/12/12
-if(substr(timestr,1,8) < "20151212")ct.version <- c("v2016-1", "v2017")[1]
-
+if(substr(timestr,1,8) < "20151212")ct.version <- "v2016-1"
 ctflux.path <- file.path(inpath,"CT-NRT",ct.version,"fluxes","optimized")
 ctmole.path <- file.path(inpath,"CT-NRT",ct.version,"molefractions","co2_total")
 
@@ -258,6 +281,7 @@ cat("# ----------- STEP 7: Namelist created/stored ...\n")
 recp.info$recp.ident <- orig.outname
 
 cat("\n\n# ----------- STEP 8: Simulation started ...\n")
+source(file.path(workdir, "src/sourceall.r"))  # source all functions
 sim.xco2(namelist=namelist, recp.info=recp.info, odiac.co2=odiac.co2)
 
 
