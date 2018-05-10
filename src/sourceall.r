@@ -56,10 +56,15 @@ source(paste(xpath, "ggplot.forward.trajec.r", sep=""))
 source(paste(xpath, "ggplot.map.r", sep=""))
 source(paste(xpath, "default.col.r", sep=""))
 
-# topmost subroutine to generate backward trajec
+# subroutines to generate backward trajec
+source(paste(xpath, "get.more.namelist.r", sep=""))
 source(paste(xpath, "run.backward.trajec.r", sep=""))
 source(paste(xpath, "run.forward.trajec.r", sep=""))
 source(paste(xpath, "find.create.dir.r", sep=""))
+
+# subroutines that allocate receptors and allow running trajec at the same time
+source(paste(xpath, "write.bash.r", sep=""))
+source(paste(xpath, "allocate.recp.r", sep=""))
 
 # topmost subroutine for XCO2 simulation
 source(paste(xpath, "sim.xco2.r", sep=""))
