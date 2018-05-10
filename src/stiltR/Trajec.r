@@ -1,20 +1,35 @@
 # for debugging
 
-Trajec<-function(yr=02,mon=8,day=1,hr=6,lat=42.536,lon=-72.172,agl=30,nhrs=-48,
-           delt=0.0,numpar=1000,ndump=0,random=T,outdt=0.0,veght=0.5,metlib="/deas/group/stilt/Metdata/",
-           metd="edas",doublefiles=F,metfile=NULL,nturb=F,outfrac=0.9,conv=F,ziscale=NULL,mgmin=1000,
-           siguverr=NULL,TLuverr=NULL,zcoruverr=NULL,horcoruverr=NULL,hymodelc.exe=NULL,
-           varsout=c("time","index","lat","lon","agl","grdht","foot","temp0","swrad","zi","dens","dmass"),
-	         rundir=NULL,nummodel=NULL,outname=NULL,outpath="",overwrite=T,emisshrs=1/100,sourcepath="./",debugTF=F,max.counter=NULL,
-           sigzierr=NULL,TLzierr=NULL,horcorzierr=NULL,zsg.name=NULL,create.X0=FALSE){
-#Function to run HYSPLIT particle dispersion model and to check distribution of particles
+Trajec <- function(yr=02, mon=8, day=1, hr=6, lat=42.536, lon=-72.172, agl=30,
+                   nhrs=-48, delt=0.0, numpar=1000, ndump=0, random=T,
+                   outdt=0.0, veght=0.5, metlib="/deas/group/stilt/Metdata/",
+                   metd="edas", doublefiles=F, metfile=NULL, nturb=F,
+                   outfrac=0.9, conv=F, ziscale=NULL, mgmin=1000,
+                   siguverr=NULL, TLuverr=NULL, zcoruverr=NULL,
+                   horcoruverr=NULL, hymodelc.exe=NULL,
+                   varsout=c("time","index","lat","lon","agl","grdht","foot",
+                             "temp0","swrad","zi","dens","dmass"),
+	                 rundir=NULL, nummodel=NULL, outname=NULL, outpath="",
+                   overwrite=T, emisshrs=1/100, sourcepath="./", debugTF=F,
+                   max.counter=NULL, sigzierr=NULL, TLzierr=NULL,
+                   horcorzierr=NULL, zsg.name=NULL, create.X0=FALSE){
+#Function to run HYSPLIT particle dispersion model and to check
+# distribution of particles
 #Written by JCL, modified by DVM on 10/4/13 (added mgmin variable)
+# optimized by DW, 05/10/2018
 
 #INPUT:
 #'yr','mon','day','hr': starting time
-#'lat','lon',&'agl' can be a VECTOR of the same length--to have multiple starting locations; agl in meters above ground
-#'nhrs' is number of hours model would be run--NEGATIVE values mean model is run BACKWARDS
-#'delt' is timestep in minutes (integer...); if 0 then dynamic timestep (depending on 'trat')
+#'lat','lon',&'agl':
+#    can be a VECTOR of the same length--to have multiple starting locations;
+#    agl in meters above ground
+
+#'nhrs': number of hours model would be run--
+#        NEGATIVE values mean model is run BACKWARDS
+
+#'delt': timestep in minutes (integer...)
+#        if 0 then dynamic timestep (depending on 'trat')
+
 #'numpar' is number of particles emitted over the # of hrs specified in 'emisshrs'
 #'ndump' to dump out all particle/puff points to a file PARDUMP that can be read at start of new simulation to continue prev calc.
 #   valid NDUMP settings: 0 - no I/O, 1- read and write, 2 - read only, 3 - write only. Default value = 0
@@ -36,7 +51,8 @@ Trajec<-function(yr=02,mon=8,day=1,hr=6,lat=42.536,lon=-72.172,agl=30,nhrs=-48,
 #   'zcoruverr' refers to the vertical correlation lengthscale of horizontal winds [m]
 #   'horcoruverr' refers to the horizontal correlation lengthscale of horizontal winds [km]
 #'varsout' specifies output variables from STILT
-#      can be any subset of c("time","sigmaw","TL","lon","lat","agl","grdht","index","cldidx","temp","temp0","sampt","foot","shtf","lhtf","tcld","dmass","dens","rhf","sphu","solw","lcld","zloc","swrad","wbar","zi","totrain","convrain","zconv","pres")
+#      can be any subset of c("time","sigmaw","TL","lon","lat","agl","grdht","index","cldidx","temp","temp0","sampt","foot","shtf","lhtf","tcld","dmass",
+#                             "dens","rhf","sphu","solw","lcld","zloc","swrad","wbar","zi","totrain","convrain","zconv","pres")
 #'nummodel' specifies copy of directory where fortran executable is executed; needs to be different for different runs running parallel on same filesystem
 #'rundir' specifies main directory where different copy directories are found (see nummodel)
 #'outname' specifies name of the object for output; if not specified, uses default name
@@ -76,47 +92,70 @@ Trajec<-function(yr=02,mon=8,day=1,hr=6,lat=42.536,lon=-72.172,agl=30,nhrs=-48,
 #
 # NO dot in $PATH on CHPC, change hymodelc to ./hymodelc, DW, 10/25/2017
 
-qcycle<-0;emissrate<-1;sampintv<-2;TLfrac=0.1; #define some former arguments
-#
-if(is.null(rundir))rundir<-"~/STILT/Exe/" #directory in which hymodelc is run (default)
+qcycle <- 0
+emissrate <- 1
+sampintv <- 2
+TLfrac <- 0.1; #define some former arguments
+
+#directory in which hymodelc is run (default)
+if(is.null(rundir))rundir<-"~/STILT/Exe/"
 if(is.null(nummodel)){
-if(substring(unix("hostname"),1,3)=="nod"){ #on grid.deas, node decides which copy number
-  nummodel<-as.numeric(substring(unix("hostname"),6,7))
+
+#on grid.deas, node decides which copy number
+if(substring(unix("hostname"),1,3)=="nod"){
+  nummodel <- as.numeric(substring(unix("hostname"),6,7))
 }else{
-  nummodel<-0
+  nummodel <- 0
 }}
 
+check.length <- (length(lat)!=length(lon))|(length(lon)!=length(agl))|
+                (length(lat)!=length(agl))
 
-if((length(lat)!=length(lon))|(length(lon)!=length(agl))|(length(lat)!=length(agl))){
+if(check.length){
   stop("lat, lon, & agl have to be the same length!")
 } #if((length(lat)!=length(lon))|(length(lon)!=length(agl))|(length(lat)!=length(agl))){
 
-npos<-length(lat)
-status<-4 #assume worst case: nothin writen, nothing found
-yr4<-(yr+2000)*(yr<50)+(yr+1900)*(yr>=50) #4 digit year
+npos <- length(lat)
+status <- 4 #assume worst case: nothin writen, nothing found
+yr4 <- (yr+2000)*(yr<50)+(yr+1900)*(yr>=50) #4 digit year
 if(is.null(outname)){
   if(npos==1)outname<-pos2id(julian(mon,day,yr4)+hr/24,lat,lon,agl)
   else stop("'outname' needs to be specified when using multiple starting locations")
 }
 
 
-returninfo<-c(yr,mon,day,hr,lat,lon,agl,nhrs,delt,numpar,ndump,random,outdt,veght,metlib,metd,doublefiles,metfile,nturb,outfrac,conv,
-           ziscale,siguverr,TLuverr,zcoruverr,horcoruverr,sigzierr,TLzierr,horcorzierr,varsout,nummodel,outname,outpath,overwrite,status)
-names.returninfo<-c("yr","mon","day","hr",paste("lat",1:npos,sep=""),paste("lon",1:npos,sep=""),paste("agl",1:npos,sep=""),"nhrs",
-           "delt","numpar","ndump","random","outdt","veght","metlib",paste("metd",1:length(metd),sep=""),"doublemetfiles")
-if(!is.null(metfile))names.returninfo<-c(names.returninfo,paste("metfile",1:length(metfile),sep=""))
-names.returninfo<-c(names.returninfo,"nturb","outfrac","conv")
-if(!is.null(ziscale))names.returninfo<-c(names.returninfo,paste("ziscale",1:length(ziscale),sep=""))
-if(!is.null(siguverr))names.returninfo<-c(names.returninfo,"siguverr")
-if(!is.null(TLuverr))names.returninfo<-c(names.returninfo,"TLuverr")
-if(!is.null(zcoruverr))names.returninfo<-c(names.returninfo,"zcoruverr")
-if(!is.null(horcoruverr))names.returninfo<-c(names.returninfo,"horcoruverr")
-if(!is.null(sigzierr))names.returninfo<-c(names.returninfo,"sigzierr")
-if(!is.null(TLzierr))names.returninfo<-c(names.returninfo,"TLzierr")
-if(!is.null(horcorzierr))names.returninfo<-c(names.returninfo,"horcorzierr")
-names.returninfo<-c(names.returninfo,paste("varsout",1:length(varsout),sep=""),"nummodel","outname","outpath","overwrite","status")
+returninfo <- c(yr, mon, day, hr, lat, lon, agl, nhrs, delt, numpar, ndump,
+                random, outdt, veght, metlib, metd, doublefiles, metfile,
+                nturb, outfrac, conv, ziscale, siguverr, TLuverr, zcoruverr,
+                horcoruverr, sigzierr, TLzierr, horcorzierr, varsout, nummodel,
+                outname, outpath, overwrite, status)
+names.returninfo <- c("yr", "mon", "day", "hr", paste("lat",1:npos,sep=""),
+                      paste("lon",1:npos,sep=""), paste("agl",1:npos,sep=""),
+                      "nhrs", "delt", "numpar", "ndump", "random", "outdt",
+                      "veght", "metlib", paste("metd",1:length(metd),sep=""),
+                      "doublemetfiles")
 
-names(returninfo)<-names.returninfo
+if(!is.null(metfile))names.returninfo <- c(names.returninfo,
+                                           paste("metfile",1:length(metfile),
+                                           sep=""))
+
+names.returninfo <- c(names.returninfo, "nturb", "outfrac", "conv")
+if(!is.null(ziscale))names.returninfo <- c(names.returninfo,
+                                           paste("ziscale",1:length(ziscale),
+                                           sep=""))
+
+if(!is.null(siguverr))names.returninfo <- c(names.returninfo, "siguverr")
+if(!is.null(TLuverr))names.returninfo <- c(names.returninfo, "TLuverr")
+if(!is.null(zcoruverr))names.returninfo <- c(names.returninfo, "zcoruverr")
+if(!is.null(horcoruverr))names.returninfo <- c(names.returninfo, "horcoruverr")
+if(!is.null(sigzierr))names.returninfo <- c(names.returninfo, "sigzierr")
+if(!is.null(TLzierr))names.returninfo <- c(names.returninfo, "TLzierr")
+if(!is.null(horcorzierr))names.returninfo <- c(names.returninfo, "horcorzierr")
+names.returninfo <- c(names.returninfo,
+                      paste("varsout", 1:length(varsout), sep=""),
+                      "nummodel", "outname", "outpath", "overwrite", "status")
+
+names(returninfo) <- names.returninfo
 
 
 
@@ -158,15 +197,18 @@ unix(paste("rm -f ",input6,sep=""))
 #Write the prescribed heights in met fields for ECMWF fields (hybrid coordinate)
 ecflag<-FALSE;if(!is.null(metfile)){if(length(grep("ec",tolower(metfile)))>0)ecflag<-TRUE}
 if(length(grep("ec",tolower(metd)))>0)ecflag<-TRUE
+
 if(ecflag){
-    metfile1<-getmetfile(yr=yr,mon=mon,day=day,hr=hr,nhrs=nhrs,metd="ECmetF",doublefiles=doublefiles)[1] #get name(s) of met files required to drive model
+    #get name(s) of met files required to drive model
+    metfile1<-getmetfile(yr=yr,mon=mon,day=day,hr=hr,nhrs=nhrs,metd="ECmetF",doublefiles=doublefiles)[1]
     if (is.null(zsg.name)) {
       zname<-paste(substring(metfile1,1,nchar(metfile1)-nchar("arl")),"IN",sep="")
     } else {
       zname <- zsg.name
     }
-#print(paste(metlib,zname,sep=""))
-  file.copy(from=paste(metlib,zname,sep=""), to=paste(rundir,"ZSG_LEVS.IN",sep=""), overwrite = TRUE) #use correct sigma levels, specific for ECMWF metdata file
+  #print(paste(metlib,zname,sep=""))
+  #use correct sigma levels, specific for ECMWF metdata file
+  file.copy(from=paste(metlib,zname,sep=""), to=paste(rundir,"ZSG_LEVS.IN",sep=""), overwrite = TRUE)
 }  #if(ecflag){
 
 
@@ -214,8 +256,14 @@ if (debugTF) {
 
 
 #translate variable names from R to fortran
-r.names<-c("time","sigmaw","TL",  "lon", "lat", "agl", "grdht","index","cldidx","temp","temp0","sampt","foot","shtf","lhtf","tcld","dmass","dens","rhf", "sphu","solw","lcld","zloc","swrad","wbar","zi",  "totrain","convrain","zconv","pres")
-f.names<-c("time","sigw",  "tlgr","long","lati","zagl","zsfc", "indx", "icdx",  "temz","temp", "samt", "foot","shtf","whtf","tcld","dmas", "dens","rhfr","sphu","solw","lcld","zloc","dswf", "wout","mlht","rain",   "crai","zcfx","pres")
+r.names<-c("time","sigmaw","TL",  "lon", "lat", "agl", "grdht","index","cldidx",
+           "temp","temp0","sampt","foot","shtf","lhtf","tcld","dmass","dens",
+           "rhf", "sphu","solw","lcld","zloc","swrad","wbar","zi", "totrain",
+           "convrain","zconv","pres")
+f.names<-c("time","sigw",  "tlgr","long","lati","zagl","zsfc", "indx", "icdx",
+           "temz","temp", "samt", "foot","shtf","whtf","tcld","dmas", "dens",
+           "rhfr","sphu","solw","lcld","zloc","dswf", "wout","mlht","rain",
+           "crai","zcfx","pres")
 varsout.f<-f.names[match(varsout,r.names)]
 if(sum(is.na(match(varsout,r.names)))>0)stop(paste("wrong names:",varsout[is.na(match(varsout,r.names))]))
 n.col<-length(varsout)
@@ -230,8 +278,10 @@ outdat<-NULL
 #
   if(is.null(metfile)){
     for (i in 1:length(metd)){
-    metf<-getmetfile(yr=yr,mon=mon,day=day,hr=hr,nhrs=nhrs,metd=metd[i],doublefiles=doublefiles) #get name(s) of met files required to drive model
-   metfile<-c(metfile,metf)
+
+    #get name(s) of met files required to drive model
+    metf<-getmetfile(yr=yr,mon=mon,day=day,hr=hr,nhrs=nhrs,metd=metd[i],doublefiles=doublefiles)
+    metfile<-c(metfile,metf)
     }
   }
 
@@ -283,14 +333,17 @@ cat(paste(metlib,'\n',metfile[i],'\n',sep=""),file=input1,append=T)  #met direct
 
 
 
-
-cat(paste(1,'\n','test','\n',emissrate,'\n',emisshrs,'\n',sep=""),file=input1,append=T)  #numb of pollutants, pollutant name, mass units emitted per hour, hours of emission
+#numb of pollutants, pollutant name, mass units emitted per hour, hours of emission
+cat(paste(1,'\n','test','\n',emissrate,'\n',emisshrs,'\n',sep=""),file=input1,append=T)
 cat(paste('00 00 00 00 00','\n',sep=""),file=input1,append=T)  #starting time of emissions--all 0's mean simulation starting time
-#   all default values for concentration grid definition
+
+# all default values for concentration grid definition
 cat(paste(1,'\n','0.0 0.0','\n','0.5 0.5','\n','30.0 30.0','\n','./','\n','cdump','\n','1','\n',sep=""),file=input1,append=T)
 cat(paste(100,'\n','00 00 00 00 00','\n','00 00 00 00 00','\n',sep=""),file=input1,append=T)
-cat(paste('00 ',sampintv,' 00','\n',sep=""),file=input1,append=T)   #'sampintv' is time interval(hrs) between which concentration grid  output would be written to file
-#   all default values for deposition definitions
+
+#'sampintv' is time interval(hrs) between which concentration grid  output would be written to file
+cat(paste('00 ',sampintv,' 00','\n',sep=""),file=input1,append=T)
+# all default values for deposition definitions
 cat(paste(1,'\n','0.0 0.0 0.0','\n','0.0 0.0 0.0 0.0 0.0','\n','0.0 0.0 0.0','\n','0.0','\n','0.0','\n',sep=""),file=input1,append=T)
 #
 #
@@ -298,29 +351,69 @@ cat(paste(1,'\n','0.0 0.0 0.0','\n','0.0 0.0 0.0 0.0 0.0','\n','0.0 0.0 0.0','\n
 
 #Generate 'Setup.cfg' file
 cat(paste(" &SETUP","\n",sep=""),file=input2)
-cat(paste(" TRATIO=",trat,",\n",sep=""),file=input2,append=T)  		#fraction of gridcell travelled by particles during a single timestep
-cat(paste(" INITD=0",",\n",sep=""),file=input2,append=T)  		#3-D particle simulation
-cat(paste(" KHMAX=9999",",\n",sep=""),file=input2,append=T)  		#max age a particle is allowed to attain
-cat(paste(" NUMPAR=",numpar,",\n",sep=""),file=input2,append=T)  	#total number of particles released at one time
-cat(paste(" QCYCLE=",qcycle,",\n",sep=""),file=input2,append=T)  	#number of hours between emission cycles
-cat(paste(" KRND=6",",\n",sep=""),file=input2,append=T)  		#at this interval in hrs, enhanced puff merging occurs
-cat(paste(" FRMR=0.0",",\n",sep=""),file=input2,append=T)  		#fraction of mass permitted to be removed at KRND intervals.
-cat(paste(" DELT=",delt,",\n",sep=""),file=input2,append=T)  		#nonzero value sets integration timestep to fixed step
-cat(paste(" ISOT=0",",\n",sep=""),file=input2,append=T)  		#flag used to set isotropic turbulence option
-cat(paste(" MGMIN=",mgmin,",\n",sep=""),file=input2,append=T)           #determines the size of the sub domain, set >1000 when working with high-res WRF-ARW met fields
-cat(paste(" OUTFRAC=",outfrac,",\n",sep=""),file=input2,append=T)       #fraction of particles which are allowed to leave the model area before hysplit stops
-cat(paste(" NDUMP=",ndump,",\n",sep=""),file=input2,append=T)  		#can be set to dump out all the particle/puff points at the end of a simulation to a file called
-									#PARDUMP. This file can be read from root directory at start of new simulation to continue previous calculation.
-									#Valid NDUMP settings: 0 - no I/O, 1- read and write, 2 - read only, 3 - write only. Default value = 0
+
+# fraction of gridcell travelled by particles during a single timestep
+cat(paste(" TRATIO=",trat,",\n",sep=""),file=input2,append=T)
+
+# 3-D particle simulation
+cat(paste(" INITD=0",",\n",sep=""),file=input2,append=T)
+
+# max age a particle is allowed to attain
+cat(paste(" KHMAX=9999",",\n",sep=""),file=input2,append=T)
+
+# total number of particles released at one time
+cat(paste(" NUMPAR=",numpar,",\n",sep=""),file=input2,append=T)
+
+# number of hours between emission cycles
+cat(paste(" QCYCLE=",qcycle,",\n",sep=""),file=input2,append=T)
+
+# at this interval in hrs, enhanced puff merging occurs
+cat(paste(" KRND=6",",\n",sep=""),file=input2,append=T)
+
+# fraction of mass permitted to be removed at KRND intervals.
+cat(paste(" FRMR=0.0",",\n",sep=""),file=input2,append=T)
+
+# nonzero value sets integration timestep to fixed step
+cat(paste(" DELT=",delt,",\n",sep=""),file=input2,append=T)
+
+# flag used to set isotropic turbulence option
+cat(paste(" ISOT=0",",\n",sep=""),file=input2,append=T)
+
+# determines the size of the sub domain,
+# set >1000 when working with high-res WRF-ARW met fields
+cat(paste(" MGMIN=",mgmin,",\n",sep=""),file=input2,append=T)
+
+# fraction of particles which are allowed to leave the model area before hysplit stops
+cat(paste(" OUTFRAC=",outfrac,",\n",sep=""),file=input2,append=T)
+
+#can be set to dump out all the particle/puff points at the end of a simulation to a file called
+cat(paste(" NDUMP=",ndump,",\n",sep=""),file=input2,append=T)
+#PARDUMP. This file can be read from root directory at start of new simulation to continue previous calculation.
+#Valid NDUMP settings: 0 - no I/O, 1- read and write, 2 - read only, 3 - write only. Default value = 0
+
+
 i<-0;if(random)i<-1
-cat(paste(" RANDOM=",i,",\n",sep=""),file=input2,append=T)  		#flag used to set isotropic turbulence option
-cat(paste(" OUTDT=",outdt,",\n",sep=""),file=input2,append=T) 		#interval [min] that will determine how often particle data are written out to PARTICLE.DAT
-cat(paste(" VEGHT=",veght,",\n",sep=""),file=input2,append=T) 		#height below which time is counted as particle seeing the ground
+
+#flag used to set isotropic turbulence option
+cat(paste(" RANDOM=",i,",\n",sep=""),file=input2,append=T)
+
+#interval [min] that will determine how often particle data are written out to PARTICLE.DAT
+cat(paste(" OUTDT=",outdt,",\n",sep=""),file=input2,append=T)
+
+#height below which time is counted as particle seeing the ground
+cat(paste(" VEGHT=",veght,",\n",sep=""),file=input2,append=T)
+
+# flag used to switch off turbulence
 i<-0;if(nturb)i<-1
-cat(paste(" NTURB=",i,",\n",sep=""),file=input2,append=T)  		#flag used to switch off turbulence
+cat(paste(" NTURB=",i,",\n",sep=""),file=input2,append=T)
+
+# flag used to switch on convection
 i<-0;if(conv)i<-1
-cat(paste(" ICONVECT=",i,",\n",sep=""),file=input2,append=T)  		#flag used to switch on convection
-if(is.null(ziscale)){  							#'ziscale' is vector of scaling factors used to prescribe mixed-layer height during model run
+cat(paste(" ICONVECT=",i,",\n",sep=""),file=input2,append=T)
+
+
+# 'ziscale' is vector of scaling factors used to prescribe mixed-layer height during model run
+if(is.null(ziscale)){
    cat(paste(" ZICONTROLTF=0,\n",sep=""),file=input2,append=T)
 }else{
    cat(paste(" ZICONTROLTF=1,\n",sep=""),file=input2,append=T)
@@ -401,7 +494,7 @@ if(as.numeric(unix(paste("cat ", rundir,"PARTICLE.DAT | wc -l",sep=""))) < 2){
 
 
   metoutname<-NULL;for(i in 1:length(metfile))metoutname<-paste(metoutname,metfile[i],sep="x")
-#  returninfo<-c(returninfo,timesofar)
+  # returninfo<-c(returninfo,timesofar)
   names(returninfo)[length(returninfo)]<-metoutname
   returninfo["status"]<-1 #perfect, all times done
   #if (debugTF) {
