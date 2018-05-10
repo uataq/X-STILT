@@ -1,24 +1,32 @@
 # subroutine to find met files
+# by DW
 
+# updates:
+# no need to "cat" met files together,
+# simply grab all met files given time strings
 
-find.metfile<-function(timestr, nhrs, metpath, met, trajecTF){
+find.metfile<-function(timestr, nhrs, metpath, met.format){
 
-  pattern <- substr(timestr, 1, 6)
+  # calculate timestring, given receptor time and nhrs
+  # then use timestring to search for met files
+  # if simply for interpolating ground height, nhrs = +/- 1
+  yr <- as.numeric(substr(timestr, 1, 4))
+  mon <- as.numeric(substr(timestr, 5, 6))
+  day <- as.numeric(substr(timestr, 7, 8))
+  hr <- as.numeric(substr(timestr, 9, 10))
 
-  # for WRF--met files for generating trajec
-  if(trajecTF & met=="1km"){
-    # requires all nested met fields and nhrs, for WRF
-    metfile <- rev(list.files(path=metpath, pattern=pattern))[-6]
-  }else{
-    # met files for trajwind() to interpolate ground heights,
-    # requires receptor lat, lon
-    filename <- paste("wrfout_d04_", tolower(site), "_", pattern, sep="")
-    if(met == "1km") metfile <- list.files(path=metpath, pattern=filename)
-  }
+  range.time <- data.frame(weekdayhr(yr=yr, mon=mon, day=day, hr=hr,
+                                     runtt=seq(sign(nhrs), nhrs)*60))
 
-  # for 1deg or 0.5deg GDAS--
-  filename <- paste(met, "_", pattern, sep="")
-  if(met != "1km") metfile <- list.files(path=metpath, pattern=filename)
+  range.timestr <- paste(formatC(range.time$yr, width=4, flag=0), "-",
+                         formatC(range.time$mon, width=2,flag=0), "-",
+                         formatC(range.time$day, width=2,flag=0), " ",
+                         formatC(range.time$hr, width=2,flag=0), ":00:00",
+                         sep="")
+  range.date <- as.POSIXlt(range.timestr, format="%Y-%m-%d %H:%M:%S", tz="UTC")
+  met.pattern <- unique(sort(strftime(range.date, format=met.format)))
 
-  return(metfile)
+  #metfile <- file.path(path=metpath, pattern=met.pattern)
+
+  return(met.pattern)
 }
