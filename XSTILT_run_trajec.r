@@ -63,7 +63,7 @@ if(selTF)nhrs <- -24  # 1day if  selTF
 
 # copy for running trajwind() or trajec()
 #nummodel <- 1
-nummodel <- seq(1,10)
+nummodel <- seq(1,5)
 dxyp <- NULL
 if(forwardTF){
   dxyp <- 0.2*2       # +/-dxyp, +/-dxyp around the city center
@@ -229,8 +229,8 @@ if(forwardTF == F){
 
   # set up job info and write bash script
   job.time <- "24:00:00"
-  num.nodes <- 2
-  num.cores <- round(length(namelist$nummodel)/num.nodes)
+  num.nodes <- 1
+  num.cores <- length(namelist$nummodel)
   account <- "lin-kp"; partition <- "lin-kp"
   email <- "dien.wu@utah.edu"
   email.type <- c("FAIL,BEGIN,END")
