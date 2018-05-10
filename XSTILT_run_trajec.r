@@ -8,26 +8,32 @@ homedir <- "/uufs/chpc.utah.edu/common/home"
 workdir <- file.path(homedir, "lin-group1/wde/github/XSTILT")
 setwd(workdir) # move to working directory
 
-source(file.path(workdir, "src/sourceall.r"))  # source all functions
+# source all functions
+source(file.path(workdir, "src/sourceall.r"))
 library(ncdf4); library(ggplot2)
 
 #------------------------------ STEP 1 --------------------------------------- #
 #### CHOOSE CITIES, TRACKS AND OCO-2 LITE FILE VERSION ***
-index <- 1
-site  <- c("Riyadh", "Cairo", "PRD")[index]
+index <- 4
+site  <- c("Riyadh", "Cairo", "PRD", "Jerusalem")[index]
 met   <- c("1km", "gdas1", "gdas0p5")[3]  # customized WRF, 1 or 0.5deg GDAS
-tt    <- 2                                # which track to model
-oco2.version <- c("b7rb","b8r")[1]        # OCO-2 version
+tt    <- 1                                # which track to model
+oco2.version <- c("b7rb","b8r")[2]        # OCO-2 version
 
 #### CHOOSE OVERPASSED TIMESTR ***
 # input all track numbers to be modeled, can be YYYYMMDD OR YYYYMMDDHH ***
 # track timestr can also be grabbed from another script
 riyadh.timestr <- c("20141227", "20141229", "20150128", "20150817", "20151112",
                     "20151216", "20160115", "20160216", "20160725", "20161031")
+jerusalem.timestr <- c("20150615", "20150624", "20150717", "20150726",
+                       "20160601", "20160610", "20160703", "20160712",
+                       "20170417", "20170528", "20170620", "20170629")
 cairo.timestr <- c("20150228", "20150318", "20160224"); prd.timestr<- "20150115"
 
 # final timestr, YYYYMMDD and file strings for trajec
-track.timestr <- c(riyadh.timestr[tt], cairo.timestr[tt], prd.timestr)[index]
+track.timestr <- c(riyadh.timestr[tt], cairo.timestr[tt], prd.timestr,
+                   jerusalem.timestr[tt])[index]
+
 filestr <- paste(substr(track.timestr,1,4), "x", substr(track.timestr,5,6), "x",
                  substr(track.timestr,7,8), sep="")
 
@@ -37,14 +43,16 @@ filestr <- paste(substr(track.timestr,1,4), "x", substr(track.timestr,5,6), "x",
 if(site == "Riyadh"){lat.lon <- c(23, 26, 45, 50, 24.71, 46.75); oco2.hr <- 10}
 if(site == "Cairo"){lat.lon <- c(29, 31, 30, 32, NA, NA); oco2.hr <- NA}
 if(site == "PRD"){lat.lon <- c(22, 23, 112, 115, NA, NA); oco2.hr <- NA}
+if(site == "Jerusalem"){lat.lon <- c(31, 33, 35, 36, 31.78, 35.22); oco2.hr<-10}
+track.timestr <- paste(track.timestr, oco2.hr, sep="")
 
 #------------------------------ STEP 2 --------------------------------------- #
 #### TURN ON/OFF FLAGS for XSTILT setups ***
 selTF <- F       # true for only use 1-day trajs.
-columnTF <- F    # whether a column receptor or fixed receptor
-forwardTF <- T   # forward or backward traj, if forward, release from a box
-windowTF <- T    # whether to release particles every ?? minutes, "dhr" in hours
-uncertTF <- T    # whether add wind error component to generate trajec
+columnTF <- T    # whether a column receptor or fixed receptor
+forwardTF <- F   # forward or backward traj, if forward, release from a box
+windowTF <- F    # whether to release particles every ?? minutes, "dhr" in hours
+uncertTF <- F    # whether add wind error component to generate trajec
 overwrite <- T	      # T:rerun hymodelc, even if particle location object found
                       # F:re-use previously calculated particle location object
 delt <- 2             # fixed timestep [min]; set =0 for dynamic timestep
@@ -54,7 +62,9 @@ nhrs <- -72           # number of hours backward (-) or forward (+)
 if(selTF)nhrs <- -24  # 1day if  selTF
 
 # copy for running trajwind() or trajec()
-nummodel <- 1; dxyp <- NULL
+#nummodel <- 1
+nummodel <- seq(1,10)
+dxyp <- NULL
 if(forwardTF){
   dxyp <- 0.2*2       # +/-dxyp, +/-dxyp around the city center
   nummodel <- 997     # use TN's hymodelc to run forward box trajec
@@ -135,11 +145,14 @@ ocopath  <- file.path(homedir, "lin-group1/wde/STILT_input", ocostr)
 
 #### CHANGE METFILES ***
 # path for the ARL format of WRF and GDAS, CANNOT BE TOO LONG ***
-metpath <- file.path(homedir, "u0947337/")
+metpath <- file.path(homedir, "u0947337", "GDAS0p5")
 
 # get metfile for generating backward trajectories
+# met.format: met file convention, e.g., "%Y%m%d_gdas0p5"
+met.format <- "%Y%m%d_gdas0p5"
+#source(file.path(workdir, "src/sourceall.r"))  # source all functions
 metfile <- find.metfile(timestr=track.timestr, nhrs=nhrs, metpath=metpath,
-                        met=met, trajecTF=T) # do not change trajecTF=T !!!
+                        met.format=met.format)
 
 # Where to run STILT, where Copy lies
 rundir <- file.path(homedir, "lin-group1/wde/STILT_modeling/STILT_Exe/")
@@ -172,7 +185,8 @@ if(columnTF){
 
 ## eyeball lat range for enhanced XCO2, or grab from available forward-time runs
 # place denser receptors during this lat range (40pts in 1deg)
-peak.lat <- c(24.5, 25)  # in deg North (+), required for backward run
+#peak.lat <- c(24.5, 25)  # in deg North (+), required for backward run
+peak.lat <- c(31.5, 32)
 bw.bg <- 1/20    # binwidth over small enhancements, e.g., every 20 pts in 1deg
 bw.peak <- 1/40  # binwidth over large enhancements, during "peak.lat"
 
@@ -185,37 +199,70 @@ recp.index <- c(seq(lat.lon[1], peak.lat[1], bw.bg),
 #### !!! NO NEED TO CHANGE ANYTHING LISTED BELOW -->
 # create a namelist including all variables
 # namelist required for generating trajec
-namelist <- list(met=met,site=site,timestr=track.timestr,filestr=filestr,
-                 lat.lon=lat.lon, ocopath=ocopath, outpath=trajpath,
-                 rundir=rundir,delt=delt, metpath=metpath, metfile=metfile,
-                 selTF=selTF, nhrs=nhrs, columnTF=columnTF, forwardTF=forwardTF,
-                 uncertTF=uncertTF, windowTF=windowTF, nummodel=nummodel,
-                 overwrite=overwrite, minagl=minagl, maxagl=maxagl, zi=zi,
-                 dpar=dpar, npar=npar, agl=agl, dh=dh, dxyp=dxyp, dtime=dtime,
-                 oco2.hr=oco2.hr, siguverr=siguverr, TLuverr=TLuverr,
-                 zcoruverr=zcoruverr, horcoruverr=horcoruverr,
-                 recp.index=recp.index, stringsAsFactors=F)
+namelist <- list(met=met, site=site, timestr=track.timestr, filestr=filestr,
+                 lat.lon=lat.lon, ocopath=ocopath, oco2.version=oco2.version,
+                 outpath=trajpath, rundir=rundir,delt=delt, metfile=metfile,
+                 metpath=metpath, selTF=selTF, nhrs=nhrs, columnTF=columnTF,
+                 forwardTF=forwardTF, uncertTF=uncertTF, windowTF=windowTF,
+                 nummodel=nummodel, overwrite=overwrite, minagl=minagl,
+                 maxagl=maxagl, zi=zi, dpar=dpar, npar=npar, agl=agl, dh=dh,
+                 dxyp=dxyp, dtime=dtime, oco2.hr=oco2.hr, siguverr=siguverr,
+                 TLuverr=TLuverr, zcoruverr=zcoruverr, horcoruverr=horcoruverr,
+                 homedir=homedir, recp.index=recp.index, workdir=workdir,
+                 stringsAsFactors=F)
 
-# store namelist to output directory
-filenm <- paste("trajlist_", site, "_", track.timestr, sep="")
-if(forwardTF==F)filenm <- paste(filenm, "_backward.txt", sep="")
-if(forwardTF==T)filenm <- paste(filenm, "_forward.txt", sep="")
-filenm <- file.path(outpath, filenm)  # link to path
-write.table(x=t(namelist), file=filenm, sep="\n", col.names=F, quote=T)
+
+#------------------------------ STEP 6 --------------------------------------- #
+#### call get.more.namelist() to get more info about receptors
+# trajectories will be stored in ./output
+if(forwardTF == F){
+
+  # further read OCO-2 data
+  # then get receptor info and other info for running trajec
+  # plotTF for whether plotting OCO-2 observed data
+  namelist <- get.more.namelist(namelist = namelist, plotTF=F)
+
+  # write X-STILT CONTROL r scripts
+  cat("Checking and distributing copies...\n")
+  run.filenm <- "run_XSTILT"
+  allocate.recp(namelist, run.name=run.filenm)
+
+  # set up job info and write bash script
+  job.time <- "24:00:00"
+  num.nodes <- 2
+  num.cores <- round(length(namelist$nummodel)/num.nodes)
+  account <- "lin-kp"; partition <- "lin-kp"
+  email <- "dien.wu@utah.edu"
+  email.type <- c("FAIL,BEGIN,END")
+  workdir <- namelist$workdir
+  filenm <- "XSTILT.sh"  # store at workdir
+
+  # write bash file --> config --> run_XSTILT
+  write.bash(job.time, num.nodes, num.cores, account, partition, email,
+             email.type, workdir, filenm, run.filenm)
+
+  cat("Generating backward trajec...\n")
+
+  # turn on excutable permission
+  system(paste("chmod u+x ./", filenm, sep=""))
+  system(paste("sbatch ", filenm, sep=""))
+  q()
+} # if backward
+
 
 #------------------------------ STEP 7 --------------------------------------- #
-#### call run.backward.trajec to start running trajectories
-# trajectories will be stored in ./output
-# plotTF for whether plotting OCO-2 observed data if calling backward subroutine
-if(forwardTF==F){
-  cat("Generating backward trajec...\n")
-  back.info <- run.backward.trajec(namelist = namelist, plotTF=F)
-}
-
+# if for forward time runs
 # plotTF for whether plotting urban plume & obs XCO2 if calling forward function
 # !!! if forward, release particles from a box around the city center
 if(forwardTF==T){
   cat("Generating forward trajec...\n")
+
+  # store namelist to output directory
+  filenm <- paste("trajlist_", site, "_", track.timestr, sep="")
+  filenm <- paste(filenm, "_forward.txt", sep="")
+  filenm <- file.path(outpath, filenm)  # link to path
+  write.table(x=t(namelist), file=filenm, sep="\n", col.names=F, quote=T)
+
   source(file.path(workdir, "src/sourceall.r"))  # source all functions
   forw.info <- run.forward.trajec(namelist = namelist, plotTF=T)
 }
