@@ -71,8 +71,8 @@ sim.xco2 <- function(namelist, recp.info, odiac.co2){
   #--------------------------------------------------------------------------- #
   # 1. get OCO-2 info given recp.info
 	# requires get.oco2info() from "OCO2.get.oco2info.r"
-  YYYYMMDD <- substr(namelist$timestr,1,8)
-  oco2.file <- list.files(pattern=YYYYMMDD, path=namelist$ocopath)
+  YYMMDD <- substr(namelist$timestr, 3, 8)
+  oco2.file <- list.files(pattern=YYMMDD, path=namelist$ocopath)
 
 	cat(paste("sim.xco2(): grabbing satellite profiles given recp lat/lon...\n"))
   oco2.info <- get.oco2info(ocopath=namelist$ocopath, ocofile=oco2.file,

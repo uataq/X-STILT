@@ -51,6 +51,7 @@ source(paste(xpath, "get.grdhgt.r", sep=""))
 source(paste(xpath, "find.metfile.r", sep=""))
 source(paste(xpath, "get.SIGUVERR.r", sep=""))
 source(paste(xpath, "grab.oco2.r", sep=""))
+source(paste(xpath, "area.r", sep="")) # calculate the area given lat/lon info
 
 source(paste(xpath, "ggplot.forward.trajec.r", sep=""))
 source(paste(xpath, "ggplot.map.r", sep=""))
@@ -81,6 +82,7 @@ source(paste(xpath, "OCO2.get.weight.funcv2.r", sep=""))
 source(paste(xpath, "OCO2.weight.trajecfootv2.r", sep=""))
 
 # X-STILT XCO2 simulation related --
+source(paste(xpath, "convert.tif2nc.odiac.r", sep=""))
 source(paste(xpath, "OCO2.odiac.anthro.r", sep=""))
 source(paste(xpath, "OCO2.ctnrt.bio.ocean.r", sep=""))
 source(paste(xpath, "OCO2.ctnrt.traj.edp.r", sep=""))
