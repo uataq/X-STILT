@@ -31,8 +31,8 @@ get.grdhgt <- function(recp.info, nummodel, agl=10, nhrs=-1, rundir, outpath,
   outname <- paste(unique(recp.info$timestr), "_", site, sep="")
 
   # if outpath did not end with "/"
-  if(substr(outpath, nchar(outpath), nchar(outpath))!="/"){
-    outpath <- paste(outpath, "/",sep="")
+  if(substr(metpath, nchar(metpath), nchar(metpath))!="/"){
+    metpath <- paste(metpath, "/",sep="")
   }
 
   # yr, mon, day, hr should be the same,
