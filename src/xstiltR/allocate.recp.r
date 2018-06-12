@@ -4,17 +4,19 @@
 
 allocate.recp <- function(namelist){
 
-  ## before writing, delete previous run_XSTILT and each trajlist* and CONTROL*
-  if(length(list.files(namelist$workdir, "run_XSTILT"))>0){
-    file.remove(list.files(namelist$workdir, "run_XSTILT"))
-  }
+  if(namelist$rmTF){
+    ## before writing, delete previous run_XSTILT and each trajlist* and CONTROL*
+    if(length(list.files(namelist$workdir, "run_XSTILT"))>0){
+      file.remove(list.files(namelist$workdir, "run_XSTILT"))
+    }
 
-  if(length(list.files(namelist$workdir, "XSTILT_CONTROL"))>0){
-    file.remove(list.files(namelist$workdir, "XSTILT_CONTROL"))
-  }
+    if(length(list.files(namelist$workdir, "XSTILT_CONTROL"))>0){
+      file.remove(list.files(namelist$workdir, "XSTILT_CONTROL"))
+    }
 
-  if(length(list.files(namelist$workdir, "trajlist_"))>0){
-    file.remove(list.files(namelist$workdir, "trajlist_"))
+    if(length(list.files(namelist$workdir, "trajlist_"))>0){
+      file.remove(list.files(namelist$workdir, "trajlist_"))
+    }
   }
 
   # create new names

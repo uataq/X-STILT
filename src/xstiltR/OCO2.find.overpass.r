@@ -5,12 +5,13 @@
 
 # target.region contains c(min.lat, max.lat, min.lon, max.lon), NEED THIS ORDER!!!
 # default city center is for Riyadh
-find.overpass<-function(date=date, targe.region=target.region,oco2.version=c("b7rb","b8r")){
+find.overpass <- function(date, targe.region, oco2.version = c("b7rb", "b8r")){
 
   library(geosphere)
+
   # path and filename for storing OCO-2 info
-  ocopath<-paste("/uufs/chpc.utah.edu/common/home/lin-group1/wde/STILT_input/OCO-2/OCO2_lite_",oco2.version,"/",sep="")
-  allfile<-list.files(pattern="oco2_LtCO2_",path=ocopath)
+  oco2.path<-paste("/uufs/chpc.utah.edu/common/home/lin-group1/wde/STILT_input/OCO-2/OCO2_lite_",oco2.version,"/",sep="")
+  allfile<-list.files(pattern="oco2_LtCO2_",path=oco2.path)
 
   #start<-paste("oco2_LtCO2_",substr(date[1],1,8),"_B7000rb_COoffline.nc4",sep="")
   #end<-paste("oco2_LtCO2_",substr(date[length(date)],1,8),"_B7000rb_COoffline.nc4",sep="")
@@ -36,7 +37,7 @@ find.overpass<-function(date=date, targe.region=target.region,oco2.version=c("b7
   for (f in 1:length(ocofile)){
 
     if(f%%20==0)cat(paste("#------ ",signif(f/length(ocofile),3)*100,"% SEARCHED ------#\n"))
-    ocodat<-nc_open(paste(ocopath,ocofile[f],sep=""))
+    ocodat<-nc_open(paste(oco2.path,ocofile[f],sep=""))
     oco.lat<-ncvar_get(ocodat,"latitude");oco.lon<-ncvar_get(ocodat,"longitude")      # grabbing OCO-2 levels, lat, lon
     oco.qf<-ncvar_get(ocodat,"xco2_quality_flag")
     oco.wl<-ncvar_get(ocodat,"warn_level")
@@ -58,5 +59,6 @@ find.overpass<-function(date=date, targe.region=target.region,oco2.version=c("b7
   result<-as.data.frame(result)
   colnames(result)<-c("timestr","tot.count","qf.count","wl.count")
   result<-result[order(result$timestr),]
+
   return(result)
 }

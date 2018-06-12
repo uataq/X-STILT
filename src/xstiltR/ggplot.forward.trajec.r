@@ -3,17 +3,16 @@
 # convert kernel density to percentile, DW, 11/15/2017
 # return latitude range, DW, 11/16/2017
 
-ggplot.forward.trajec <- function(ident, trajpath, site, timestr, ocopath, zoom,
+ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path, zoom,
                                    lat.lon){
 
   # need joinPolys() and point.in.polygon() functions
   library(ggplot2); library(ncdf4); library(MASS)
   library(PBSmapping); library(sp)
-
   font.size <- rel(1.2)
 
   # call grab.oco2() to read in observations
-  obs.all <- grab.oco2(ocopath=ocopath, timestr=timestr, lat.lon=lat.lon)
+  obs.all <- grab.oco2(oco2.path, timestr, lat.lon)
 
   # read in forward trajec
   trajdat <- NULL

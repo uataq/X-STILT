@@ -35,6 +35,11 @@ get.grdhgt <- function(recp.info, nummodel, agl=10, nhrs=-1, rundir, outpath,
     metpath <- paste(metpath, "/",sep="")
   }
 
+  # if outpath did not end with "/"
+  if(substr(rundir, nchar(rundir), nchar(rundir))!="/"){
+    rundir <- paste(rundir, "/",sep="")
+  }
+
   # yr, mon, day, hr should be the same,
   # trajwind() can return matrix if lat/lon/agl is in vector form
 	trajwind.info <- trajwind(yr =unique(recp.info$recp.year - 2000),

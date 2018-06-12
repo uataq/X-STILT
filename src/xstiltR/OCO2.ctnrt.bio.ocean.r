@@ -45,7 +45,7 @@ ctnrt.bio.ocean <- function(ident, foot, recp.info, ct.version, ctpath,
   # if foot hours differ from CT hours, the subroutine cannot find the CT times
   # break...
   if(unique(back.times$hr %% 3 != 0)){
-    cat("ctnrt.biov2(): foot hours differ from CT hours, NO files found...\n")
+    cat("ctnrt.bio.ocean(): foot hours differ from CT hours, NO files found...\n")
 
   }else{  # if not, we can find CT files
 
@@ -72,7 +72,12 @@ ctnrt.bio.ocean <- function(ident, foot, recp.info, ct.version, ctpath,
       # open the daily file just once
       ctpattern <- paste("flux1x1.", foot.dd[f], sep="")
       ctfile <- list.files(path=ctpath, pattern=ctpattern)
-      ctdat  <- nc_open(file.path(ctpath, ctfile))
+
+      if(length(ctfile)==0){
+        stop("ctnrt.bio.ocean(): NO CT flux files found...Please check...\n")
+      }else{
+        ctdat <- nc_open(file.path(ctpath, ctfile))
+      }
 
       # 2D map for each 3 hours
       # 1 deg in N-S, 1 deg in E-W, move centered lat/lon to lower left
@@ -81,13 +86,13 @@ ctnrt.bio.ocean <- function(ident, foot, recp.info, ct.version, ctpath,
         ct.lat <- ncvar_get(ctdat, "lat") - 0.5
         ct.lon <- ncvar_get(ctdat, "lon") - 0.5
         ct.time <- ncvar_get(ctdat, "date_components")
-      }
+      } # if v2016
 
       if(ct.version == "v2017"){
         ct.lat <- ncvar_get(ctdat, "latitude") - 0.5
         ct.lon <- ncvar_get(ctdat, "longitude") - 0.5
         ct.time <- ncvar_get(ctdat, "time_components")
-      }
+      } # if v2017
 
       rownames(ct.time) <- c("year", "mon", "day", "hour", "min", "sec")
 
@@ -135,8 +140,8 @@ ctnrt.bio.ocean <- function(ident, foot, recp.info, ct.version, ctpath,
       #print(c(min.store,max.store))
 
       # put into the big array for storing
-      ctbio[,,seq(min.store, max.store)] <- sel.ct.bio  # umol/m2/s
-      ctocean[,,seq(min.store, max.store)] <- sel.ct.ocean  # umol/m2/s
+      ctbio[,, seq(min.store, max.store)] <- sel.ct.bio  # umol/m2/s
+      ctocean[,, seq(min.store, max.store)] <- sel.ct.ocean  # umol/m2/s
       nc_close(ctdat)
     }# end for f
 
