@@ -97,3 +97,7 @@ source(paste(xpath, "OCO2.apriori.r", sep=""))
 # subroutines for bootstrap --
 source(paste(xpath, "OCO2.bootstrap.level.r", sep=""))
 source(paste(xpath, "OCO2.bootstrap.traj.r", sep=""))
+
+
+# plotting
+source(paste(xpath, "ggplot.sim.obs.r", sep=""))

@@ -1,6 +1,6 @@
 # X-STILT: X-Stochastic Time-Inverted Lagrangian Transport model
 ## Descriptions:
-Main R scripts and subroutines for X-STILT, modified from the Stochastic Time-Inverted Lagrangian Transport (STILT) model [*Lin et al*., 2003] based on the manuscript of *Wu et al.* (submitted to *Geophysical Modeling Developments*).
+Main R scripts and subroutines for X-STILT, modified from the Stochastic Time-Inverted Lagrangian Transport (STILT) model [*Lin et al*., 2003] based on the manuscript of *Wu et al.* (submitted to *Geoscientific Model Development*).
 
 ## Details:
 - X-STILT runs (column or fixed receptors)
@@ -14,4 +14,4 @@ Main R scripts and subroutines for X-STILT, modified from the Stochastic Time-In
 3. Generate/store weighted column footprint
 4. Convolve column footprint (from above step) with different emission/flux grids
 
-Model developments are ongoing. Please contact Dien if you have any questions/comments/suggestions. Thanks.
+Model developments are ongoing. Please contact Dien if you have any questions/comments/suggestions. Thank you.
