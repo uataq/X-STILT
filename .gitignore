@@ -35,3 +35,7 @@ vignettes/*.pdf
 count_overpass*
 old/*
 output/*
+*.sh
+run_XSTILT_*
+*ggplot*.r
+*.conf

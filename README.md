@@ -2,10 +2,9 @@
 ## Descriptions:
 Main R scripts and subroutines for X-STILT, modified from the Stochastic Time-Inverted Lagrangian Transport (STILT) model [*Lin et al*., 2003] based on [*Wu et al*., 2018] (in review on *Geoscientific Model Development Discussion*).
 
-Also, we're been building X-STILTv2 based on the latest STILT-R version 2 [*Fasoli et al*., 2018] with improved model efficiency and more realistic "footprint" values (https://uataq.github.io/stilt/). Please check model codes on "*OCO2-XSTILT*" branch of STILTv2 (https://github.com/wde0924/stilt/tree/oco2-xstilt).
-
-
 ## Details for X-STILTv2.0 based on STILT-R version 2 [*Fasoli et al*., 2018]:
+We're been building X-STILTv2 based on the latest STILT-R version 2 [*Fasoli et al*., 2018] with improved model efficiency and more realistic "footprint" values (https://uataq.github.io/stilt/). Please check model codes on "*OCO2-XSTILT*" branch of STILTv2 (https://github.com/wde0924/stilt/tree/oco2-xstilt).
+
 One can select OCO-2 overpasses and make spatial plots of retrived XCO2 before running X-STILT, by creating a namelist in 'create_namelist_oco2-xstilt.r'. Additional subroutines on top of STILT-R version 2 can be found in /r/src/oco2-xstilt.
 
 ![Example: Spatial map of XCO2 contribution (ppm) on 12/29/2014 for few selected soundings/receptors over Riyadh](xco2_Riyadh_2014122910_gdas0p5_STILTv2_zoom8_-24hrs_100dpar.png)
