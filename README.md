@@ -8,9 +8,9 @@ We're been building X-STILTv2 based on the latest STILT-R version 2 [*Fasoli et 
 
 One can select OCO-2 overpasses and make spatial plots of retrived XCO2 before running X-STILT, by creating a namelist in 'create_namelist_oco2-xstilt.r'. Additional subroutines on top of STILT-R version 2 can be found in /r/src/oco2-xstilt.
 
+Example:
 ![](xco2_Riyadh_2014122910_gdas0p5_STILTv2_zoom8_-24hrs_100dpar.png)
-Example: Spatial map of XCO2 contribution (ppm) on 12/29/2014 for few selected soundings/receptors over Riyadh
-
+Figure 1: Spatial map of XCO2 contribution (ppm) on 12/29/2014 for few selected soundings/receptors over Riyadh
 
 ## Details for X-STILTv1.1 based on STILTv1 [*Lin et al*., 2003]:
 - X-STILT runs (column or fixed receptors)
