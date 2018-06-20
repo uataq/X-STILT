@@ -1,4 +1,4 @@
-# X-STILT: X-Stochastic Time-Inverted Lagrangian Transport model
+# X-STILT: Column-Stochastic Time-Inverted Lagrangian Transport model
 ## Descriptions:
 Main R scripts and subroutines for X-STILT, modified from the Stochastic Time-Inverted Lagrangian Transport (STILT) model [*Lin et al*., 2003] based on [*Wu et al*., 2018] (in review on *Geoscientific Model Development Discussion*).
 
@@ -8,6 +8,7 @@ Also, we're been building X-STILTv2 based on the latest STILT-R version 2 [*Faso
 ## Details for X-STILTv2.0 based on STILT-R version 2 [*Fasoli et al*., 2018]:
 One can select OCO-2 overpasses and make spatial plots of retrived XCO2 before running X-STILT, by creating a namelist in 'create_namelist_oco2-xstilt.r'. Additional subroutines on top of STILT-R version 2 can be found in /r/src/oco2-xstilt.
 
+![Example: Spatial map of XCO2 contribution (ppm) on 12/29/2014 for few selected soundings/receptors over Riyadh](xco2_Riyadh_2014122910_gdas0p5_STILTv2_zoom8_-24hrs_100dpar.png)
 
 ## Details for X-STILTv1.1 based on STILTv1 [*Lin et al*., 2003]:
 - X-STILT runs (column or fixed receptors)
