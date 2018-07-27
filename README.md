@@ -6,38 +6,37 @@ Model developments are ongoing towards a more flexible model framework that can 
 
 
 ## Details for X-STILTv2.0 based on STILT-R version 2 [*Fasoli et al*., 2018]:
-We're been merging column features with the new STILT-R version 2 [*Fasoli et al*., 2018] with improved model efficiency and more realistic "footprint" values (https://uataq.github.io/stilt/). Modifications on top of STILTv2 are located in /src/oco2-xsilt. Users can start with 'create_namelist_oco2-xsilt.r' for model and parameter initializations.
+We're been merging column features with the new STILT-R version 2 [*Fasoli et al*., 2018] with improved model efficiency and more realistic "footprint" values (https://uataq.github.io/stilt/). Still, one can use Trajecfoot() from STILTv1 for generating footprints, if setting stilt.ver to 1.
+Modifications on top of STILTv2 are located in /src/oco2-xsilt. Users can start with 'create_namelist_oco2-xsilt.r' for model and parameter initializations.
 
 - X-STILTv2 features:
 1. Select OCO-2 overpasses and make spatial plots of retrieved XCO2 given a city
-  * requires a spatial domain for each city, see *get.lon.lat()* and *get.site.track()*
 2. Select OCO-2 soundings based on latitude binwidths for each overpass
 3. Create namelist with model parameters
-4. Included model runs and analysis controlled by *flags*:
-  * Backward trajectories + weighted column footprints        -> *run_trajec/run_foot*
-  * Forward trajectories + 2D kernel density maps             -> *forwardTF*
-  * Horizontal transport error                                -> *run_hor_err*
-      -> wind error statistics needed
-  * Vertical transport error via scaling mixed layer height   -> *zicontroltf*
-  * Simulate FFCO2 XCO2 enhancements                          -> *run_sim*
-      -> footprints + emission fields needed
+4. Model runs and analysis included:
+   * Backward trajectories + weighted column footprints        -> *run_trajec/run_foot*
+   * Forward trajectories + 2D kernel density maps             -> *forwardTF*
+   * Horizontal transport error (wind error statistics needed) -> *run_hor_err*
+   * Vertical transport error via scaling mixed layer height   -> *zicontroltf*
+   * Simulate FFCO2 XCO2 enhancements (footprint needed)       -> *run_sim*
+
 
 - Example panel plots:
-![](xco2_Riyadh_2014122910_gdas0p5_STILTv2_zoom8_-24hrs_100dpar.png)
+![](xco2_riyadh.png)
 Figure 1: Spatial map of XCO2 contribution (ppm) on 12/29/2014 for few selected soundings/receptors over Riyadh
 
 
 ## Details for archived X-STILTv1.1 based on STILTv1 [*Lin et al*., 2003]:
 - X-STILT runs (column or fixed receptors)
-1. Change parameters in "XSTILT_run_trajec.r" and store the namelist
-2. Automatically call subroutines to generate backward or forward trajectories
-3. Allow for distributing receptors/soundings to several STILT copies and multiple program calculations (update on 05/10/2018)
+  1. Change parameters in "XSTILT_run_trajec.r" and store the namelist
+  2. Automatically call subroutines to generate backward or forward trajectories
+  3. Allow for distributing receptors/soundings to several STILT copies and multiple program calculations (update on 05/10/2018)
 
 - X-STILT XCO2 simulations (incorporate satellite profiles)
-1. Change parameters in "XSTILT_sim_xco2.r" and store the namelist
-2. Weight trajec-level footprint by satellite profiles (i.e., prior, averaging kernels and pressure weighting)
-3. Generate/store weighted column footprint
-4. Convolve column footprint (from above step) with different emission/flux grids
+  1. Change parameters in "XSTILT_sim_xco2.r" and store the namelist
+  2. Weight trajec-level footprint by satellite profiles (i.e., prior, averaging kernels and pressure weighting)
+  3. Generate/store weighted column footprint
+  4. Convolve column footprint (from above step) with different emission/flux grids
 
 
 ## Reference:
