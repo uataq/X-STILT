@@ -139,7 +139,7 @@ get.more.namelist <- function(namelist, plotTF){
   # update release AGLs
   recp.info <- list()
   if (namelist$columnTF) {
-    namelist$agl <- namelist$agl
+    namelist$agl  <- namelist$agl
     namelist$npar <- namelist$npar   # total number of particles
   }
 
@@ -166,7 +166,7 @@ get.more.namelist <- function(namelist, plotTF){
     namelist$recp.day <- day
     namelist$recp.hr  <- hr
   }
-
+  
   # return namelist
   return(namelist)
 

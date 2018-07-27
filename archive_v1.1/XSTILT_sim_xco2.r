@@ -6,7 +6,7 @@
 #### source all functions and load all libraries
 # CHANGE working directory ***
 homedir <- '/uufs/chpc.utah.edu/common/home'
-workdir <- file.path(homedir, 'lin-group1/wde/github/XSTILT')
+workdir <- file.path(homedir, 'lin-group5/wde/github/XSTILT')
 setwd(workdir) # move to working directory
 
 source(file.path(workdir, 'src/sourceall.r'))  # source all functions
@@ -16,29 +16,30 @@ library(ncdf4); library(ggplot2)
 #### CHOOSE CITIES, TRACKS AND OCO-2 LITE FILE VERSION ***
 site  <- 'Riyadh'
 met   <- c('1km', 'gdas1', 'gdas0p5')[3]    # customized WRF, 1 or 0.5deg GDAS
-tt    <- 1                                # which track to model
+tt    <- 2                                # which track to model
 oco2.version <- c('b7rb', 'b8r')[1]        # OCO-2 version
 
 # input all track numbers to be modeled, can be YYYYMMDD OR YYYYMMDDHH ***
 riyadh.timestr<- c('20141227', '20141229', '20150128', '20150817', '20151112',
-                   '20151216', '20160115', '20160216', '20160725', '20161031')
+  '20151216', '20160115', '20160216', '20160725', '20161031')
 
 # final timestr, YYYYMMDD and file strings for trajec
 track.timestr <- riyadh.timestr[tt]
 
 filestr <- paste0(substr(track.timestr,1,4), 'x', substr(track.timestr,5,6), 'x',
-                 substr(track.timestr,7,8))
+  substr(track.timestr,7,8))
 
 #### SET spatial domains for generating footprints or grabbing ODIAC emissions,
 # these variables will determine the numpix.x, numpix.y, lon.ll, lat.ll;
 # e.g., for Riyadh, 	# 0-50N, 0-60E,  ***
 
 # !!!! these lat/lon ranges differ from those in 'XSTILT_run_trajec.r' !!!!
-if (site == 'Riyadh') {minlon <- 0 ; maxlon <- 60; minlat <- 0 ; maxlat <- 50}
+#if (site == 'Riyadh') {minlon <- 0; maxlon <- 60; minlat <- 0; maxlat <- 50}
+if (site == 'Riyadh') {minlon <- 30; maxlon <- 50; minlat <- 15; maxlat <- 35}
 
 #### CHOOSE THE CO2 SOURCES/SINKS TO BE MODELED ***
 # total 5 components, no wildfire component for now, but can be easily added
-ss  <- c(1,2,3,4,5)
+ss  <- c(1, 2, 3, 4, 5)
 sel <- c('anthro', 'bio', 'ocean', 'edp', 'apriori')[ss]
 cat('# ----------- STEP 1: city, tracks selected ...\n')
 
@@ -73,18 +74,19 @@ cat('# ----------- STEP 2: flags turned on/off ...\n')
 #------------------------------ STEP 3 --------------------------------------- #
 #### INPUT/CHANGE PATHS and GET TRAJEC INFO ***
 # intpath: path that stores input prior data, including ODIAC, CT, and OCO-2
-inpath  <- file.path(homedir, 'lin-group1/wde/STILT_input')
-oco2.path <- file.path(inpath, paste0('OCO-2/OCO2_lite_', oco2.version))
+inpath  <- file.path(homedir, 'lin-group5/wde/input_data')
+oco2.path <- file.path(inpath, paste0('OCO-2/L2/OCO2_lite_', oco2.version))
 
 # outpath: main output directory and model results (txtfile)
 # trajpath: path that stores original non-weighted trajectories
 outpath  <- file.path(workdir, 'output')
 trajpath <- file.path(outpath, 'Traj')
 
-#orig.trajpath <- file.path(trajpath, 'orig_traj')
-orig.trajpath <- file.path(trajpath, 'orig_traj', site)
-orig.trajdir  <- dir(orig.trajpath, track.timestr)
-orig.trajpath <- file.path(orig.trajpath, orig.trajdir)
+orig.trajpath <- file.path(trajpath, 'orig_traj')
+#orig.trajpath <- file.path(trajpath, 'orig_traj', site)
+#orig.trajdir  <- dir(orig.trajpath, track.timestr)
+#orig.trajpath <- file.path(orig.trajpath, orig.trajdir)
+#orig.trajpath <- '/uufs/chpc.utah.edu/common/home/lin-group4/wde/STILT_output/OCO-2/Traj/Riyadh/gdas0p5/multi_agl/orig_traj/2014122910'
 
 ### ncdfpath: path that stores model intermediate (e.g., weighted traj,
 # footprint, contribution map), call find.create.dir() to create one if not found
@@ -118,21 +120,22 @@ info <- ident.to.info(ident = orig.outname)
 recp.info <- info[[1]]	# for receptor info
 agl.info  <- info[[2]]	  # for release level info
 timestr   <- unique(recp.info$timestr)
+recp.info$recp.ident <- orig.outname
 
 #### call get.grdhgt() or read from existing txt file
 # to interpolate modeled ground heights from metfile,
 # where to run trajwind() for model grdhgt, where Copy lies
-rundir <- file.path(homedir, 'lin-group1/wde/STILT_modeling/STILT_Exe')
+rundir <- file.path(homedir, 'lin-group5/wde/STILT_modeling/STILT_Exe')
 
 #### get ground height info:
 
 # path for the ARL format of WRF and GDAS, CANNOT BE TOO LONG ***
-metpath <- file.path(homedir, 'u0947337', 'GDAS0p5')
+metpath <- file.path(homedir, 'u0947337', met)
 met.format <- '%Y%m%d_gdas0p5'
 metfile <- find.metfile(timestr = timestr, nhrs = -1, metpath = metpath,
                         met.format = met.format)
 
-overwrite <- T   # true for regenerating ground heights
+overwrite <- F   # true for regenerating ground heights
 filenm <- paste0('trajwind_recp_info_', site, '_', timestr, '.txt')
 
 # if found
@@ -264,8 +267,6 @@ cat('# ----------- STEP 7: Namelist created/stored ...\n')
 
 #------------------------------ STEP 8 --------------------------------------- #
 # start X-STILT runs, call oco2.get.xco2()
-recp.info$recp.ident <- orig.outname
-
 cat('\n\n# ----------- STEP 8: Simulation started ...\n')
 sim.xco2(namelist = namelist, recp.info = recp.info, odiac.co2 = odiac.co2)
 

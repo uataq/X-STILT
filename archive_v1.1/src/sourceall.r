@@ -95,8 +95,8 @@ source(paste(xpath, "OCO2.apriori.r", sep=""))
 #source(paste(xpath, "CT-NRT.bg.trajfoot.r", sep=""))
 
 # subroutines for bootstrap --
-source(paste(xpath, "OCO2.bootstrap.level.r", sep=""))
-source(paste(xpath, "OCO2.bootstrap.traj.r", sep=""))
+#source(paste(xpath, "OCO2.bootstrap.level.r", sep=""))
+#source(paste(xpath, "OCO2.bootstrap.traj.r", sep=""))
 
 
 # plotting

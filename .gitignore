@@ -32,10 +32,8 @@ vignettes/*.pdf
 *.utf8.md
 *.knit.md
 
-count_overpass*
 old/*
 output/*
 *.sh
 run_XSTILT_*
-*ggplot*.r
 *.conf

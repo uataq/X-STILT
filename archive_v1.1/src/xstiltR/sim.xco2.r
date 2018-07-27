@@ -32,7 +32,7 @@
 # ak.weight & pw.weight: logical flags for whether weighting against averaging
 #                        kernel or pressure weighting, can be T or F
 # minlon, maxlon, minlat, maxlat: spatial domains for generating footprints,
-# these 4 variables will determine the numpix.x, numpix.y, lon.ll, lat.ll;
+# these 4 variables will determine the numpix.x, numpix.y, minlon, minlat;
 # ct.version: version for CarbonTracker,
 #             required when simulating bio and oceanic contributions
 # odiac.co2: matrix for anthropogenic CO2 emissions from ODIAC,
@@ -65,12 +65,15 @@ sim.xco2 <- function(namelist, recp.info, odiac.co2){
   #--------------------------------------------------------------------------- #
   # 1. get OCO-2 info given recp.info
   # requires get.oco2info() from 'OCO2.get.oco2info.r'
-  YYMMDD <- substr(namelist$timestr, 3, 8)
-  oco2.file <- list.files(pattern = YYMMDD, path = namelist$oco2.path)
+  timestr <- namelist$timestr
+  oco2.path <- namelist$oco2.path
+  YYMMDD <- substr(timestr, 3, 8)
+  oco2.file <- list.files(pattern = YYMMDD, path = oco2.path)
 
 	cat('sim.xco2(): grabbing satellite profiles given recp lat/lon...\n')
+
   oco2.info <- get.oco2info(
-    oco2.path = namelist$oco2.path, oco2.file = oco2.file,
+    oco2.path = oco2.path, oco2.file = oco2.file,
 	  recp.lat = recp.info$recp.lat, recp.lon = recp.info$recp.lon)
 
   wgt.profile <- oco2.info[[1]]    # lists of vertical profiles for each recp
@@ -78,10 +81,13 @@ sim.xco2 <- function(namelist, recp.info, odiac.co2){
   id <- as.numeric(as.character(oco2.dat$find.id))	# OCO-2 ID
 
   # get LOWER LEFT and lat/lon domain for footprint
-  lon.ll <- namelist$minlon
-  lat.ll <- namelist$minlat
-  dlat <- namelist$maxlat - lat.ll
-  dlon <- namelist$maxlon - lon.ll
+  minlon <- namelist$minlon
+  minlat <- namelist$minlat
+  maxlon <- namelist$maxlon
+  maxlat <- namelist$maxlat
+
+  dlat <- maxlat - minlat
+  dlon <- maxlon - minlon
 
   # write headers in txt file
   filenm <- file.path(namelist$txtpath, namelist$txtname)
@@ -95,7 +101,7 @@ sim.xco2 <- function(namelist, recp.info, odiac.co2){
   # loop over each receptor...
   for (i in 1:nrow(recp.info)) {
 
-    cat(paste('#----', signif(i / nrow(recp.info) * 100, 3), '% Done ---- #\n'))
+    cat(paste('# ---', signif(i / nrow(recp.info) * 100, 3), '% Done --- #\n'))
 
 		## get receptor info, in vector form
     tmp.lat    <- recp.info$recp.lat[i]     # receptor lat
@@ -113,19 +119,32 @@ sim.xco2 <- function(namelist, recp.info, odiac.co2){
     #------------------------------------------------------------------------- #
     # 2. read in traj and apply ak and pw profiles onto original trajs
     cat('sim.xco2(): Reading unweighted trajec ...\n')
+    orig.trajpath <- namelist$orig.trajpath
     tmp.ident <- substr(tmp.ident, 1, nchar(tmp.ident) - 6)
-    orig.trajdat <- getr(tmp.ident, path = namelist$orig.trajpath)
+    orig.trajdat <- getr(tmp.ident, path = orig.trajpath)
+    if(F){
+      library(dplyr)
+      tj <- data.frame(orig.trajdat)
+      tj <- tj %>% filter(foot > 1E-6 & lat > 22 &
+        lat < 25 & lon > 37 & lon < 47.2)
+      sel.tj <- tj %>% filter(time <= -1440)
+      f1 <- ggplot(data = sel.tj) + geom_point(aes(lon, lat))
+    }
 
     ### start weighting trajec-level footprint...call weight.trajecfootv2()
     # new.trajpath: path for storing weighted trajectory
     cat('sim.xco2(): Weighting trajec-level footprint...\n')
+    ak.weight = namelist$ak.weight
+    pw.weight = namelist$pw.weight
+    new.trajpath = namelist$wgt.trajpath
+
     scale.prof <- weight.trajecfootv2(
       ident = tmp.ident, trajdat = orig.trajdat,
       recp.info = tmp.recp.info, agl.info = tmp.agl.info,
 			oco.ak.norm = tmp.wgt.prof$ak.norm, oco.pw = tmp.wgt.prof$pw,
 			oco.pres = tmp.wgt.prof$pres, oco.apriori = tmp.wgt.prof$apriori,
-			recp.grdhgt = tmp.grdhgt, new.trajpath = namelist$wgt.trajpath,
-			ak.weight = namelist$ak.weight, pw.weight = namelist$pw.weight)
+			recp.grdhgt = tmp.grdhgt, new.trajpath = new.trajpath,
+			ak.weight = ak.weight, pw.weight = pw.weight)
 
     ## returns the ak pw profiles at for all levels & the weighted footprint
     combine.prof <- scale.prof[[1]]	# all profile info, ak, pw, apriori
@@ -138,8 +157,10 @@ sim.xco2 <- function(namelist, recp.info, odiac.co2){
 
       # 3.1. GENERATE 2D footprint based on the above weighted traj,
       # call get.foot() from 'OCO2.get.foot.r'
-      lat.res <- namelist$lat.res.anthro; numpix.y <- dlat / lat.res
-      lon.res <- namelist$lon.res.anthro; numpix.x <- dlon / lon.res
+      lat.res <- namelist$lat.res.anthro
+      lon.res <- namelist$lon.res.anthro
+      numpix.y <- dlat / lat.res
+      numpix.x <- dlon / lon.res
 
       # compute footprint time stamps, if only 2 elements in 'foottimes',
       # we need to return the time-integrated 2D footprint (xfoot),
@@ -148,13 +169,16 @@ sim.xco2 <- function(namelist, recp.info, odiac.co2){
       # if >2 elements in 'foottimes', return time-varying 3D footprint (foot)
       # when coupling with hourly ODIAC
       if (namelist$hourlyTF) foottimes <- seq(0, abs(namelist$max.hour), 1)
+      footpath <- namelist$foot.path
+      dmassTF = namelist$dmassTF
+      storeTF = namelist$storeTF
+
       foot.anthro <- get.foot(
-        ident = tmp.ident, foot.overwrite = T, lat.res = lat.res,
-				trajdat = wgt.trajdat, trajpath = namelist$wgt.trajpath,
-				footpath = namelist$foot.path, foottimes = foottimes,
-				dmassTF = namelist$dmassTF, numpix.x = numpix.x,
-				storeTF = namelist$storeTF, numpix.y = numpix.y,
-				lon.ll = lon.ll, lat.ll = lat.ll, lon.res = lon.res)
+        ident = tmp.ident, foot.overwrite = T, trajdat = wgt.trajdat,
+        trajpath = new.trajpath, footpath = footpath, foottimes = foottimes,
+        dmassTF = dmassTF, numpix.x = numpix.x,
+        storeTF = storeTF, numpix.y = numpix.y,
+        lon.ll = minlon, lat.ll = minlat, lon.res = lon.res, lat.res = lat.res)
 
     	# 3.2. CALL the subroutine for matching ODIAC emission with xfoot,
       #      and sum the matrix to obtain 'dxco2.anthro'
@@ -183,7 +207,7 @@ sim.xco2 <- function(namelist, recp.info, odiac.co2){
         trajpath = namelist$wgt.trajpath, foottimes = foottimes,
         footpath = namelist$foot.path, dmassTF = namelist$dmassTF,
         storeTF = namelist$storeTF, numpix.x = numpix.x, numpix.y = numpix.y,
-        lon.ll = lon.ll, lat.ll = lat.ll, lon.res = lon.res, lat.res = lat.res)
+        minlon = minlon, minlat = minlat, lon.res = lon.res, lat.res = lat.res)
 
       # 4.2. CALL the subroutine for matching biosperhic fluxes with footprint,
       #      and sum the matrix to obtain 'xco2.bio' or 'xco2.ocean'

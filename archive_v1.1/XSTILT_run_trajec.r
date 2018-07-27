@@ -10,7 +10,7 @@
 #### source all functions and load all libraries
 # CHANGE working directory
 homedir <- '/uufs/chpc.utah.edu/common/home'
-workdir <- file.path(homedir, 'lin-group1/wde/github/XSTILT')
+workdir <- file.path(homedir, 'lin-group5/wde/github/XSTILT')
 setwd(workdir) # move to working directory
 
 # source all functions
@@ -21,19 +21,19 @@ library(ncdf4); library(ggplot2)
 #### CHOOSE CITIES, TRACKS AND OCO-2 LITE FILE VERSION ***
 site  <- 'Riyadh'
 met   <- c('1km', 'gdas1', 'gdas0p5')[3]  # customized WRF, 1 or 0.5deg GDAS
-tt    <- 1                                # which track to model
+tt    <- 2                                # which track to model
 oco2.version <- c('b7rb', 'b8r')[1]       # OCO-2 version
 
 #### CHOOSE OVERPASSED TIMESTR ***
 # input all track numbers to be modeled, can be YYYYMMDD OR YYYYMMDDHH ***
 # track timestr can also be grabbed from another script
 riyadh.timestr <- c('20141227', '20141229', '20150128', '20150817', '20151112',
-                    '20151216', '20160115', '20160216', '20160725', '20161031')
+  '20151216', '20160115', '20160216', '20160725', '20161031')
 
 # final timestr, YYYYMMDD and file strings for trajec
 track.timestr <- riyadh.timestr[tt]
 filestr <- paste0(substr(track.timestr, 1, 4), 'x', substr(track.timestr, 5, 6),
-                  'x', substr(track.timestr, 7, 8))
+  'x', substr(track.timestr, 7, 8))
 
 # spatial domains placing receptors and city center, help select OCO-2 data ***
 # in form of 'lat.lon <- c(minlat, maxlat, minlon, maxlon, city.lat, city.lon)'
@@ -44,17 +44,17 @@ track.timestr <- paste0(track.timestr, oco2.hr)
 
 #------------------------------ STEP 2 --------------------------------------- #
 #### TURN ON/OFF FLAGS for XSTILT setups ***
-columnTF <- T    # whether a column receptor or fixed receptor
-forwardTF <- F   # forward or backward traj, if forward, release from a box
-windowTF <- F    # whether to release particles every ?? minutes, 'dhr' in hours
-uncertTF <- F    # whether add wind error component to generate trajec
-overwrite <- T	 # T:rerun hymodelc, even if particle location object found
-                 # F:re-use previously calculated particle location object
-mpcTF <- T       # true for running trajec on multiple STILT copies
-delt <- 2        # fixed timestep [min]; set =0 for dynamic timestep
+columnTF  <- T    # whether a column receptor or fixed receptor
+forwardTF <- F    # forward or backward traj, if forward, release from a box
+windowTF  <- F    # whether to release particles every ?? minutes, 'dhr' in hours
+uncertTF  <- F    # whether add wind error component to generate trajec
+overwrite <- T	  # T:rerun hymodelc, even if particle location object found
+                  # F:re-use previously calculated particle location object
+mpcTF <- F        # true for running trajec on multiple STILT copies
+delt  <- 0        # fixed timestep [min]; set =0 for dynamic timestep
 
 ### change parameters according to above flags
-nhrs <- -72      # number of hours backward (-) or forward (+)
+nhrs <- -12      # number of hours backward (-) or forward (+)
 nummodel <- 1    # copy for running trajwind() or trajec()
 if (mpcTF) nummodel <- seq(11, 17)      # can be a vector denoting copy numbers
 
@@ -86,7 +86,7 @@ if (uncertTF) {
 
   ## add errors, mainly siguverr, create a subroutine to compute siguverr
   # from model-data wind comparisons
-  errpath <- file.path(homedir, 'lin-group1/wde/STILT_input/wind_err')
+  errpath <- file.path(homedir, 'lin-group5/wde/STILT_input/wind_err')
   errpath <- file.path(errpath, tolower(site), tolower(met))
 
   # call get.SIGUVERR() to interpolate most near-field wind errors
@@ -140,20 +140,20 @@ if (forwardTF) {
 
 ## change paths--
 # path for input data, OCO-2 Lite file
-oco2.str   <- paste0('OCO-2/OCO2_lite_', oco2.version)
-oco2.path  <- file.path(homedir, 'lin-group1/wde/STILT_input', oco2.str)
+oco2.str   <- paste0('OCO-2/L2/OCO2_lite_', oco2.version)
+oco2.path  <- file.path(homedir, 'lin-group5/wde/input_data', oco2.str)
 
 # path for the ARL format of WRF and GDAS, CANNOT BE TOO LONG
-metpath <- file.path(homedir, 'u0947337', 'GDAS0p5')
+metpath <- file.path(homedir, 'u0947337', met)
 
 # get metfile for generating backward trajectories
 # met.format: met file convention, e.g., '%Y%m%d_gdas0p5'
-met.format <- '%Y%m%d_gdas0p5'
+met.format <- paste0('%Y%m%d_', met)
 metfile <- find.metfile(timestr = track.timestr, nhrs = nhrs, metpath = metpath,
-                        met.format = met.format)
+  met.format = met.format)
 
 # Where to run STILT, where Copy lies
-rundir <- file.path(homedir, 'lin-group1/wde/STILT_modeling/STILT_Exe/')
+rundir <- file.path(homedir, 'lin-group5/wde/STILT_modeling/STILT_Exe/')
 
 
 #------------------------------ STEP 4 --------------------------------------- #
@@ -191,9 +191,10 @@ bw.peak <- 1/40   # binwidth over large enhancements, during 'peak.lat'
 
 # recp.index: how to pick receptors from soundings
 recp.index <- c(seq(lat.lon[1], peak.lat[1], bw.bg),
-                seq(peak.lat[1], peak.lat[2], bw.peak),
-                seq(peak.lat[1], lat.lon[2], bw.bg))
+  seq(peak.lat[1], peak.lat[2], bw.peak), seq(peak.lat[1], lat.lon[2], bw.bg))
 
+# or overwrite recp.index with the latitude you wanted to model
+recp.index <- 24.5444
 
 #------------------------------ STEP 5 --------------------------------------- #
 #### !!! NO NEED TO CHANGE ANYTHING LISTED BELOW -->
@@ -230,7 +231,7 @@ if (forwardTF == F) {
   namelist <- allocate.recp(namelist)
 
   ## set up job info and write bash script
-  job.time   <- '24:00:00'
+  job.time   <- '12:00:00'
   num.nodes  <- 1
   num.cores  <- length(namelist$nummodel)
   account    <- 'lin-kp'
@@ -240,7 +241,7 @@ if (forwardTF == F) {
 
   # write bash file --> config --> run_XSTILT and update namelist:
   bash.file <- write.bash(namelist, job.time, num.nodes, num.cores, account,
-                          partition, email, email.type)
+    partition, email, email.type)
   cat('Start generating backward trajec...\n')
   system(paste0('sbatch ', bash.file))
   q()
