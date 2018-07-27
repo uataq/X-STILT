@@ -1,42 +1,12 @@
 # X-STILT: Column-Stochastic Time-Inverted Lagrangian Transport model
 ## Descriptions:
-Scripts and subroutines for X-STILT, modified from the Stochastic Time-Inverted Lagrangian Transport (STILT) model [*Lin et al*., 2003] and STILT-R version 2 [*Fasoli et al*., 2018]. Methodology is based on [*Wu et al*., 2018] (in review on *Geoscientific Model Development Discussion*).
+Scripts and subroutines for X-STILT, modified from the Stochastic Time-Inverted Lagrangian Transport (STILT) model [*Lin et al*., 2003] and STILT-R version 2 [*Fasoli et al*., 2018]. Methodology is based on [*Wu et al*., 2018] (in review on *Geoscientific Model Development Discussion*). Detailed descriptions can be found in each directory (*archive_v1.1* and *lastest_v2.0*).
 
-Model developments are ongoing towards a more flexible model framework that can be more easily applied to other column measurements. Contributions from other users are welcomed and highly appreciated. Please contact Dien (Dien.Wu@utah.edu) if you have any questions/comments/suggestions. Thank you.
+Developments are still ongoing towards a more flexible model framework that can be more easily applied to other column measurements. Contributions from other users are welcomed and highly appreciated. Please contact Dien (Dien.Wu@utah.edu) if you have any questions/comments/suggestions.
 
-
-## Details for X-STILTv2.0 based on STILT-R version 2 [*Fasoli et al*., 2018]:
-We're been merging column features with the new STILT-R version 2 [*Fasoli et al*., 2018] with improved model efficiency and more realistic "footprint" values (https://uataq.github.io/stilt/). Still, one can use Trajecfoot() from STILTv1 for generating footprints, if setting stilt.ver to 1.
-Modifications on top of STILTv2 are located in /src/oco2-xsilt. Users can start with 'create_namelist_oco2-xsilt.r' for model and parameter initializations.
-
-- X-STILTv2 features:
-1. Select OCO-2 overpasses and make spatial plots of retrieved XCO2 given a city
-2. Select OCO-2 soundings based on latitude binwidths for each overpass
-3. Create namelist with model parameters
-4. Model runs and analysis included:
-   * Backward trajectories + weighted column footprints        -> *run_trajec/run_foot*
-   * Forward trajectories + 2D kernel density maps             -> *forwardTF*
-   * Horizontal transport error (wind error statistics needed) -> *run_hor_err*
-   * Vertical transport error via scaling mixed layer height   -> *zicontroltf*
-   * Simulate FFCO2 XCO2 enhancements (footprint needed)       -> *run_sim*
-
-
-- Example panel plots:
+## Examples:
 ![](xco2_riyadh.png)
-Figure 1: Spatial map of XCO2 contribution (ppm) on 12/29/2014 for few selected soundings/receptors over Riyadh
-
-
-## Details for archived X-STILTv1.1 based on STILTv1 [*Lin et al*., 2003]:
-- X-STILT runs (column or fixed receptors)
-  1. Change parameters in "XSTILT_run_trajec.r" and store the namelist
-  2. Automatically call subroutines to generate backward or forward trajectories
-  3. Allow for distributing receptors/soundings to several STILT copies and multiple program calculations (update on 05/10/2018)
-
-- X-STILT XCO2 simulations (incorporate satellite profiles)
-  1. Change parameters in "XSTILT_sim_xco2.r" and store the namelist
-  2. Weight trajec-level footprint by satellite profiles (i.e., prior, averaging kernels and pressure weighting)
-  3. Generate/store weighted column footprint
-  4. Convolve column footprint (from above step) with different emission/flux grids
+Figure 1: Spatial map of XCO2 contribution (ppm) on 12/29/2014 for selected soundings/receptors over Riyadh
 
 
 ## Reference:
