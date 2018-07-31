@@ -98,9 +98,10 @@ run.forward.trajec <- function(namelist, plotTF = F){
 
   cat(paste('run.forward.trajex(): Working on forward traj @', city.lat, 'N\n'))
   if (namelist$overwrite) {
-    info <- Trajecmulti(yr = rel.yr - 2000, mon = rel.mon, day = rel.day, hr=rel.hr,
-                        mn = rel.min, dxyp = dxyp, dzp = 0, lat = rel.lat, lon = rel.lon,
-                        agl = rel.agl, outname = ident, nhrs = nhrs, numpar = npar,
+    info <- Trajecmulti(yr = rel.yr - 2000, mon = rel.mon, day = rel.day,
+                        hr = rel.hr, mn = rel.min, dxyp = dxyp, dzp = 0,
+                        lat = rel.lat, lon = rel.lon, agl = rel.agl,
+                        outname = ident, nhrs = nhrs, numpar = npar,
                         nummodel = nummodel, metd = c('fnl','awrf'), rundir = rundir,
                         metfile = namelist$metfile, metlib = namelist$metpath,
                         doublefiles = T, overwrite = namelist$overwrite,

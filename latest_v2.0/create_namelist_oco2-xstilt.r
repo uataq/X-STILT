@@ -9,51 +9,32 @@
 # Add STILTv1 dependencies and work well with existing framework and add dmassTF
 # for mass violation corrections, DW, 07/17/2018
 #
-# Add horizontal transport error module with flag 'run_hor_err'
+# Complement horizontal transport error module with flag 'run_hor_err'
 #   with additional subroutines in /src/oco2-xstilt/trans_err, DW, 07/23/2018
 #
-# Add vertical trans error module, with flag 'run_ver_err',
+# Complement vertical trans error module, with flag 'run_ver_err',
 # ziscale when scaling PBL heights and break trans error part (step 3) into
 # horizontal wind error and vertical trans error (via PBL perturb), DW, 07/25/2018
+#
+# Complement forward runs from a box around the city, DW, 07/27/2018
+# this requires the AER_NOAA_branch modified hymodelc
+#
+# remove forwardTF and background estimates out of this code,
+# for forward run, see 'compute_bg_xco2.r', DW, 07/30/2018
+#
+# for generating trajec with horizontal error compoennt,
+# use the same lat/lon from original trajec, DW, 07/31/2018
 # -----------------------------------------------------------------------------
 
 #### source all functions and load all libraries
 # CHANGE working directory ***
 homedir <- '/uufs/chpc.utah.edu/common/home'
-workdir <- file.path(homedir, 'lin-group5/wde/github/stilt')
+workdir <- file.path(homedir, 'lin-group5/wde/github/XSTILT/latest_v2.0')
 setwd(workdir)   # move to working directory
 source('r/dependencies.r') # source all functions
 
 #------------------------------ STEP 1 --------------------------------------- #
-#### CHOOSE CITIES, SEARCH FOR TRACKS AND OCO-2 LITE FILE VERSION ***
-sitelist <- c(
-  # middle east and SE Asia
-  'Riyadh',  'Medina',   'Mecca',     'Cairo',     'Jerusalem',   'Jeddah',
-  'Karachi', 'Tehran',   'Istanbul',  'Baghdad',   'Ankara',
-  'Mumbai',  'Delhi',    'Bangalore', 'Hyderabad', 'Ahmedabad',
-  'Manila',  'Jakarta',  'Bangkok',   'HoChiMinh', 'Singapore',   'KualaLumpur',
-
-  # China and Japan
-  'Nanjing', 'Suzhou',   'Shanghai',  'YRD',   'Beijing',   'Tianjin',  'JJJ',
-  'Xian',    'Lanzhou',  'Zhengzhou', 'PRD',
-  'Seoul',   'Busan',    'Nagoya',    'Tokyo-Yokohama', 'Osaka-Kobe-Kyoto',
-
-  # Africa and Europe
-  'Lagos',   'Luanda',  'Kinshasa',  'CapeTown',   'Johannesburg', 'Moscow',
-  'Paris',   'London',  'Madrid',    'Barcelona',  'Rome',         'Berlin',
-  'Milan',   'Athens',  'StPetersburg',
-
-  # North America
-  'Indy',    'Chicago',  'Phoenix',   'Denver',    'Seattle',     'SLC',
-  'LA',      'LV',       'Houston',   'Dallas',    'Albuquerque', 'NY',
-  'DC',      'Miami',    'Atlanta',   'Toronto',   'Montreal',    'Vancouver',
-
-  # central & south America and Australia
-  'SaoPaulo', 'Lima',    'Perth',     'Sydney',    'Brisbane',    'Melbourne'
-)
-# one can add more urban regions here
-
-# choose a city from above
+# insert target city
 site <- 'Riyadh'
 
 # OCO-2 version, path
@@ -105,7 +86,7 @@ if (oco2.ver == 'b7rb') oco2.track <- oco2.track %>% filter(qf.urban.count > 80)
 if (oco2.ver == 'b8r') oco2.track <- oco2.track %>% filter(wl.urban.count > 100)
 
 # finally narrow down and get timestr
-all.timestr <- oco2.track$timestr
+all.timestr <- oco2.track$timestr[c(2, 3, 8, 9, 10)]
 
 # once you have all timestr, you can choose whether to plot them on maps
 # this helps you choose which overpass to simulate first, see 'tt' below
@@ -120,7 +101,7 @@ if (plotTF) {
 }
 
 # *** NOW choose the timestr that you would like to work on...
-tt <- 3
+tt <- 2
 timestr <- all.timestr[tt]
 
 cat(paste('Working on:', timestr, 'for city/region:', site, '...\n\n'))
@@ -129,58 +110,30 @@ cat('Done with choosing cities & overpasses...\n')
 
 #------------------------------ STEP 2 --------------------------------------- #
 #### Whether forward/backward, release from a column or a box
-columnTF   <- T    # whether a column receptor or fixed receptor
-forwardTF  <- F    # forward or backward traj, if forward, release from a box
-windowTF   <- F    # whether to release particles every ? minutes,'dhr' in hours
+columnTF    <- T    # whether a column receptor or fixed receptor
+stilt.ver   <- 2    # STILT versions (call different footprint algorithms)
+delt        <- 2    # fixed timestep [min]; set = 0 for dynamic timestep
+nhrs        <- -72  # number of hours backward (-) or forward (+)
 
-# T:rerun hymodelc, even if particle location object found
-# F:re-use previously calculated particle location object
-run_trajec <- F    # whether to generate trajec
-run_foot   <- F    # whether to generate footprint
-run_sim    <- T    # whether to calculate simulated XCO2.ff, see STEP 8
+run_trajec  <- T    # run trajec, will overwrite existing 'out'
+run_foot    <- F    # run footprint, trajec requires
+run_sim     <- F    # calculate simulated XCO2.ff, see STEP 8
+
+run_hor_err <- T    # run traj with hor wind errors/calc trans error (see STEP3)
+run_ver_err <- F    # run traj with mixed layer height scaling (see STEP3)
+if (run_hor_err) err.level <- c('lower', 'upper')[1]  # which part to be modeled
+
 if (run_trajec) cat('Need to generate trajec...\n')
 if (run_foot)   cat('Need to generate footprint...\n\n')
 
-# whether to generate trajec with horizontal wind err component/to calc trans error
-# OR generate trajec with PBL scaling
-run_hor_err <- F   # T: set parameters in STEP 3, call functions in STEP 9
-run_ver_err <- F   # T: set parameters in STEP 3, call functions in STEP 9
-stilt.ver   <- 2   # STILT versions (call different footprint algorithms)
-
-delt <- 0          # fixed timestep [min]; set = 0 for dynamic timestep
-nhrs <- -72        # number of hours backward (-) or forward (+)
-
-# change to Ben's definitions,  see validate_varsiwant()
+# change to STILT-R version 2 conventions, see validate_varsiwant()
 varstrajec <- c('time', 'indx', 'lati', 'long', 'zagl', 'zsfc', 'foot', 'samt',
-  'dmas', 'mlht', 'pres', 'sigw', 'tlgr', 'dens')
-
-## below settings are for forward simulations, to be improved ------------------
-# if release particles from a box, +/-dxyp, +/-dxyp around the city center
-# point to the hymodelc with TN's modicications--
-exepath <- file.path(workdir, 'exe/AER_NOAA_branch')  # where hymodelc is
-dxyp <- NA
-if (forwardTF) {
-  dxyp <- 0.4     # deg around city center
-  nhrs <- 12      # number of hours backward (-) or forward (+)
-}  # end if forwardTF
-
-# whether allow for time window for releasing particles
-dhr   <- NA; dtime <- NA
-if (windowTF) {
-  dhr <- 0.5     # release particle every 30 mins
-  dtime <- seq(-10, 0, dhr)
-  # e.g., FROM 10 hours ahead of sounding hour (-10), TO sounding hour (0)
-
-  cat('Release particles', dtime[1], 'hrs ahead & every', dhr * 60, 'mins...\n')
-}  # end if windowTF
-
+                'dmas', 'mlht', 'pres', 'sigw', 'tlgr', 'dens')
 cat('Done with choosing forward box OR backward column runs...\n')
-
 
 #------------------------------ STEP 3 --------------------------------------- #
 # select receptors --
 #### Set model receptors, AGLs and particel numbers ***
-# for backward fixed-level runs OR forward fixed-level runs
 # agl can be a vector, meaning releasing particles from several fixed level
 # but if trying to represent air column, use columnTF=T, see below
 
@@ -190,35 +143,34 @@ numpar <- 1000       # par for each time window for forward box runs
 
 ### 2) SET COLUMN RECEPTORS as a list, if release particles from a column
 if (columnTF) {
-
   # min, middle, max heights for STILT levels, in METERS
   minagl <- 0
-  midagl <- 3000
+  midagl <- 3000  # cutoff level
   maxagl <- 6000
-
-  # vertical spacing below and above cutoff level 'midagl', in METERS
-  dh   <- c(100, 500)
-
-  # particle numbers per level, 2500 for the Brute Force test
-  dpar <- c(10, 50, 100, 200, 2500)[3]
+  dh   <- c(100, 500)   # vertical spacing below and above 'midagl', in METERs
+  dpar <- c(10, 50, 100, 200, 2500)[3]  # part # per level, 2500 for Brute Force
 
   # compute the agl list
-  agl  <- list(c(seq(minagl, midagl, dh[1]), seq(midagl+dh[2], maxagl, dh[2])))
-  nlev <- length(unlist(agl))
-  numpar <- nlev * dpar   # total number of particles
-}
+  agl.lower <- seq(minagl, midagl, dh[1])
+  agl.upper <- seq(midagl+dh[2], maxagl, dh[2])
+
+  # seperate release levels, when generating trajec with wind error
+  if (run_hor_err & err.level == 'lower') agl <- list(agl.lower)
+  if (run_hor_err & err.level == 'upper') agl <- list(agl.upper)
+  if (run_hor_err == F) agl <- list(c(agl.lower, agl.upper))
+  numpar <- length(unlist(agl)) * dpar   # total number of particles
+} # end if columnTF
 
 ## eyeball lat range for enhanced XCO2, or grab from available forward-time runs
 # place denser receptors during this lat range (40pts in 1deg)
 selTF <- T  # whether select receptors; or simulate all soundings
 if (selTF) {
-
   # lat range in deg N for placing denser receptors, required for backward run
   if (site == 'Riyadh')    peak.lat <- c(24, 25)
   if (site == 'Jerusalem') peak.lat <- c(31.75, 32.25)
-  if (site == 'Cairo')   peak.lat <- c(29.5, 30.5)
-  if (site == 'Phoenix') peak.lat <- c(33.0, 34.0)
-  if (site == 'Baghdad') peak.lat <- c(32.5, 33.5)
+  if (site == 'Cairo')     peak.lat <- c(29.5, 30.5)
+  if (site == 'Phoenix')   peak.lat <- c(33.0, 34.0)
+  if (site == 'Baghdad')   peak.lat <- c(32.5, 33.5)
 
   # number of points to aggregate within 1deg over small/large enhancements,
   # i.e., over background/enhancements, binwidth will be 1deg/num
@@ -229,7 +181,6 @@ if (selTF) {
   recp.indx <- c(seq(lon.lat[3],  peak.lat[1], 1/num.bg),
     seq(peak.lat[1], peak.lat[2], 1/num.peak),
     seq(peak.lat[1], lon.lat[4],  1/num.bg))
-
 } else {
   recp.indx <- NULL
 }
@@ -238,13 +189,22 @@ if (selTF) {
 recp.num <- NULL     # can be a number for max num of receptors
 find.lat <- NULL     # for debug or test, model one sounding
 
-# select satellite soundings, plotTF for whether plotting OCO-2 observed XCO2
-source('r/dependencies.r') # source all functions
-recp.info <- get.recp.info(timestr, oco2.path, lon.lat, selTF, recp.indx,
-  recp.num, find.lat, agl, plotTF = F)
-nrecp <- nrow(recp.info)
-cat(paste('Done with receptor setup...total', nrecp, 'receptors..\n'))
+# for generating trajec with horizontal error compoennt,
+# use the same lat.lon from original trajec, DW, 07/31/2018
+if (run_hor_err)
+  trajpath <- file.path(homedir, 'lin-group5/wde/github/stilt/workdir',
+    paste0('out_', timestr, '_72hrs_v8'), 'by-id')
 
+# select satellite soundings, plotTF for whether plotting OCO-2 observed XCO2
+recp.info <- get.recp.info(timestr = timestr, oco2.path = oco2.path,
+  oco2.ver = oco2.ver, lon.lat = lon.lat, selTF = selTF,
+  recp.indx = recp.indx, recp.num = recp.num, find.lat = find.lat, agl = agl,
+  plotTF = F, run_trajec = run_trajec, run_hor_err = run_hor_err,
+  trajpath = trajpath, stilt.ver = stilt.ver)
+
+nrecp <- nrow(recp.info)
+print(nrecp)
+cat(paste('Done with receptor setup...\n'))
 
 #------------------------------ STEP 4 --------------------------------------- #
 # path for the ARL format of WRF and GDAS
@@ -275,7 +235,7 @@ if (run_hor_err) {
 
   # call get.SIGUVERR() to interpolate most near-field wind errors
   err.info <- get.siguverr(site, timestr, errpath = err.path, nfTF = F,
-    forwardTF = forwardTF, lon.lat, nhrs)
+    forwardTF = F, lon.lat, nhrs, agl)
 
   if (is.null(err.info)) {
     cat('no wind error found; make consevative assumption of siguverr...\n')
@@ -312,20 +272,18 @@ if (run_ver_err) {
   zicontroltf <- 1              # 0 for FALSE; 1 for scaling, TRUE
   ziscale     <- rep(list(rep(0.8, 24)), nrecp)  # create as list
   # 1st # for scaling factor; 2nd # for # of hours (always use abs())
-  cat(paste('+++ PBL scaling of', ziscale[[1]][1],
+  cat(paste('+++ Mixed layer height scaling of', ziscale[[1]][1],
     'when generating trajec +++\n'))
 
 } else {
-  cat('NO PBL scaling when generating trajec...\n')
+  cat('NO Mixed layer height scaling ...\n')
   zicontroltf <- 0
   ziscale     <- 1.0
 } # end if run_ver_err
-
 cat('Done with choosing met & inputting wind errors...\n')
 
-
 #------------------------------ STEP 5 --------------------------------------- #
-#### Settings for generating footprint maps
+#### Settings for generating footprint maps, no need for getting background
 ## SET spatial domains and resolution for calculating footprints
 foot.res <- 1/120  # footprint resolution, 1km for ODIAC
 
@@ -343,20 +301,19 @@ print(foot.info)
 
 ## whether weighted footprint by AK and PW for column simulations
 if (columnTF) {
-  ak.wgt  <- T; pwf.wgt <- T
+  ak.wgt <- T;  pwf.wgt <- T
 } else {  # no weighting needed for fixed receptor simulations
   ak.wgt <- NA; pwf.wgt <- NA
 }
 
-# 1st-order correction on dmass for footprint using STILTv1
+# 1st-order correction on dmass for footprint if using STILTv1
 dmassTF <- F
 
-# other footprint parameters using STILTv2
+# other footprint parameters if using STILTv2
 hnf_plume      <- T  # whether turn on hyper near-field (HNP) for mising hgts
 smooth_factor  <- 1  # Gaussian smooth factor, 0 to disable
 time_integrate <- T  # whether integrate footprint along time
 projection     <- '+proj=longlat'
-
 cat('Done with footprint setup...\n')
 
 
@@ -365,8 +322,7 @@ cat('Done with footprint setup...\n')
 # create a namelist including all variables
 # namelist required for generating trajec
 namelist <- list(agl = agl, ak.wgt = ak.wgt, delt = delt, dmassTF = dmassTF,
-  dpar = dpar, dtime = dtime, dxyp = dxyp, foot.info = foot.info,
-  forwardTF = forwardTF, hnf_plume = hnf_plume, homedir = homedir,
+  dpar = dpar, foot.info = foot.info, hnf_plume = hnf_plume, homedir = homedir,
   horcoruverr = horcoruverr, horcorzierr = horcorzierr, lon.lat = lon.lat,
   met = met, met.format = met.format, met.num = met.num, met.path = met.path,
   nhrs = nhrs, numpar = numpar, outdir = outdir, oco2.path = oco2.path,
@@ -382,90 +338,71 @@ namelist <- list(agl = agl, ak.wgt = ak.wgt, delt = delt, dmassTF = dmassTF,
 
 #------------------------------ STEP 7 --------------------------------------- #
 ## run trajec/footprint/simulations for backward simulations --
-if (forwardTF == F) {
+if (run_trajec | run_foot) {    ## if running trajec or footprint
 
-  ## --------------------- if running trajec or footprint ----------------------
-  if (run_trajec | run_foot) {
+  ## use Ben's algorithm for parallel simulation settings
+  n_nodes  <- 5
+  n_cores  <- ceiling(nrecp/n_nodes)
+  job.time <- '24:00:00'
+  slurm    <- n_nodes > 1
+  namelist$slurm_options <- list(time = job.time, account = 'lin-kp',
+    partition = 'lin-kp')
 
-    ## use Ben's algorithm for parallel simulation settings
-    n_nodes  <- 7
-    n_cores  <- ceiling(nrecp/n_nodes)
-    job.time <- '24:00:00'
-    slurm    <- n_nodes > 1
-    namelist$slurm_options <- list(time = job.time, account = 'lin-kp',
-      partition = 'lin-kp')
+  # time allowed for running hymodelc before forced terminations
+  timeout  <- 2 * 60 * 60  # in sec
+  namelist <- c(namelist, n_cores = n_cores, n_nodes = n_nodes, slurm = slurm,
+    timeout = timeout)
+  cat('Done with creating namelist...\n')
 
-    # time allowed for running hymodelc before forced terminations
-    timeout  <- 2 * 60 * 60  # in sec
-    namelist <- c(namelist, n_cores = n_cores, n_nodes = n_nodes, slurm = slurm,
-      timeout = timeout)
-    cat('Done with creating namelist...\n')
+  # call run_stilt_mod(), start running trajec and foot
+  run.stiltv2(namelist = namelist)
 
-    # call run_stilt_mod(), start running trajec and foot
-    run.stiltv2(namelist = namelist)
+} else if (run_sim) {    ## if running trajec or footprint
 
-  } else if (run_sim) {
+  # requires trajec and footprints ready for running this sections:
+  # Simulate XCO2.ff using ODIAC emissions, DW, 06/04/2018
+  # grab footprint info
+  foot.path <- file.path(workdir, 'out/by-id')
+  foot.file <- file.path(foot.path, list.files(foot.path, pattern = 'foot.nc',
+    recursive = T))
 
-    ## --------------------- if running trajec or footprint --------------------
-    # requires trajec and footprints ready for running this sections:
-    # Simulate XCO2.ff using ODIAC emissions, DW, 06/04/2018
+  tmp.foot <- raster(foot.file[1]); foot.extent <- extent(tmp.foot)
+  cat('Done reading footprint..\n')
 
-    # grab footprint info
-    #foot.path <- file.path(workdir, 'out', 'footprints')
-    foot.path <- file.path(workdir, 'ziscale_test/72hrs/out_zisf1p0/by-id')
-    foot.file <- file.path(foot.path,
-      list.files(foot.path, pattern = 'foot.nc', recursive = T))
+  # txt file name for outputting model results
+  txtfile <- file.path(workdir, paste0(timestr, '_', site, '_XCO2ff_',
+    abs(nhrs), 'hrs_', dpar, 'dpar_sf', smooth_factor, '.txt'))
 
-    tmp.foot <- raster(foot.file[1])
-    foot.extent <- extent(tmp.foot)
-    cat('Done reading footprint..\n')
+  # before simulations, subset emissions and convert tif format to nc format
+  vname <- '2017'; tiff.path <- file.path(homedir,
+    paste0('lin-group2/group_data/ODIAC/ODIAC', vname),
+    substr(timestr, 1,4))  # tif file from ODIAC website
 
-    # txt file name for outputting model results
-    txtfile <- file.path(workdir, paste0(timestr, '_', site, '_XCO2ff_',
-      abs(nhrs), 'hrs_', dpar, 'dpar_sf', smooth_factor, '.txt'))
+  # call tif2nc.odiacv2() to subset and get emiss file name
+  # 'store.path' is the path for outputting emissions
+  cat('Start reading and subsetting emissions that match foot...\n')
+  emiss.file <- tif2nc.odiacv3(site, timestr, vname, workdir, foot.extent,
+    store.path = file.path(workdir, 'in', 'ODIAC'), tiff.path, gzTF = F)
 
-    # before simulations, subset emissions and convert tif format to nc format
-    vname <- '2017'; tiff.path <- file.path(homedir,
-      paste0('lin-group2/group_data/ODIAC/ODIAC', vname),
-      substr(timestr, 1,4))  # tif file from ODIAC website
+  # reformatted ODIAC emissions file name should include 'YYYYMM'
+  # call func to match ODIAC emissions with xfoot & sum up to get 'dxco2.ff'
+  cat('Start XCO2.ff simulations...\n')
+  receptor <- foot.odiacv3(foot.file, emiss.file, workdir, txtfile, lon.lat,
+    plotTF = F)
 
-    # call tif2nc.odiacv2() to subset and get emiss file name
-    # 'store.path' is the path for outputting emissions
-    cat('Start reading and subsetting emissions that match foot...\n')
-    emiss.file <- tif2nc.odiacv3(site, timestr, vname, workdir, foot.extent,
-      store.path = file.path(workdir, 'in', 'ODIAC'), tiff.path, gzTF = F)
+  #ff2 <- read.table(txtfile, sep = ',', header = T)
+  #l1 <- ggplot() + geom_point(data = receptor, aes(lat, xco2.ff), colour = 'red')
 
-    # reformatted ODIAC emissions file name should include 'YYYYMM'
-    # call func to match ODIAC emissions with xfoot & sum up to get 'dxco2.ff'
-    cat('Start XCO2.ff simulations...\n')
-    receptor <- foot.odiacv3(foot.file, emiss.file, workdir, txtfile, lon.lat,
-      plotTF = F)
+  ### add latitude integrations--
+  library(zoo)
+  auc <- diff(receptor$lat) * rollmean(receptor$xco2.ff, 2)
+  xco2.ff.int <- sum(auc[auc > 0])
+  cat(paste('Lat-integrated XCO2.ff:', signif(xco2.ff.int, 3), 'ppm\n'))
+} # end if run traj/foot/sim
 
-    #ff2 <- read.table(txtfile, sep = ',', header = T)
-    #l1 <- ggplot() + geom_point(data = receptor, aes(lat, xco2.ff), colour = 'red')
-
-    ### add latitude integrations--
-    library(zoo)
-    auc <- diff(receptor$lat) * rollmean(receptor$xco2.ff, 2)
-    xco2.ff.int <- sum(auc[auc > 0])
-    cat(paste('Lat-integrated XCO2.ff:', signif(xco2.ff.int, 3), 'ppm\n'))
-  } # end if run traj/foot/sim
-
-} # end if forwardTF == F
 
 
 #------------------------------ STEP 8 --------------------------------------- #
-## if for forward time runs and determining backgorund XCO2
-if (forwardTF) {
-  cat('Generating forward trajec...\n')
-
-  # !!! if forward, release particles from a box around the city center
-  # plotTF for whether plotting urban plume & obs XCO2
-  run.forward.trajec(namelist = namelist, plotTF = T)
-}  # end if forwardTF
-
-
-#------------------------------ STEP 9 --------------------------------------- #
 ### simulate transport error in XCO2 due to met errors, DW, 07/25/2018
 # requires two sets of trajectories before running the following section:
 if (run_hor_err) {

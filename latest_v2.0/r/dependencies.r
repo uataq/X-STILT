@@ -21,7 +21,8 @@ invisible(lapply(rsc, source))
 if (!'lib.loc' %in% ls())
   lib.loc <- NULL
 load_libs('dplyr', 'ncdf4', 'parallel', 'raster', 'readr', 'rslurm', 'uataq',
-          'ggplot2', 'Hmisc', 'ggmap', 'geosphere', 'reshape2',
+          'ggplot2', 'Hmisc', 'ggmap', 'geosphere', 'reshape2', 'PBSmapping',
+          'sp', 'MASS', 'stringr',
           lib.loc = lib.loc)
 # add few other packages for OCO-2/XSTILT, DW, 05/23/2018
 

@@ -26,6 +26,21 @@ grab.oco2 <- function(ocopath, timestr, lon.lat){
   sec <- ncvar_get(ocodat, "time")
   time <- as.POSIXct(sec, origin = "1970-01-01 00:00:00", tz = "UTC")
 
+  # 0:Nadir, 1:Glint, 2:Target, 3: Transition
+  OM <- ncvar_get(ocodat, 'Sounding/operation_mode')
+  LF <- ncvar_get(ocodat, 'Sounding/land_fraction') # > 80%: land, < 20%: sea
+
+  # operation modes:
+  mode <- rep(NULL, length(OM))
+  mode[LF > 80 & OM == 0] <- 'Land_Nadir'
+  mode[LF < 20 & OM == 0] <- 'Sea_Nadir'
+  mode[LF > 80 & OM == 1] <- 'Land_Glint'
+  mode[LF < 20 & OM == 1] <- 'Sea_Glint'
+  mode[LF > 80 & OM == 2] <- 'Land_Target'
+  mode[LF < 20 & OM == 2] <- 'Sea_Target'
+  mode[LF > 80 & OM == 3] <- 'Land_Transition'
+  mode[LF < 20 & OM == 3] <- 'Sea_Transition'
+
   # select regions, lon.lat: c(minlon, maxlon, minlat, maxlat)
   region.index <- oco.lat >= lon.lat[3] & oco.lat <= lon.lat[4] &
                   oco.lon >= lon.lat[1] & oco.lon <= lon.lat[2]
@@ -35,6 +50,8 @@ grab.oco2 <- function(ocopath, timestr, lon.lat){
   sel.time <- as.character(time[region.index])
   sel.hr   <- as.numeric(substr(sel.time, 12, 13))
   sel.min  <- as.numeric(substr(sel.time, 15, 16))
+  sel.sec  <- as.numeric(substr(sel.time, 18, 19))
+
   sel.foot <- as.numeric(foot[region.index])
   sel.wl   <- as.numeric(wl[region.index])
   sel.qf   <- as.numeric(qf[region.index])
@@ -42,10 +59,13 @@ grab.oco2 <- function(ocopath, timestr, lon.lat){
   sel.lon  <- as.numeric(oco.lon[region.index])
   sel.xco2.obs <- as.numeric(xco2.obs[region.index])
   sel.xco2.obs.uncert <- as.numeric(xco2.obs.uncert[region.index])
+  sel.mode <- mode[region.index]
+  cat('Operational Modes:', unique(sel.mode), '\n\n')
 
-  obs.all <- data.frame(id = sel.id, time = sel.time, hr = sel.hr, min = sel.min,
-    lat = sel.lat, lon = sel.lon, xco2 = sel.xco2.obs, foot = sel.foot,
-    xco2.uncert = sel.xco2.obs.uncert, wl = sel.wl, qf = sel.qf)
+  obs.all <- data.frame(id = sel.id, time = sel.time, hr = sel.hr,
+    min = sel.min, sec = sel.sec, lat = sel.lat, lon = sel.lon, foot = sel.foot,
+    xco2 = sel.xco2.obs, xco2.uncert = sel.xco2.obs.uncert, wl = sel.wl,
+    qf = sel.qf)
 
   return(obs.all)
 }
