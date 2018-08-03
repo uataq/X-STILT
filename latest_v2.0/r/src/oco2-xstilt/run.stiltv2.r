@@ -8,9 +8,9 @@
 run.stiltv2 <- function(namelist){
 
   # User inputs ----------------------------------------------------------------
-  stilt_wd <- namelist$workdir
+  stilt_wd  <- namelist$workdir
   output_wd <- namelist$outdir
-  lib.loc <- .libPaths()[1]
+  lib.loc   <- .libPaths()[1]
   receptors <- namelist$recp.info
 
   # modification for OCO-2 column simulations, DW, 05/24/2018
@@ -174,7 +174,7 @@ run.stiltv2 <- function(namelist){
     varsiwant <- paste(varsiwant, collapse = '/')
 
   # add variables for OCO-2/XSTILT, 'ak.wgt', 'pwf.wgt', 'oco2.path', 'run_foot'
-  output <- stilt_apply(X = 1:nrow(receptors), FUN = simulation_step,
+  output <- stilt_apply(X = 1:nrow(receptors), FUN = simulation_stepv2,
                         slurm = slurm, slurm_options = slurm_options,
                         n_cores = n_cores, n_nodes = n_nodes, rm_dat = rm_dat,
                         ak.wgt = ak.wgt, conage = conage, cpack = cpack,

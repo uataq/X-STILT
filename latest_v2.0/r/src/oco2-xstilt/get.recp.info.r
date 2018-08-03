@@ -13,10 +13,14 @@ get.recp.info <- function(timestr, oco2.path, oco2.ver, lon.lat, selTF,
   trajpath = NULL, stilt.ver = 2){
 
   # ------------------- Step 1. READ IN OCO-2 LITE FILES ------------------- #
+  source('r/dependencies.r') # source all functions
   oco2 <- grab.oco2(oco2.path, timestr, lon.lat)
   # filter by quality flag too, more receptors when XCO2 is high
   if (oco2.ver == 'b7rb') sel.oco2 <- oco2 %>% filter(qf == 0)
   if (oco2.ver == 'b8r')  sel.oco2 <- oco2 %>% filter(wl <= 1)
+
+  # round lat, lon for each sounding, fix bug, DW, 07/31/2018
+  sel.oco2 <- sel.oco2 %>% mutate(lat = signif(lat, 6), lon = signif(lon, 7))
 
   # whether plotting XCO2 from OCO-2
   if (plotTF) {
@@ -93,7 +97,8 @@ get.recp.info <- function(timestr, oco2.path, oco2.ver, lon.lat, selTF,
         tz = 'UTC'))
   } # end if run_hor_err
 
-  recp.info <- recp.info[order(recp.info$lati), ] %>%
+  recp.info <- recp.info[order(recp.info$lat), ]
+  recp.info <- recp.info %>%
     dplyr::select('run_time' = 'run_times_utc', 'lati' = 'lat', 'long' = 'lon')
 
   # subset receptor data frame or find the nearest lat..

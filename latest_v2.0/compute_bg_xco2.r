@@ -18,7 +18,7 @@ source('r/dependencies.r') # source all functions
 site <- 'Riyadh'
 
 # OCO-2 version, path
-oco2.ver <- c('b7rb', 'b8r')[2]  # OCO-2 version
+oco2.ver <- c('b7rb', 'b8r')[1]  # OCO-2 version
 input.path <- file.path(homedir, 'lin-group5/wde/input_data')
 output.path <-file.path(homedir, 'lin-group5/wde/github/result')
 
@@ -55,7 +55,6 @@ site.info <- get.site.track(site, oco2.ver, oco2.path, searchTF,
 # get coordinate info and OCO2 track info from result 'site.info'
 lon.lat <- site.info$lon.lat
 oco2.track <- site.info$oco2.track
-print(lon.lat)
 
 # one can further subset 'oco2.track' based on sounding # over near city center
 # one can further subset 'oco2.track' based on data quality
@@ -66,7 +65,8 @@ if (oco2.ver == 'b7rb') oco2.track <- oco2.track %>% filter(qf.urban.count > 80)
 if (oco2.ver == 'b8r') oco2.track <- oco2.track %>% filter(wl.urban.count > 100)
 
 # finally narrow down and get timestr
-all.timestr <- oco2.track$timestr[c(2, 3, 8, 9, 10)]
+#all.timestr <- oco2.track$timestr[c(2, 3, 5, 8, 9, 10, 13)]
+all.timestr <- oco2.track$timestr[c(2, 3, 5, 6, 7)]
 
 # once you have all timestr, you can choose whether to plot them on maps
 # this helps you choose which overpass to simulate first, see 'tt' below
@@ -74,9 +74,9 @@ plotTF <- F
 if (plotTF) {
   for(t in 1:length(all.timestr)){
   ggmap.obs.xco2(site, timestr = all.timestr[t], oco2.path, lon.lat, workdir,
-    plotdir = file.path(workdir, 'plot/ggmap', site))
+    plotdir = workdir)
   ggmap.obs.sif(site, timestr = all.timestr[t], sif.path, lon.lat, workdir,
-    plotdir = file.path(workdir, 'plot/ggmap', site))
+    plotdir = workdir)
   }
 }
 
@@ -104,12 +104,14 @@ if (method == 'M1') {
 # -------------------------- Regional daily median  -------------------------- #
 if (method == 'M2H') {
   reg.lon.lat <- c(-15, 60, 0, 60)  # minlon, maxlon, minlat, maxlat
+  print(reg.lon.lat)
   mm <- ggplot.map(map = 'ggmap', center.lon = 25, center.lat = 20, zoom = 4)
 
   hakka.bg <- NULL
   for (t in 1:length(all.timestr)) {
     obs <- grab.oco2(oco2.path, all.timestr[t], reg.lon.lat) %>%
-      filter(wl <= 1) %>% filter(qf == 0)
+      #filter(wl <= 1) %>%
+      filter(qf == 0)
     m1 <- mm[[1]] + geom_point(data = obs, aes(lon, lat, colour = xco2),
       size = 0.4) + scale_colour_gradientn(colours = def.col(), name = 'XCO2')
 
@@ -123,11 +125,21 @@ if (method == 'M2H') {
 
 # -------------------------- Normal statistics  -------------------------- #
 if (method == 'M2S') {
+  library(MASS)
   silva.bg <- NULL
+
+  # 4x4 deg box around hotsplot, from Silva and Arellano, 2017
+  lon.lat[1] <- lon.lat[5] - 2; lon.lat[2] <- lon.lat[5] + 2
+  lon.lat[3] <- lon.lat[6] - 2; lon.lat[4] <- lon.lat[6] + 2
+  print(lon.lat)
+
   for (t in 1:length(all.timestr)) {
     obs <- grab.oco2(oco2.path, all.timestr[t], lon.lat) %>%
-      filter(wl <= 1) %>% filter(qf == 0)
-    silva.bg <- c(silva.bg, mean(obs$xco2) - sd(obs$xco2))
+      #filter(wl <= 1) %>%
+      filter(qf == 0)
+    tmp.bg <- as.numeric(fitdistr(obs$xco2, 'normal')$estimate[1]) -
+              as.numeric(fitdistr(obs$xco2, 'normal')$estimate[2])
+    silva.bg <- c(silva.bg, tmp.bg)
   }
   silva.bg <- data.frame(timestr = all.timestr, silva.bg = silva.bg)
   write.table(silva.bg, file = paste0('M2S_bg_', site, '_', oco2.ver, '.txt'),
@@ -141,14 +153,16 @@ if (method == 'M3') {
 
   bg.info <- NULL
   for (t in 1:length(all.timestr)) {
-  #t = 1
+
     timestr <- all.timestr[t]
+    print(timestr)
+
     #------------------------------ STEP 5.1 --------------------------------- #
     #### Whether forward/backward, release from a column or a box
-    forwardTF <- T    # forward or backward traj, if forward, release from a box
-    delt      <- 2    # fixed timestep [min]; set = 0 for dynamic timestep
-    overwrite <- F    # whether to run forward traj, if T, will overwrite existing
-    plotTF    <- T    # whether to calculate background and plot 2D density
+    forwardTF  <- T  # forward or backward traj, if forward, release from a box
+    delt       <- 2  # fixed timestep [min]; set = 0 for dynamic timestep
+    run_trajec <- F  # whether to run forward traj, if T, will overwrite existing
+    plotTF     <- T  # whether to calculate background and plot 2D density
 
     ### MUST-HAVE parameters about errors
     run_hor_err <- T  # run trajec with hor wind errors/calc trans error
@@ -170,8 +184,8 @@ if (method == 'M3') {
     # simulation_step() will find corresponding met files
     met        <- c('1km', 'gdas1', 'gdas0p5')[3]  # choose met fields
     met.path   <- file.path(homedir, 'u0947337', met)
-    met.num    <- 1                           # min number of met files needed
     met.format <- '%Y%m%d_gdas0p5'            # met file name convention
+    met.num    <- 1                           # min number of met files needed
 
     #### Whether obtaining wind errors, transport error component
     # require wind error comparisons stored in txtfile *****
@@ -189,8 +203,9 @@ if (method == 'M3') {
       err.path <- file.path(err.path, tolower(site), tolower(met))
 
       # call get.SIGUVERR() to interpolate most near-field wind errors
-      err.info <- get.siguverr(site , timestr, errpath = err.path, nfTF = T,
-        forwardTF = forwardTF, lon.lat, nhrs)
+      #err.info <- get.siguverr(site, timestr, err.path, nfTF = F, forwardTF = T,
+      #  lon.lat, nhrs)
+      err.info <- NULL
 
       if (is.null(err.info)) {
         cat('no wind error found; make consevative assumption of siguverr...\n')
@@ -236,23 +251,26 @@ if (method == 'M3') {
     #------------------------------ STEP 5.3 -------------------------------- #
     # !!! need to add makefile for AER_NOAA_branch in fortran ;
     # link two hymodelcs in exe directory
+    #clean.side <- c('south', 'both', 'both', 'north', 'south', 'north', 'south')[t]
     clean.side <- c('south', 'both', 'north', 'south', 'north')[t]
     print(clean.side)
 
-    #outpath <- NULL
-    outpath <- file.path(workdir, 'out_forward/')
+    if (run_trajec == T) outpath <- NULL  # will be in copies
+    if (run_trajec == F) outpath <- file.path(workdir, 'out_forward/')
     tmp.info <- run.forward.trajec(site = site, timestr = timestr,
-                                  overwrite = overwrite, nummodel = t,
-                                  lon.lat = lon.lat, delt = delt, dxyp = dxyp,
-                                  dzp = 0, dtime = dtime, agl = agl,
-                                  numpar = numpar, nhrs = nhrs, workdir = workdir,
-                                  outpath = outpath, siguverr = siguverr,
-                                  TLuverr = TLuverr, zcoruverr = zcoruverr,
-                                  horcoruverr = horcoruverr, met.format = met.format,
-                                  met.path = met.path, met.num = 1,
-                                  plotTF = plotTF, oco2.path = oco2.path,
-                                  oco2.ver = oco2.ver, zoom = 7, td = 0.05,
-                                  clean.side = clean.side)
+                                   overwrite = run_trajec, nummodel = t,
+                                   lon.lat = lon.lat, delt = delt, dxyp = dxyp,
+                                   dzp = 0, dtime = dtime, agl = agl,
+                                   numpar = numpar, nhrs = nhrs,
+                                   workdir = workdir, outpath = outpath,
+                                   siguverr = siguverr, TLuverr = TLuverr,
+                                   zcoruverr = zcoruverr,
+                                   horcoruverr = horcoruverr,
+                                   met.format = met.format, met.path = met.path,
+                                   met.num = 1, plotTF = plotTF,
+                                   oco2.path = oco2.path, oco2.ver = oco2.ver,
+                                   zoom = 7, td = 0.05, clean.side = clean.side)
+    print(tmp.info)
     bg.info <- rbind(bg.info, tmp.info)
   } # end for t
 

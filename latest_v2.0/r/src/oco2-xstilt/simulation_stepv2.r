@@ -15,6 +15,7 @@
 # add 'run_foot', if false, then no need to run footprint. DW, 06/04/2018
 # add STILTv1 and Trajecfoot(), DW, 07/17/2018
 # add ziscale as list, remember to unlist, DW, 07/25/2018
+# change the path of hymodelc executable, DW, 07/31/2018
 
 # for debug --
 if(F){
@@ -22,7 +23,7 @@ if(F){
   r_long = receptors$long; r_zagl = receptors$zagl
 }
 
-simulation_step <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
+simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
                             ak.wgt = NA, conage = 48, cpack = 1, delt = 0,
                             dmassTF = F, dxf = 1, dyf = 1, dzf = 0.01,
                             emisshrs = 0.01, frhmax = 3, frhs = 1, frme = 0.1,
@@ -53,10 +54,11 @@ simulation_step <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
     # If using lapply or parLapply, receptors are passed as vectors and need to
     # be subsetted for the specific simulation index
     # add ziscale, DW
+    print(r_run_time)
     if (length(r_run_time) > 1) {
       r_run_time <- r_run_time[X]
-      r_lati  <- r_lati[X]
-      r_long  <- r_long[X]
+      r_lati  <- format(r_lati[X], digits = 4, nsmall = 4)
+      r_long  <- format(r_long[X], digits = 4, nsmall = 4)
       r_zagl  <- r_zagl[X]
       ziscale <- ziscale[X]
     }
@@ -98,8 +100,11 @@ simulation_step <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
       # Ensure necessary files and directory structure are established in the
       # current rundir
       dir.create(rundir)
-      link_files <- dir(file.path(stilt_wd, 'exe'))
-      file.symlink(file.path(stilt_wd, 'exe', link_files), rundir)
+
+      # change the path of hymodelc executable, DW, 07/31/2018
+      # since we added another version of hymodelc (AER_NOAA_branch) under exe
+      link_files <- dir(file.path(stilt_wd, 'exe', 'master'))
+      file.symlink(file.path(stilt_wd, 'exe', 'master', link_files), rundir)
 
       # Execute particle trajectory simulation, and read results into data frame
       output$receptor <- list(run_time = r_run_time,
@@ -210,7 +215,7 @@ simulation_step <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
       # file to a data_frame with an adjusted timestamp and index for the
       # simulation step. If none exists, report an error and proceed
       if (!file.exists(output$file)) {
-        warning('simulation_step(): No _traj.rds file found in ', rundir,
+        warning('simulation_stepv2(): No _traj.rds file found in ', rundir,
                 '\n    skipping this timestep and trying the next...')
         return()
       }

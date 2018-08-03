@@ -9,7 +9,7 @@
 # add agl for released heights in mAGL, DW, 07/31/2018
 
 get.siguverr <- function(site, timestr, errpath, nfTF = F, forwardTF = F,
-  lon.lat, nhrs, agl){
+  lon.lat, nhrs, agl = NULL){
 
   ### read in wind comparisons
   errfile <- list.files(path = errpath, pattern = substr(timestr, 1, 8))
@@ -67,9 +67,7 @@ get.siguverr <- function(site, timestr, errpath, nfTF = F, forwardTF = F,
       } # end if
 
       # then compute mean SIGUVERR
-      sel.nf <- nf %>% filter(press >= 700)
-      siguverr <- sqrt(mean((sel.nf$u.err^2 + sel.nf$v.err^2)/2))
-      u.bias <- mean(sel.nf$u.err); v.bias <- mean(sel.nf$v.err)
+      sel.met.rad <- nf %>% filter(press >= 700)
 
     }else{    #### if not nearfield wind statistics
       # we have 5 days statistics, only grab first 3 days backward
@@ -82,13 +80,13 @@ get.siguverr <- function(site, timestr, errpath, nfTF = F, forwardTF = F,
         mutate(date = as.Date(as.character(time), '%Y%m%d')) %>%
         filter(hgt  >= min(unlist(agl)) & hgt <= max(unlist(agl)) &
                date >= min.date & date <= max.date)
-
-      # also add mean wind biases statistic
-      siguverr <- sqrt(mean((sel.met.rad$u.err^2 + sel.met.rad$v.err^2)/2))
-      u.bias   <- mean(sel.met.rad$u.err)
-      v.bias   <- mean(sel.met.rad$v.err)
     } # end if nfTF
 
+    # also add mean wind biases statistic
+    siguverr <- sqrt(mean((sel.met.rad$u.err^2 + sel.met.rad$v.err^2)/2))
+    u.bias   <- mean(sel.met.rad$u.err)
+    v.bias   <- mean(sel.met.rad$v.err)
+    
     stat <- data.frame(siguverr, u.bias, v.bias)
     return(list(sel.met.rad, stat))
 

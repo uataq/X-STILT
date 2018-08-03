@@ -51,6 +51,7 @@ run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
 
   # if running trajec
   if (overwrite) {
+    
     # delete previous directories and then create new one
     system(paste0('rm -rf ', outpath), ignore.stderr = T)
     dir.create(outpath, showWarnings = FALSE)

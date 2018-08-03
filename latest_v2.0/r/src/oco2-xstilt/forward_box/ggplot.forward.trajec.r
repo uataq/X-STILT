@@ -41,7 +41,7 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
                          lat = c(llat[1], llat[1], llat[2], llat[2]))
 
   # only allow for an hour duration, and compute release times in POSIXct format
-  info <- ident.to.info(ident = ident, aglTF = F)[[1]]
+  info <- ident.to.info(ident = ident, stilt.ver = 1, aglTF = F)[[1]]
   info$rel.date <- as.POSIXlt(info$timestr, format = '%Y%m%d%H%M', tz = 'UTC')
 
   # get first release time
@@ -105,11 +105,11 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
     mutate(POS = 1:nrow(wide.bound), PID = 1)
 
   # if diff is too large, meaning there are more than one polygon
-  if (length(which(abs(diff(bound.traj$Y)) > td)) > 0)
-    bound.traj <- bound.traj[1:which(abs(diff(bound.traj$Y)) > td),]
+  #if (length(which(abs(diff(bound.traj$Y)) > td)) > 0)
+  #  bound.traj <- bound.traj[1:which(abs(diff(bound.traj$Y)) > td),]
 
-  if (length(which(abs(diff(bound.traj$X)) > td)) > 0)
-    bound.traj <- bound.traj[1:which(abs(diff(bound.traj$X)) > td),]
+  #if (length(which(abs(diff(bound.traj$X)) > td)) > 0)
+  #  bound.traj <- bound.traj[1:which(abs(diff(bound.traj$X)) > td),]
 
   p3 <- p2 + geom_polygon(data = bound.traj, aes(X, Y), colour = 'gray10',
     linetype = 1, fill = NA, size = 0.9, alpha = 0.5)
@@ -155,7 +155,8 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
     p5 <- p4 + theme(legend.position = 'right',
       legend.key.width = unit(0.5, 'cm'),
       legend.key.height = unit(1.5, 'cm'),
-      legend.text = element_text(size = font.size), legend.key = element_blank(),
+      legend.text = element_text(size = font.size),
+      legend.key = element_blank(),
       axis.title.y = element_text(size = font.size,angle = 90),
       axis.title.x = element_text(size = font.size,angle = 0),
       axis.text = element_text(size = font.size),
@@ -170,34 +171,54 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
       if (oco2.ver == 'b8r') scr.obs <- obs %>% filter(wl <= 1)
 
       # get Enhanced latitude range
-      min.lat <- min(pol.obs$lat)
-      max.lat <- max(pol.obs$lat)
+      pol.min.lat <- min(pol.obs$lat)
+      pol.max.lat <- max(pol.obs$lat)
 
       # allow for some uncertainty, to avoid including high XCO2
-      dlat <- max.lat - min.lat
-      min.lat <- min.lat - dlat * 0.2
-      max.lat <- max.lat + dlat * 0.2
-      cat(paste('Enhanced lat range:', signif(min.lat, 4), '-',
-        signif(max.lat, 4),'N\n'))
+      dlat <- pol.max.lat - pol.min.lat
+      pol.min.lat <- pol.min.lat - dlat * 0.3
+      pol.max.lat <- pol.max.lat + dlat * 0.3
+      cat(paste('Enhanced lat range:', signif(pol.min.lat, 4), '-',
+        signif(pol.max.lat, 4),'N\n'))
 
-      north.obs <- scr.obs %>%
-        filter(lat > max.lat & lat < min(lon.lat[4], max.lat + 1))
-      south.obs <- scr.obs %>%
-        filter(lat < min.lat & lat > max(lon.lat[3], min.lat - 1))
+      # north part
+      north.min.lat <- pol.max.lat
+      north.max.lat <- min(lon.lat[4], pol.max.lat + 0.5)
+      #north.max.lat <- pol.max.lat + 1
+      north.obs <- scr.obs %>% filter(lat > north.min.lat & lat < north.max.lat)
+      north.bg  <- mean(north.obs$xco2)
 
-      north.bg <- mean(north.obs$xco2)
-      south.bg <- mean(south.obs$xco2)
+      # south part
+      south.min.lat <- max(lon.lat[3], pol.min.lat - 0.5)
+      #south.min.lat <- pol.min.lat - 1
+      south.max.lat <- pol.min.lat
+      south.obs <- scr.obs %>% filter(lat > south.min.lat & lat < south.max.lat)
+      south.bg  <- mean(south.obs$xco2)
 
       # calculate background:
       if (clean.side == 'both') {
-        mean.bg <- c(north.bg + south.bg)/2
-        sd.bg <- sd(c(north.obs$xco2, south.obs$xco2))
+        # if use obs on both sides, only extent 0.5deg each, total bg of 1deg
+        north.max.lat <- min(lon.lat[4], pol.max.lat + 0.5)
+        south.min.lat <- max(lon.lat[3], pol.min.lat - 0.5)
+
+        north.obs <- scr.obs %>% filter(lat > north.min.lat & lat < north.max.lat)
+        south.obs <- scr.obs %>% filter(lat > south.min.lat & lat < south.max.lat)
+
+        mean.bg <- mean(c(north.obs$xco2, south.obs$xco2))
+        sd.bg   <- sd(c(north.obs$xco2, south.obs$xco2))
+        cat(paste('Background lat range:',  signif(north.min.lat, 4), '-',
+          signif(north.max.lat, 4), 'N + ', signif(south.min.lat, 4), '-',
+          signif(south.max.lat, 4), 'N\n'))
 
       } else if (clean.side == 'north') {
         mean.bg <- north.bg; sd.bg <- sd(north.obs$xco2)
+        cat(paste('Background lat range:', signif(north.min.lat, 4), '-',
+          signif(north.max.lat, 4), 'N\n'))
 
       } else if(clean.side == 'south') {
         mean.bg <- south.bg; sd.bg <- sd(south.obs$xco2)
+        cat(paste('Background lat range:', signif(south.min.lat, 4), '-',
+          signif(south.max.lat, 4), '\n'))
 
       } else {
         cat('Incorrect input of clean.side\n')
@@ -209,19 +230,21 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
     }else{  # if no intersection
       cat('ggplot.forward.trajec(): No intersection with OCO-2 track...\n')
       north.bg <- NA; south.bg <- NA; mean.bg  <- NA
-      min.lat  <- NA; max.lat  <- NA
+      pol.min.lat <- NA; pol.max.lat <- NA
     }  # end if nrow(pol.obs)
 
     title <- paste('Forward-time urban plume for overpass on', timestr)
     p5 <- p5 + labs(x = 'LONGITUDE', y = 'LATITUDE', title = title)
 
-    picname <- paste0('urban_plume_forward_', site, '_', timestr, '.png')
+    picname <- paste0('urban_plume_forward_', site, '_', timestr, '_', oco2.ver,
+      '.png')
     picname <- file.path(trajpath, picname)
     ggsave(p5, filename = picname, width = 12, height = 12)
 
     # also, return the max min latitude ranges for polluted range
     bg.info <- data.frame(timestr, north.bg, south.bg, final.bg = mean.bg,
-      min.lat, max.lat)
+      pol.min.lat, pol.max.lat, clean.side, north.min.lat, north.max.lat,
+      south.min.lat, south.max.lat)
     return(bg.info)
   } # end if
 

@@ -19,7 +19,7 @@
 # Complement forward runs from a box around the city, DW, 07/27/2018
 # this requires the AER_NOAA_branch modified hymodelc
 #
-# remove forwardTF and background estimates out of this code,
+# remove forwardTF, windowTF and background estimates out of this code,
 # for forward run, see 'compute_bg_xco2.r', DW, 07/30/2018
 #
 # for generating trajec with horizontal error compoennt,
@@ -86,7 +86,7 @@ if (oco2.ver == 'b7rb') oco2.track <- oco2.track %>% filter(qf.urban.count > 80)
 if (oco2.ver == 'b8r') oco2.track <- oco2.track %>% filter(wl.urban.count > 100)
 
 # finally narrow down and get timestr
-all.timestr <- oco2.track$timestr[c(2, 3, 8, 9, 10)]
+all.timestr <- oco2.track$timestr[c(2, 3, 5, 8, 9, 10)]
 
 # once you have all timestr, you can choose whether to plot them on maps
 # this helps you choose which overpass to simulate first, see 'tt' below
@@ -121,7 +121,11 @@ run_sim     <- F    # calculate simulated XCO2.ff, see STEP 8
 
 run_hor_err <- T    # run traj with hor wind errors/calc trans error (see STEP3)
 run_ver_err <- F    # run traj with mixed layer height scaling (see STEP3)
-if (run_hor_err) err.level <- c('lower', 'upper')[1]  # which part to be modeled
+if (run_hor_err) {
+  err.level <- c('lower', 'upper')[1]  # which part to be modeled
+} else {
+  err.level <- NA
+}
 
 if (run_trajec) cat('Need to generate trajec...\n')
 if (run_foot)   cat('Need to generate footprint...\n\n')
@@ -206,6 +210,7 @@ nrecp <- nrow(recp.info)
 print(nrecp)
 cat(paste('Done with receptor setup...\n'))
 
+
 #------------------------------ STEP 4 --------------------------------------- #
 # path for the ARL format of WRF and GDAS
 # simulation_step() will find corresponding met files
@@ -216,12 +221,15 @@ met.format <- '%Y%m%d_gdas0p5'                 # met file name convention
 
 # one can link to other direcetory that store trajec,
 # but need to have the same directory structure, including by-id, footprint...
-outdir     <- file.path(workdir, 'out')  # path for storing trajec, foot
+outdir <- file.path(workdir, 'out')  # path for storing trajec, foot
 
 #### Whether obtaining wind errors, transport error component
 # require wind error comparisons stored in txtfile *****
 if (run_hor_err) {
   cat('+++ horizontal wind error component +++\n')
+
+  # path for storing trajec with err component
+  #outdir <- file.path(workdir, 'out_err')
 
   # intput correlation lengthscale (in m) and timescales (in mins)
   # correlation timescale, horizontal and vertical lengthscales
@@ -332,8 +340,8 @@ namelist <- list(agl = agl, ak.wgt = ak.wgt, delt = delt, dmassTF = dmassTF,
   sigzierr = sigzierr, site = site, smooth_factor = smooth_factor,
   stilt.ver = stilt.ver, time_integrate = time_integrate, timestr = timestr,
   TLuverr = TLuverr, TLzierr = TLzierr, varstrajec = varstrajec,
-  windowTF = windowTF, workdir = workdir, zicontroltf = zicontroltf,
-  ziscale = ziscale, zcoruverr = zcoruverr)
+  workdir = workdir, zicontroltf = zicontroltf, ziscale = ziscale,
+  zcoruverr = zcoruverr)
 
 
 #------------------------------ STEP 7 --------------------------------------- #
@@ -341,10 +349,11 @@ namelist <- list(agl = agl, ak.wgt = ak.wgt, delt = delt, dmassTF = dmassTF,
 if (run_trajec | run_foot) {    ## if running trajec or footprint
 
   ## use Ben's algorithm for parallel simulation settings
-  n_nodes  <- 5
+  n_nodes  <- 10
   n_cores  <- ceiling(nrecp/n_nodes)
   job.time <- '24:00:00'
   slurm    <- n_nodes > 1
+  #slurm <- F
   namelist$slurm_options <- list(time = job.time, account = 'lin-kp',
     partition = 'lin-kp')
 
@@ -399,7 +408,6 @@ if (run_trajec | run_foot) {    ## if running trajec or footprint
   xco2.ff.int <- sum(auc[auc > 0])
   cat(paste('Lat-integrated XCO2.ff:', signif(xco2.ff.int, 3), 'ppm\n'))
 } # end if run traj/foot/sim
-
 
 
 #------------------------------ STEP 8 --------------------------------------- #
