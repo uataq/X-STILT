@@ -38,10 +38,9 @@ source('r/dependencies.r') # source all functions
 site <- 'Riyadh'
 
 # OCO-2 version, path
-oco2.ver <- c('b7rb', 'b8r')[2]  # OCO-2 version
+oco2.ver <- c('b7rb', 'b8r')[1]  # OCO-2 version
 input.path <- file.path(homedir, 'lin-group5/wde/input_data')
-output.path <-file.path(homedir, 'lin-group5/wde/github/result')
-
+output.path <- file.path(homedir, 'lin-group5/wde/github/result')
 oco2.path <- file.path(input.path, paste0('OCO-2/L2/OCO2_lite_', oco2.ver))
 sif.path <- file.path(input.path, paste0('OCO-2/L2/OCO2_lite_SIF_', oco2.ver))
 txtpath <- file.path(output.path, 'oco2_overpass')
@@ -92,7 +91,7 @@ all.timestr <- oco2.track$timestr[c(2, 3, 5, 8, 9, 10)]
 # this helps you choose which overpass to simulate first, see 'tt' below
 plotTF <- F
 if (plotTF) {
-  for(t in 1:length(all.timestr)){
+  for (t in 1:length(all.timestr)) {
   ggmap.obs.xco2(site, timestr = all.timestr[t], oco2.path, lon.lat, workdir,
     plotdir = file.path(workdir, 'plot/ggmap', site))
   ggmap.obs.sif(site, timestr = all.timestr[t], sif.path, lon.lat, workdir,
@@ -110,7 +109,7 @@ cat('Done with choosing cities & overpasses...\n')
 
 #------------------------------ STEP 2 --------------------------------------- #
 #### Whether forward/backward, release from a column or a box
-columnTF    <- T    # whether a column receptor or fixed receptor
+columnTF    <- F    # whether a column receptor or fixed receptor
 stilt.ver   <- 2    # STILT versions (call different footprint algorithms)
 delt        <- 2    # fixed timestep [min]; set = 0 for dynamic timestep
 nhrs        <- -72  # number of hours backward (-) or forward (+)
@@ -119,7 +118,7 @@ run_trajec  <- T    # run trajec, will overwrite existing 'out'
 run_foot    <- F    # run footprint, trajec requires
 run_sim     <- F    # calculate simulated XCO2.ff, see STEP 8
 
-run_hor_err <- T    # run traj with hor wind errors/calc trans error (see STEP3)
+run_hor_err <- F    # run traj with hor wind errors/calc trans error (see STEP3)
 run_ver_err <- F    # run traj with mixed layer height scaling (see STEP3)
 if (run_hor_err) {
   err.level <- c('lower', 'upper')[1]  # which part to be modeled
@@ -142,8 +141,9 @@ cat('Done with choosing forward box OR backward column runs...\n')
 # but if trying to represent air column, use columnTF=T, see below
 
 ### 1) if release particles from fixed levels
-agl    <- 10         # in mAGL
+agl    <- c(10, 100, 500, 1000, 3000)[3]         # in mAGL
 numpar <- 1000       # par for each time window for forward box runs
+dpar   <- NA
 
 ### 2) SET COLUMN RECEPTORS as a list, if release particles from a column
 if (columnTF) {
@@ -191,7 +191,7 @@ if (selTF) {
 
 # whether to subset receptors when debugging
 recp.num <- NULL     # can be a number for max num of receptors
-find.lat <- NULL     # for debug or test, model one sounding
+find.lat <- 24.5444     # for debug or test, model one sounding
 
 # for generating trajec with horizontal error compoennt,
 # use the same lat.lon from original trajec, DW, 07/31/2018
@@ -207,9 +207,9 @@ recp.info <- get.recp.info(timestr = timestr, oco2.path = oco2.path,
   trajpath = trajpath, stilt.ver = stilt.ver)
 
 nrecp <- nrow(recp.info)
-print(nrecp)
 cat(paste('Done with receptor setup...\n'))
 
+#stop()
 
 #------------------------------ STEP 4 --------------------------------------- #
 # path for the ARL format of WRF and GDAS
@@ -275,20 +275,24 @@ TLzierr     <- NA
 horcorzierr <- NA
 
 ### Besides horizontal wind error, do we want to account for PBL height?
-# add vertical trans error via ziscale *****
-if (run_ver_err) {
-  zicontroltf <- 1              # 0 for FALSE; 1 for scaling, TRUE
-  ziscale     <- rep(list(rep(0.8, 24)), nrecp)  # create as list
-  # 1st # for scaling factor; 2nd # for # of hours (always use abs())
-  cat(paste('+++ Mixed layer height scaling of', ziscale[[1]][1],
-    'when generating trajec +++\n'))
+if (run_ver_err) {    # add vertical trans error via ziscale *****
+  zicontroltf <- 1                         # 0: NO scaling; 1: with scaling
+  nhrs.zisf   <- 24                        # of hours for zi scaling, always +
+  const.zisf  <- c(0.6, 0.8, 1.2, 1.4)[1]  # if constant zi scaling factors
+
+  # create ziscale as list, with list dimension of # of receptors
+  ziscale     <- rep(list(rep(const.zisf, nhrs.zisf)), nrecp)
+  cat(paste('+++ PBL scaling of', const.zisf, 'when generating trajec +++\n'))
 
 } else {
-  cat('NO Mixed layer height scaling ...\n')
+  cat('NO PBL scaling when generating trajec...\n')
   zicontroltf <- 0
-  ziscale     <- 1.0
+  const.zisf  <- 1      # 1 means no scaling
+  ziscale     <- const.zisf
+
 } # end if run_ver_err
 cat('Done with choosing met & inputting wind errors...\n')
+
 
 #------------------------------ STEP 5 --------------------------------------- #
 #### Settings for generating footprint maps, no need for getting background
@@ -349,7 +353,7 @@ namelist <- list(agl = agl, ak.wgt = ak.wgt, delt = delt, dmassTF = dmassTF,
 if (run_trajec | run_foot) {    ## if running trajec or footprint
 
   ## use Ben's algorithm for parallel simulation settings
-  n_nodes  <- 10
+  n_nodes  <- 1
   n_cores  <- ceiling(nrecp/n_nodes)
   job.time <- '24:00:00'
   slurm    <- n_nodes > 1
