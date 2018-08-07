@@ -38,15 +38,16 @@ source('r/dependencies.r') # source all functions
 site <- 'Riyadh'
 
 # OCO-2 version, path
-oco2.ver <- c('b7rb', 'b8r')[1]  # OCO-2 version
+oco2.ver <- c('b7rb', 'b8r')[2]  # OCO-2 version
 input.path <- file.path(homedir, 'lin-group5/wde/input_data')
 output.path <- file.path(homedir, 'lin-group5/wde/github/result')
 oco2.path <- file.path(input.path, paste0('OCO-2/L2/OCO2_lite_', oco2.ver))
 sif.path <- file.path(input.path, paste0('OCO-2/L2/OCO2_lite_SIF_', oco2.ver))
 txtpath <- file.path(output.path, 'oco2_overpass')
+#txtpath <- './'
 
 # date range for searching OCO-2 tracks, min, max YYYYMMDD
-date.range <- c('20140101', '20181231')
+date.range <- c('20140101', '20141230')
 
 # vector of examined region, c(minlon, maxlon, minlat, maxlat, citylon, citylat)
 lon.lat <- get.lon.lat(site)  # can be NULL, default will be given in site.info()
@@ -93,9 +94,9 @@ plotTF <- F
 if (plotTF) {
   for (t in 1:length(all.timestr)) {
   ggmap.obs.xco2(site, timestr = all.timestr[t], oco2.path, lon.lat, workdir,
-    plotdir = file.path(workdir, 'plot/ggmap', site))
+    plotdir = file.path(workdir, 'plot/', site))
   ggmap.obs.sif(site, timestr = all.timestr[t], sif.path, lon.lat, workdir,
-    plotdir = file.path(workdir, 'plot/ggmap', site))
+    plotdir = file.path(workdir, 'plot/', site))
   }
 }
 
@@ -115,7 +116,7 @@ delt        <- 2    # fixed timestep [min]; set = 0 for dynamic timestep
 nhrs        <- -72  # number of hours backward (-) or forward (+)
 
 run_trajec  <- T    # run trajec, will overwrite existing 'out'
-run_foot    <- F    # run footprint, trajec requires
+run_foot    <- T    # run footprint, trajec requires
 run_sim     <- F    # calculate simulated XCO2.ff, see STEP 8
 
 run_hor_err <- F    # run traj with hor wind errors/calc trans error (see STEP3)
@@ -141,7 +142,7 @@ cat('Done with choosing forward box OR backward column runs...\n')
 # but if trying to represent air column, use columnTF=T, see below
 
 ### 1) if release particles from fixed levels
-agl    <- c(10, 100, 500, 1000, 3000)[3]         # in mAGL
+agl    <- c(10, 100, 500, 1000, 2500)[5]         # in mAGL
 numpar <- 1000       # par for each time window for forward box runs
 dpar   <- NA
 

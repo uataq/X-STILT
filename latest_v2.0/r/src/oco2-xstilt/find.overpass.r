@@ -13,7 +13,7 @@
 
 find.overpass <- function(date.range, target.region,
   oco2.ver = c('b7rb','b8r'),
-  oco2.path = file.path('/uufs/chpc.utah.edu/common/home/lin-group1/wde/input_data/OCO-2/L2',
+  oco2.path = file.path('/uufs/chpc.utah.edu/common/home/lin-group5/wde/input_data/OCO-2/L2',
               paste0('OCO2_lite_', oco2.ver)),
   urbanTF = F, dlon = 0.5, dlat = 0.5){
 

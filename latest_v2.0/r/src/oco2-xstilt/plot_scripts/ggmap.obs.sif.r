@@ -4,8 +4,8 @@
 ggmap.obs.sif <- function(site, timestr, sif.path, lon.lat, workdir,
   plotdir = file.path(workdir, 'plot'), zoom = 9){
 
-  sel.sif <- grab.sif(sif.path, lon.lat)
-  if (is.na(sel.sif)) {cat('NO SIF file matched, returning NA...'); return()}
+  sel.sif <- grab.sif(sif.path, timestr, lon.lat)
+  if (length(sel.sif) == 0) {cat('NO SIF file matched, returning NA...'); return()}
 
   # plot center
   alpha <- 1; font.size <- rel(1.1); col <- def.col()
@@ -23,7 +23,7 @@ ggmap.obs.sif <- function(site, timestr, sif.path, lon.lat, workdir,
     geom_point(data = melt.sif, aes(lon, lat, colour = value), size = 1.0) +
     facet_wrap(~variable, ncol = 2) +
     scale_colour_gradientn(name = 'OCO-2 SIF', colours = col,
-      limits = c(-1, max(2.5, max(melt.sif$sif))),
+      limits = c(-1, max(2.5, max(melt.sif$value))),
       breaks = seq(-4, 4, 0.5), labels = seq(-4, 4, 0.5))
 
   # draw a rectangle around the city

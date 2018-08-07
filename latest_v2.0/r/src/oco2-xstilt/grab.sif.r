@@ -1,6 +1,6 @@
 # subroutine to read and select SIF data, DW 08/07/2018
 
-grab.sif <- function(sif.path, lon.lat){
+grab.sif <- function(sif.path, timestr, lon.lat){
 
     # get Sif file name
     sif.file <- list.files(pattern = paste0('LtSIF_', substr(timestr, 3, 8)),
