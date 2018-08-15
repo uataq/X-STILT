@@ -4,9 +4,13 @@ Scripts and subroutines for X-STILT, modified from the Stochastic Time-Inverted 
 
 Developments are still ongoing towards a more flexible model framework that can be more easily applied to other column measurements. Contributions from other users are welcomed and highly appreciated. Please contact Dien (Dien.Wu@utah.edu) if you have any questions/comments/suggestions.
 
-## Examples:
-![](xco2_riyadh.png)
-Figure 1: Spatial map of XCO2 contribution (ppm) on 12/29/2014 for selected soundings/receptors over Riyadh
+
+## Example plots:
+![](../wgt_sum_xfoot_Riyadh_2015121610_gdas0p5_STILTv2_zoom8_-72hrs_100dpar.png)
+Figure 1: Latitude-integrated map of weighted column footprints [umol/m2/s] on 12/29/2014 from 70+ selected sounding/receptor over Riyadh.
+
+![](../wgt_sum_xco2_Riyadh_2015121610_gdas0p5_STILTv2_zoom8_-72hrs_100dpar.png)
+Figure 1: Latitude-integrated XCO2.ff contribution maps [ppm] on 12/29/2014 from 70+ selected sounding/receptor over Riyadh.
 
 
 ## Reference:

@@ -20,8 +20,7 @@ Modifications on top of STILTv2 are located in /src/oco2-xsilt. Users can start 
    * Vertical transport error via scaling mixed layer height   -> *zicontroltf*
    * Simulate FFCO2 XCO2 enhancements (footprint needed)       -> *run_sim*
 
-
-## Column footprints comparisons using footprint algorithms between model versions and smooth factors:
+## Example plots:
 ![](wgt_sum_xfoot_Riyadh_2015121610_gdas0p5_STILTv2_zoom8_-72hrs_100dpar.png)
 Figure 1: Latitude integrated map of weighted column footprints [umol/m2/s] on 12/29/2014 from 70+ selected sounding/receptor over Riyadh.
 
