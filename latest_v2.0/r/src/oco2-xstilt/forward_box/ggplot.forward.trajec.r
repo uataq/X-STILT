@@ -14,8 +14,9 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
   # call grab.oco2() to read in observations and compute overpass time
   # lon.lat used for grabbing OCO2 should be wider, e.g., by 2 deg +
   mod.lon.lat <- lon.lat
-  mod.lon.lat[c(1, 3)] <- mod.lon.lat[c(1, 3)] - 2
-  mod.lon.lat[c(2, 4)] <- mod.lon.lat[c(2, 4)] + 2
+  mod.lon.lat[, c('minlon', 'minlat')] <- mod.lon.lat[, c('minlon', 'minlat')] - 2
+  mod.lon.lat[, c('maxlon', 'maxlat')] <- mod.lon.lat[, c('maxlon', 'maxlat')] + 2
+
   obs <- grab.oco2(oco2.path, timestr, mod.lon.lat)
   obs.datestr <- as.POSIXlt(as.character(obs$time),
     format = '%Y-%m-%d %H:%M:%S', tz = 'UTC')
@@ -183,13 +184,13 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
 
       # north part
       north.min.lat <- pol.max.lat
-      north.max.lat <- min(lon.lat[4], pol.max.lat + 0.5)
+      north.max.lat <- min(lon.lat$maxlat, pol.max.lat + 0.5)
       #north.max.lat <- pol.max.lat + 1
       north.obs <- scr.obs %>% filter(lat > north.min.lat & lat < north.max.lat)
       north.bg  <- mean(north.obs$xco2)
 
       # south part
-      south.min.lat <- max(lon.lat[3], pol.min.lat - 0.5)
+      south.min.lat <- max(lon.lat$minlat, pol.min.lat - 0.5)
       #south.min.lat <- pol.min.lat - 1
       south.max.lat <- pol.min.lat
       south.obs <- scr.obs %>% filter(lat > south.min.lat & lat < south.max.lat)
@@ -198,8 +199,8 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
       # calculate background:
       if (clean.side == 'both') {
         # if use obs on both sides, only extent 0.5deg each, total bg of 1deg
-        north.max.lat <- min(lon.lat[4], pol.max.lat + 0.5)
-        south.min.lat <- max(lon.lat[3], pol.min.lat - 0.5)
+        north.max.lat <- min(lon.lat$maxlat, pol.max.lat + 0.5)
+        south.min.lat <- max(lon.lat$minlat, pol.min.lat - 0.5)
 
         north.obs <- scr.obs %>% filter(lat > north.min.lat & lat < north.max.lat)
         south.obs <- scr.obs %>% filter(lat > south.min.lat & lat < south.max.lat)

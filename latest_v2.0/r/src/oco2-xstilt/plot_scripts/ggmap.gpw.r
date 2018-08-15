@@ -9,7 +9,8 @@ ggmap.gpw <- function(lon.lat, pop.path, mm = NULL, site = NULL,
   pop.dat <- raster(file.path(pop.path, pop.file))
 
   # crop population data
-  sel.pop.dat <- crop(pop.dat, extent(lon.lat[1:4]))  # 1km deg
+  sel.pop.dat <- crop(pop.dat,
+    extent(lon.lat$minlon, lon.lat$maxlon, lon.lat$minlat, lon.lat$maxlat))
   pop.df <- raster::as.data.frame(sel.pop.dat, xy = T)
   colnames(pop.df) <- list('lon', 'lat', 'pop')
 

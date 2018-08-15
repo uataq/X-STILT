@@ -4,18 +4,17 @@
 # 'date.range' for date range, c(YYYYMMDD_1, YYYYMMDD_2)
 # 'oco2.path' default in lin-group
 
-# target.region contains c(min.lat, max.lat, min.lon, max.lon), NEED THIS ORDER!!!
+# lon.lat contains c(minlat, maxlat, minlon, maxlon, ...), NEED THIS ORDER!!!
 # default city center is for Riyadh
-# change the order of 'target.region',
+# change the order of 'lon.lat',
 # --- c(min.lon, max.lon, min.lat, max.lat, city.lon, city.lat), DW
 # add a flag ''urbanTF' for searching soundings near urban region, DW, 06/15/2018
 # dlat, dlon for lat,lon from city center
 
-find.overpass <- function(date.range, target.region,
-  oco2.ver = c('b7rb','b8r'),
-  oco2.path = file.path('/uufs/chpc.utah.edu/common/home/lin-group5/wde/input_data/OCO-2/L2',
-              paste0('OCO2_lite_', oco2.ver)),
-  urbanTF = F, dlon = 0.5, dlat = 0.5){
+find.overpass <- function(date.range, lon.lat, oco2.ver = c('b7rb','b8r'),
+  oco2.path =
+  file.path('/uufs/chpc.utah.edu/common/home/lin-group5/wde/input_data/OCO-2/L2',
+    paste0('OCO2_lite_', oco2.ver)), urbanTF = F, dlon = 0.5, dlat = 0.5){
 
   library(geosphere); library(ncdf4); library(dplyr)
 
@@ -62,21 +61,20 @@ find.overpass <- function(date.range, target.region,
     oco2.wl  <- ncvar_get(oco2.dat, 'warn_level')
 
     # determine whether there are any overpasses for the target region
-    SEL <- oco2.lon >= target.region[1] & oco2.lon <= target.region[2] &
-           oco2.lat >= target.region[3] & oco2.lat <= target.region[4]
+    SEL <- oco2.lon >= lon.lat$minlon & oco2.lon <= lon.lat$maxlon &
+           oco2.lat >= lon.lat$minlat & oco2.lat <= lon.lat$maxlat
     tot.count <- length(which(SEL))
     qf.count  <- length(which(SEL & oco2.qf == 0))
     if (oco2.ver == 'b8r')  wl.count <- length(which(SEL & oco2.wl == 0))
     if (oco2.ver == 'b7rb') wl.count <- length(which(SEL & oco2.wl < 15))
 
     # also search for soundings near city center,
-    # city.lon = target.region[5]; city.lat = target.region[6]
     if (urbanTF) {
       SEL.urban <-
-        oco2.lon >= (target.region[5] - dlon) &
-        oco2.lon <= (target.region[5] + dlon) &
-        oco2.lat >= (target.region[6] - dlat) &
-        oco2.lat <= (target.region[6] + dlat)
+        oco2.lon >= (lon.lat$citylon - dlon) &
+        oco2.lon <= (lon.lat$citylon + dlon) &
+        oco2.lat >= (lon.lat$citylat - dlat) &
+        oco2.lat <= (lon.lat$citylat + dlat)
       tot.urban.count <- length(which(SEL.urban))
       qf.urban.count  <- length(which(SEL.urban & oco2.qf == 0))
       if (oco2.ver == 'b8r')  wl.urban.count <- length(which(SEL.urban & oco2.wl == 0))

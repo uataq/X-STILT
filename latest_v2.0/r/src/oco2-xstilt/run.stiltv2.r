@@ -4,6 +4,7 @@
 
 # preserve original "run_stilt.r" and modify "run_stilt.r" as a subroutine
 # add ziscale, DW, 07/25/2018
+# add prescribed met.files if available, DW, 08/08/2018
 
 run.stiltv2 <- function(namelist){
 
@@ -135,27 +136,25 @@ run.stiltv2 <- function(namelist){
   source('r/dependencies.r')
 
   # Structure out directory ----------------------------------------------------
-  d <- file.path('out')
-  if(!file.exists(d))dir.create(d)
-
   # Outputs are organized in three formats. by-id contains simulation files by
   # unique simulation identifier. particles and footprints contain symbolic
   # links to the particle trajectory and footprint files in by-id
-  #system('rm -r out/footprints', ignore.stderr = T)
+  system(paste0('rm -r ', output_wd, '/footprints'), ignore.stderr = T)
   if (run_trajec) {
-    system('rm -r out/by-id', ignore.stderr = T)
-    system('rm -r out/particles', ignore.stderr = T)
+    system(paste0('rm -r ', output_wd, '/by-id'), ignore.stderr = T)
+    system(paste0('rm -r ', output_wd, '/particles'), ignore.stderr = T)
   }
-
   for (d in c('by-id', 'particles', 'footprints')) {
-    d <- file.path('out', d)
-    if (!file.exists(d))dir.create(d)
+    d <- file.path(output_wd, d)
+    if (!file.exists(d))
+      dir.create(d, recursive = T)
   }
 
   # Met path symlink -----------------------------------------------------------
   met_directory   <- namelist$met.path
   met_file_format <- namelist$met.format
   n_met_min <- namelist$met.num
+  met_files <- namelist$met.files
 
   # Auto symlink the meteorological data path to the working directory to
   # eliminate issues with long (>80 char) paths in fortran. Note that this
@@ -188,11 +187,11 @@ run.stiltv2 <- function(namelist){
                         kmsl = kmsl, kpuff = kpuff, krnd = krnd, kspl = kspl,
                         kzmix = kzmix, maxdim = maxdim, maxpar = maxpar,
                         lib.loc = lib.loc, met_file_format = met_file_format,
-                        met_loc = met_loc, mgmin = mgmin, n_hours = n_hours,
-                        n_met_min = n_met_min, ncycl = ncycl, ndump = ndump,
-                        ninit = ninit, nturb = nturb, numpar = numpar,
-                        oco2.path = oco2.path, outdt = outdt, outfrac = outfrac,
-                        output_wd = output_wd, p10f = p10f,
+                        met_files = met_files, met_loc = met_loc, mgmin = mgmin,
+                        n_hours = n_hours, n_met_min = n_met_min, ncycl = ncycl,
+                        ndump = ndump, ninit = ninit, nturb = nturb,
+                        numpar = numpar, oco2.path = oco2.path, outdt = outdt,
+                        outfrac = outfrac, output_wd = output_wd, p10f = p10f,
                         projection = projection, pwf.wgt = pwf.wgt,
                         qcycle = qcycle, r_run_time = receptors$run_time,
                         r_lati = receptors$lati, r_long = receptors$long,
@@ -209,6 +208,6 @@ run.stiltv2 <- function(namelist){
                         xmn = xmn, xmx = xmx, xres = xres, ymn = ymn, ymx = ymx,
                         yres = yres, zicontroltf = zicontroltf,
                         ziscale = ziscale, z_top = z_top, zcoruverr = zcoruverr)
-  q('no')
+  #q('no')
 
 }

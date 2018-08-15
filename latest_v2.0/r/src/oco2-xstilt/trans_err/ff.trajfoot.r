@@ -32,8 +32,8 @@ ff.trajfoot <- function(trajdat, emiss){
 
   # verify--
   if (F) {
-    m1 <- ggplot.map(map = 'ggmap', center.lat = lon.lat[6],
-      center.lon = lon.lat[5] + 0.1, zoom = 8)[[1]]
+    m1 <- ggplot.map(map = 'ggmap', center.lat = lon.lat$citylat,
+      center.lon = lon.lat$citylon + 0.1, zoom = 8)[[1]]
     c1 <- m1 + geom_point(data = trajdat[trajdat$indx < 2000, ],
         aes(long, lati, colour = co2)) +
         scale_colour_gradient(low = 'yellow', high = 'red', trans = 'log10')

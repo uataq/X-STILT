@@ -26,12 +26,10 @@ get.recp.info <- function(timestr, oco2.path, oco2.ver, lon.lat, selTF,
   if (plotTF) {
     zoom <- 8
     font.size <- rel(1.0)
-    col <- c('black', '#2F2C62', '#42399B', '#4A52A7', '#59AFEA', '#7BCEB8',
-      '#A7DA64','#EFF121', '#F5952D', '#E93131', '#D70131', '#D70131')
+    col <- def.col()
     col.range <- seq(380, 420, 2)
-    sitemap <- get_map(location = c(lon = lon.lat[5], lat = lon.lat[6]),
-      zoom = zoom, maptype = 'roadmap')  # plot google map
-    m1 <- ggmap(sitemap) + theme_bw()
+    m1 <- ggplot.map(map = 'ggmap', center.lat = lon.lat$citylat,
+          center.lon = lon.lat$citylon, zoom = zoom)[[1]] + theme_bw()
 
     # add observed XCO2
     c1 <- m1 + geom_point(data = sel.oco2, aes(lon, lat, colour = xco2))

@@ -42,8 +42,8 @@ grab.oco2 <- function(ocopath, timestr, lon.lat){
   mode[LF < 20 & OM == 3] <- 'Sea_Transition'
 
   # select regions, lon.lat: c(minlon, maxlon, minlat, maxlat)
-  region.index <- oco.lat >= lon.lat[3] & oco.lat <= lon.lat[4] &
-                  oco.lon >= lon.lat[1] & oco.lon <= lon.lat[2]
+  region.index <- oco.lat >= lon.lat$minlat & oco.lat <= lon.lat$maxlat &
+                  oco.lon >= lon.lat$minlon & oco.lon <= lon.lat$maxlon
 
   # get OCO-2 overpassing time
   sel.id   <- as.numeric(id[region.index])

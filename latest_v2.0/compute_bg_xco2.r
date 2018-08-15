@@ -15,10 +15,10 @@ source('r/dependencies.r') # source all functions
 
 #------------------------------ STEP 1 --------------------------------------- #
 # insert target city
-site <- 'Riyadh'
+site <- 'LV'
 
 # OCO-2 version, path
-oco2.ver <- c('b7rb', 'b8r')[1]  # OCO-2 version
+oco2.ver <- c('b7rb', 'b8r')[2]  # OCO-2 version
 input.path <- file.path(homedir, 'lin-group5/wde/input_data')
 output.path <-file.path(homedir, 'lin-group5/wde/github/result')
 
@@ -29,8 +29,8 @@ txtpath <- file.path(output.path, 'oco2_overpass')
 # date range for searching OCO-2 tracks, min, max YYYYMMDD
 date.range <- c('20140101', '20181231')
 
-# vector of examined region, c(minlon, maxlon, minlat, maxlat, citylon, citylat)
-lon.lat <- get.lon.lat(site)  # can be NULL, default will be given in site.info()
+# input dlat, dlon for spatial domain around city center
+lon.lat <- get.lon.lat(site, dlon = 1, dlat = 1)
 
 # 'thred.count' for at least how many soundings needed per 1deg lat range
 # -> calculate a total thred on total # of soundings given 'lon.lat'
@@ -44,7 +44,7 @@ searchTF <- F
 
 # whether search for overpasses over urban region,
 # defined as city.lat +/- dlat, city.lon +/- dlon
-urbanTF <- T; dlon <- 0.5; dlat <- 0.5
+urbanTF <- T; dlon.urban <- 0.5; dlat.urban <- 0.5
 
 # call get.site.info() to get lon.lat and OCO2 overpasses info
 # PLEASE add lat lon info in 'get.site.track'
@@ -61,12 +61,17 @@ oco2.track <- site.info$oco2.track
 # see columns 'qf.count' or 'wl.count' in 'oco2.track'
 # e.g., choose overpasses that have 100 soundings with QF == 0, & get reordered
 if (urbanTF) oco2.track <- oco2.track %>% filter(tot.urban.count > 200)
-if (oco2.ver == 'b7rb') oco2.track <- oco2.track %>% filter(qf.urban.count > 80)
-if (oco2.ver == 'b8r') oco2.track <- oco2.track %>% filter(wl.urban.count > 100)
+oco2.track <- oco2.track %>% filter(qf.urban.count > 50)
+
+# remove summtertime tracks
+oco2.track <- oco2.track %>%
+  filter(substr(timestr, 5, 6) < '05' | substr(timestr, 5, 6) > '08')
 
 # finally narrow down and get timestr
 #all.timestr <- oco2.track$timestr[c(2, 3, 5, 8, 9, 10, 13)]
-all.timestr <- oco2.track$timestr[c(2, 3, 5, 6, 7)]
+#all.timestr <- oco2.track$timestr[c(2, 3, 5, 6, 7)]  # v7, Riyadh
+all.timestr <- oco2.track$timestr[c(7, 8, 9, 10, 14)]  # v8, LV
+print(all.timestr)
 
 # once you have all timestr, you can choose whether to plot them on maps
 # this helps you choose which overpass to simulate first, see 'tt' below
@@ -103,14 +108,19 @@ if (method == 'M1') {
 
 # -------------------------- Regional daily median  -------------------------- #
 if (method == 'M2H') {
-  reg.lon.lat <- c(-15, 60, 0, 60)  # minlon, maxlon, minlat, maxlat
+
+  # minlon, maxlon, minlat, maxlat, used in Hakkareinen et al., 2016
+  #reg.lon.lat <- c(-15, 60, 0, 60)  # For EU
+  reg.lon.lat <- c(-130, -60, 0, 60)  # For US
+  #reg.lon.lat <- c(60, 150, 0, 60)  # For Asia
+
   print(reg.lon.lat)
   mm <- ggplot.map(map = 'ggmap', center.lon = 25, center.lat = 20, zoom = 4)
 
   hakka.bg <- NULL
   for (t in 1:length(all.timestr)) {
     obs <- grab.oco2(oco2.path, all.timestr[t], reg.lon.lat) %>%
-      #filter(wl <= 1) %>%
+      #filter(wl <= 1) #%>%
       filter(qf == 0)
     m1 <- mm[[1]] + geom_point(data = obs, aes(lon, lat, colour = xco2),
       size = 0.4) + scale_colour_gradientn(colours = def.col(), name = 'XCO2')
@@ -134,9 +144,8 @@ if (method == 'M2S') {
   print(lon.lat)
 
   for (t in 1:length(all.timestr)) {
-    obs <- grab.oco2(oco2.path, all.timestr[t], lon.lat) %>%
-      #filter(wl <= 1) %>%
-      filter(qf == 0)
+    obs <- grab.oco2(oco2.path, all.timestr[t], lon.lat) %>% filter(qf == 0) #%>%
+      #filter(wl <= 1)
     tmp.bg <- as.numeric(fitdistr(obs$xco2, 'normal')$estimate[1]) -
               as.numeric(fitdistr(obs$xco2, 'normal')$estimate[2])
     silva.bg <- c(silva.bg, tmp.bg)
@@ -161,8 +170,8 @@ if (method == 'M3') {
     #### Whether forward/backward, release from a column or a box
     forwardTF  <- T  # forward or backward traj, if forward, release from a box
     delt       <- 2  # fixed timestep [min]; set = 0 for dynamic timestep
-    run_trajec <- F  # whether to run forward traj, if T, will overwrite existing
-    plotTF     <- T  # whether to calculate background and plot 2D density
+    run_trajec <- T  # whether to run forward traj, if T, will overwrite existing
+    plotTF     <- F  # whether to calculate background and plot 2D density
 
     ### MUST-HAVE parameters about errors
     run_hor_err <- T  # run trajec with hor wind errors/calc trans error
@@ -182,10 +191,13 @@ if (method == 'M3') {
     #------------------------------ STEP 5.2 --------------------------------- #
     # path for the ARL format of WRF and GDAS
     # simulation_step() will find corresponding met files
-    met        <- c('1km', 'gdas1', 'gdas0p5')[3]  # choose met fields
+    met.indx   <- 1
+    met        <- c('hrrr', '1km', 'gdas0p5')[met.indx] # choose met fields
     met.path   <- file.path(homedir, 'u0947337', met)
-    met.format <- '%Y%m%d_gdas0p5'            # met file name convention
-    met.num    <- 1                           # min number of met files needed
+    met.num    <- 1     # min number of met files needed
+
+    # met file name convention
+    met.format <- c('%Y%m%d.%Hz.hrrra', 'wrfout_', '%Y%m%d_gdas0p5')[met.indx]
 
     #### Whether obtaining wind errors, transport error component
     # require wind error comparisons stored in txtfile *****
@@ -196,6 +208,7 @@ if (method == 'M3') {
       # correlation timescale, horizontal and vertical lengthscales
       if (met == 'gdas0p5') {TLuverr <- 1*60; zcoruverr <- 600; horcoruverr <- 40}
       if (met == 'gdas1') {TLuverr <- 2.4*60; zcoruverr <- 700; horcoruverr <- 97}
+      if (met == 'hrrr') {TLuverr <- 0.5*60; zcoruverr <- 400; horcoruverr <- 10}
 
       ## add errors, mainly siguverr, create a subroutine to compute siguverr
       # from model-data wind comparisons
@@ -210,7 +223,7 @@ if (method == 'M3') {
       if (is.null(err.info)) {
         cat('no wind error found; make consevative assumption of siguverr...\n')
         # make a conservative assumption about the wind error, for the Middle East
-        siguverr <- 1.8  # < 2 m/s for GDAS 1deg, based on Wu et al., GMDD
+        siguverr <- 2.5  # < 2 m/s for GDAS 1deg, based on Wu et al., GMDD
 
       } else {
         met.rad  <- err.info[[1]]

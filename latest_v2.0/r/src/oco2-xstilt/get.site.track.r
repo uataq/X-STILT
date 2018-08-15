@@ -8,6 +8,8 @@ get.site.track <- function(site, oco2.ver, oco2.path, searchTF = F,
   lon.lat, urbanTF, dlon.urban = NULL, dlat.urban = NULL,
   thred.count.per.deg.urban = NULL, txtpath){
 
+  library(dplyr)
+  
   # instead of inputting all info mannually, use find.overpass() to find
   # overpasses given a city lat.lon
   # once have coordinate info, get OCO-2 overpasses,
@@ -33,7 +35,7 @@ get.site.track <- function(site, oco2.ver, oco2.path, searchTF = F,
   } # end if !file.exists()
 
   # select time range and remove tracks with too few soundings
-  thred.count <- thred.count.per.deg * abs(diff(c(lon.lat[3], lon.lat[4])))
+  thred.count <- thred.count.per.deg * abs(diff(c(lon.lat$minlat, lon.lat$maxlat)))
   cat('Only return overpass dates that have >', thred.count, 'sounding...\n')
 
   oco2.track <- oco2.track %>% filter(timestr >= date.range[1] &
@@ -46,8 +48,7 @@ get.site.track <- function(site, oco2.ver, oco2.path, searchTF = F,
       filter(tot.urban.count > thred.count.urban)
   }
 
-  all.info <- list(lon.lat = lon.lat, oco2.track = oco2.track)
-  return(all.info)
+  return(oco2.track)
 }
 
 # end of script

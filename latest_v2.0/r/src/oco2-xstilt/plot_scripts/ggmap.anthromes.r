@@ -17,8 +17,9 @@ ggmap.anthromes <- function(lon.lat, anthro.path, mm = NULL, site = NULL,
   colnames(melt.atm) <- c('lon', 'lat', 'class')
 
   sel.atm <- melt.atm %>%
-    filter(lon >= lon.lat[1] & lon <= lon.lat[2] &
-           lat >= lon.lat[3] & lat <= lon.lat[4]) %>% filter(!is.na(class))
+    filter(lon >= lon.lat$minlon & lon <= lon.lat$maxlon &
+           lat >= lon.lat$minlat & lat <= lon.lat$maxlat) %>%
+    filter(!is.na(class))
 
   ### anthro biomes legend
   #GRID Values = Anthrome classes**

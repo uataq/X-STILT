@@ -9,14 +9,15 @@
 # add vector forms of lat/lon/agl, DW, 05/02/2018
 # version 2 for matching Ben's STILT-R version 2, call calc_trajectory instead,
 # DW, 05/29/2018
+# add met_files (prescribed or not), DW, 08/08/2018
 
 get.ground.hgt <- function(varsiwant, conage, cpack, dxf, dyf, dzf, emisshrs,
                            frhmax, frhs, frme, frmr, frts, frvs, hscale, ichem,
                            iconvect, initd, isot, ivmax, kbls, kblt, kdef,
                            khmax, kmix0, kmixd, kmsl, kpuff, krnd, kspl, kzmix,
-                           maxdim, maxpar, met_file_format, met_loc, mgmin,
-                           ncycl, ndump, ninit, n_hours, outdt, outfrac, p10f,
-                           qcycle, random, splitf, tkerd, tkern, rm_dat,
+                           maxdim, maxpar, met_files, met_file_format, met_loc,
+                           mgmin, ncycl, ndump, ninit, n_hours, outdt, outfrac,
+                           p10f, qcycle, random, splitf, tkerd, tkern, rm_dat,
                            receptor, rundir, timeout, tlfrac, tratio, tvmix,
                            veght, vscale, w_option, z_top){
 
@@ -41,8 +42,15 @@ get.ground.hgt <- function(varsiwant, conage, cpack, dxf, dyf, dzf, emisshrs,
                           long = receptor$long, zagl = r_zagl)
 
   # get met files for + or - 1 hour
-  met_files <- find_met_files(receptor$run_time, met_file_format,
-                              n_hours, met_loc)
+  if (is.null(met_files)) {
+    met_files <- find_met_files(receptor$run_time, met_file_format,
+                                n_hours, met_loc)
+  } else {  # if met_files are given
+    # select the 1km WRF for interpolating ground height, DW, 08/08/2018
+    # 1st always with highest resolution met fields, use the 2nd in this case
+    # need further modifications !!!
+    met_files <- met_files[1]
+  }
 
   # Execute particle trajectory simulation, and read results into data frame
   if (!file.exists(output$file)) {
@@ -67,7 +75,7 @@ get.ground.hgt <- function(varsiwant, conage, cpack, dxf, dyf, dzf, emisshrs,
     cat('get.ground.hgt(): trajec found...\n')
     particle <- readRDS(output$file)
   }
-
+print(str(particle))
   # select the min timestep, which is the most closed to the receptor
   sel <- abs(particle$time) == min(unique(abs(particle$time)))
   sel.part <- particle[sel, ]

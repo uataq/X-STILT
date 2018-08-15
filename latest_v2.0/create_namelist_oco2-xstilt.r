@@ -24,6 +24,9 @@
 #
 # for generating trajec with horizontal error compoennt,
 # use the same lat/lon from original trajec, DW, 07/31/2018
+#
+# add 'met.files'; if metfiles are given, no need to use find_met_files(),
+# if NULL, then use find_met_files() to find met files DW, 08/08/2018
 # -----------------------------------------------------------------------------
 
 #### source all functions and load all libraries
@@ -35,7 +38,7 @@ source('r/dependencies.r') # source all functions
 
 #------------------------------ STEP 1 --------------------------------------- #
 # insert target city
-site <- 'Riyadh'
+site <- 'LV'
 
 # OCO-2 version, path
 oco2.ver <- c('b7rb', 'b8r')[2]  # OCO-2 version
@@ -47,10 +50,10 @@ txtpath <- file.path(output.path, 'oco2_overpass')
 #txtpath <- './'
 
 # date range for searching OCO-2 tracks, min, max YYYYMMDD
-date.range <- c('20140101', '20141230')
+date.range <- c('20140101', '20181230')
 
-# vector of examined region, c(minlon, maxlon, minlat, maxlat, citylon, citylat)
-lon.lat <- get.lon.lat(site)  # can be NULL, default will be given in site.info()
+# input dlat, dlon for spatial domain around city center
+lon.lat <- get.lon.lat(site, dlon = 1, dlat = 1)
 
 # 'thred.count' for at least how many soundings needed per 1deg lat range
 # -> calculate a total thred on total # of soundings given 'lon.lat'
@@ -68,8 +71,8 @@ urbanTF <- T; dlon <- 0.5; dlat <- 0.5
 
 # call get.site.info() to get lon.lat and OCO2 overpasses info
 # PLEASE add lat lon info in 'get.site.track'
-site.info <- get.site.track(site, oco2.ver, oco2.path, searchTF,
-  date.range, thred.count.per.deg, lon.lat, urbanTF, dlon, dlat,
+site.info <- get.site.track(site, oco2.ver, oco2.path, searchTF, date.range,
+  thred.count.per.deg, lon.lat, urbanTF, dlon, dlat,
   thred.count.per.deg.urban, txtpath)
 
 # get coordinate info and OCO2 track info from result 'site.info'
@@ -81,24 +84,27 @@ print(lon.lat)
 # one can further subset 'oco2.track' based on data quality
 # see columns 'qf.count' or 'wl.count' in 'oco2.track'
 # e.g., choose overpasses that have 100 soundings with QF == 0, & get reordered
-if (urbanTF) oco2.track <- oco2.track %>% filter(tot.urban.count > 200)
-if (oco2.ver == 'b7rb') oco2.track <- oco2.track %>% filter(qf.urban.count > 80)
-if (oco2.ver == 'b8r') oco2.track <- oco2.track %>% filter(wl.urban.count > 100)
+#if (urbanTF) oco2.track <- oco2.track %>% filter(tot.urban.count > 200)
+#if (oco2.ver == 'b7rb') oco2.track <- oco2.track %>% filter(qf.urban.count > 80)
+#if (oco2.ver == 'b8r') oco2.track <- oco2.track %>% filter(wl.urban.count > 100)
+oco2.track <- oco2.track %>% filter(qf.urban.count > 80)
 
 # finally narrow down and get timestr
-all.timestr <- oco2.track$timestr[c(2, 3, 5, 8, 9, 10)]
+all.timestr <- oco2.track$timestr
 
 # once you have all timestr, you can choose whether to plot them on maps
 # this helps you choose which overpass to simulate first, see 'tt' below
 plotTF <- F
 if (plotTF) {
-  for (t in 1:length(all.timestr)) {
-  ggmap.obs.xco2(site, timestr = all.timestr[t], oco2.path, lon.lat, workdir,
-    plotdir = file.path(workdir, 'plot/', site))
-  ggmap.obs.sif(site, timestr = all.timestr[t], sif.path, lon.lat, workdir,
-    plotdir = file.path(workdir, 'plot/', site))
+  plotdir <- file.path(workdir, 'plot'); dir.create(plotdir)
+  plotdir <- file.path(workdir, 'plot', site); dir.create(plotdir)
+
+  for(t in 1:length(all.timestr)){
+    ggmap.obs.xco2(site, all.timestr[t], oco2.path, lon.lat, workdir, plotdir)
+    ggmap.obs.sif(site, all.timestr[t], sif.path, lon.lat, workdir, plotdir)
   }
 }
+
 
 # *** NOW choose the timestr that you would like to work on...
 tt <- 2
@@ -110,7 +116,7 @@ cat('Done with choosing cities & overpasses...\n')
 
 #------------------------------ STEP 2 --------------------------------------- #
 #### Whether forward/backward, release from a column or a box
-columnTF    <- F    # whether a column receptor or fixed receptor
+columnTF    <- T    # whether a column receptor or fixed receptor
 stilt.ver   <- 2    # STILT versions (call different footprint algorithms)
 delt        <- 2    # fixed timestep [min]; set = 0 for dynamic timestep
 nhrs        <- -72  # number of hours backward (-) or forward (+)
@@ -191,11 +197,12 @@ if (selTF) {
 }
 
 # whether to subset receptors when debugging
-recp.num <- NULL     # can be a number for max num of receptors
-find.lat <- 24.5444     # for debug or test, model one sounding
+recp.num <- 1     # can be a number for max num of receptors
+find.lat <- NULL     # for debug or test, model one sounding
 
 # for generating trajec with horizontal error compoennt,
 # use the same lat.lon from original trajec, DW, 07/31/2018
+trajpath <- NULL
 if (run_hor_err)
   trajpath <- file.path(homedir, 'lin-group5/wde/github/stilt/workdir',
     paste0('out_', timestr, '_72hrs_v8'), 'by-id')
@@ -215,14 +222,26 @@ cat(paste('Done with receptor setup...\n'))
 #------------------------------ STEP 4 --------------------------------------- #
 # path for the ARL format of WRF and GDAS
 # simulation_step() will find corresponding met files
-met        <- c('1km', 'gdas1', 'gdas0p5')[3]  # choose met fields
+met        <- c('1km', 'gdas0p5', 'nest')[2]   # choose met fields
 met.path   <- file.path(homedir, 'u0947337', met)
 met.num    <- 1                                # min number of met files needed
-met.format <- '%Y%m%d_gdas0p5'                 # met file name convention
+met.format <- paste0('%Y%m%d_', met)           # met file name convention
+met.files  <- NULL
+
+### if using nested met fields, e.g., 1km and GDAS, prescribe them, DW, 08/08/2018
+if (met == 'nest') {
+  met.file  <- file.path(met.path,
+    rev(list.files(path = met.path, pattern = substr(timestr, 1, 6))))[2]
+ print(met.file)
+  # expand it with dimensions of # of receptors
+  # !!! always order the 1st element for met field with highest resolution
+  met.files <- rep(list(met.file), nrecp)
+} # end if nested met fields
 
 # one can link to other direcetory that store trajec,
 # but need to have the same directory structure, including by-id, footprint...
 outdir <- file.path(workdir, 'out')  # path for storing trajec, foot
+
 
 #### Whether obtaining wind errors, transport error component
 # require wind error comparisons stored in txtfile *****
@@ -256,7 +275,8 @@ if (run_hor_err) {
     siguverr <- as.numeric(err.info[[2]][1])    # SD in wind errors
     u.bias   <- as.numeric(err.info[[2]][2])
     v.bias   <- as.numeric(err.info[[2]][3])
-    cat(paste('u.bias:', signif(u.bias,3), 'm/s; v.bias:', signif(v.bias,3), 'm/s\n'))
+    cat(paste('u.bias:', signif(u.bias,3), 'm/s; v.bias:',
+      signif(v.bias,3), 'm/s\n'))
 
   }  # end if is.null(err.info)
   cat(paste('SIGUVERR:', signif(siguverr, 3), 'm/s..\n'))
@@ -330,6 +350,7 @@ projection     <- '+proj=longlat'
 cat('Done with footprint setup...\n')
 
 
+
 #------------------------------ STEP 6 --------------------------------------- #
 #### !!! NO NEED TO CHANGE ANYTHING LISTED BELOW -->
 # create a namelist including all variables
@@ -338,15 +359,15 @@ namelist <- list(agl = agl, ak.wgt = ak.wgt, delt = delt, dmassTF = dmassTF,
   dpar = dpar, foot.info = foot.info, hnf_plume = hnf_plume, homedir = homedir,
   horcoruverr = horcoruverr, horcorzierr = horcorzierr, lon.lat = lon.lat,
   met = met, met.format = met.format, met.num = met.num, met.path = met.path,
-  nhrs = nhrs, numpar = numpar, outdir = outdir, oco2.path = oco2.path,
-  projection = projection, pwf.wgt = pwf.wgt, recp.info = recp.info,
-  run_foot = run_foot, run_sim = run_sim, run_trajec = run_trajec,
-  run_hor_err = run_hor_err, run_ver_err = run_ver_err, siguverr = siguverr,
-  sigzierr = sigzierr, site = site, smooth_factor = smooth_factor,
-  stilt.ver = stilt.ver, time_integrate = time_integrate, timestr = timestr,
-  TLuverr = TLuverr, TLzierr = TLzierr, varstrajec = varstrajec,
-  workdir = workdir, zicontroltf = zicontroltf, ziscale = ziscale,
-  zcoruverr = zcoruverr)
+  met.files = met.files, nhrs = nhrs, numpar = numpar, outdir = outdir,
+  oco2.path = oco2.path, projection = projection, pwf.wgt = pwf.wgt,
+  recp.info = recp.info, run_foot = run_foot, run_sim = run_sim,
+  run_trajec = run_trajec, run_hor_err = run_hor_err, run_ver_err = run_ver_err,
+  siguverr = siguverr, sigzierr = sigzierr, site = site,
+  smooth_factor = smooth_factor, stilt.ver = stilt.ver,
+  time_integrate = time_integrate, timestr = timestr, TLuverr = TLuverr,
+  TLzierr = TLzierr, varstrajec = varstrajec, workdir = workdir,
+  zicontroltf = zicontroltf, ziscale = ziscale, zcoruverr = zcoruverr)
 
 
 #------------------------------ STEP 7 --------------------------------------- #
@@ -370,6 +391,7 @@ if (run_trajec | run_foot) {    ## if running trajec or footprint
 
   # call run_stilt_mod(), start running trajec and foot
   run.stiltv2(namelist = namelist)
+
 
 } else if (run_sim) {    ## if running trajec or footprint
 

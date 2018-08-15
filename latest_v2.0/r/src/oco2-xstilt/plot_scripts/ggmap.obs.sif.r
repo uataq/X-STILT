@@ -11,8 +11,8 @@ ggmap.obs.sif <- function(site, timestr, sif.path, lon.lat, workdir,
   alpha <- 1; font.size <- rel(1.1); col <- def.col()
 
   # plot google map
-  m1 <- ggplot.map(map = 'ggmap', zoom = zoom, center.lat = lon.lat[6],
-    center.lon = lon.lat[5])[[1]] + theme_bw()
+  m1 <- ggplot.map(map = 'ggmap', zoom = zoom, center.lat = lon.lat$citylat,
+    center.lon = lon.lat$citylon)[[1]] + theme_bw()
 
   melt.sif <- sel.sif %>%
     dplyr::select('timestr', 'lat', 'lon', 'sif757', 'sif771', 'avg.sif')
@@ -28,8 +28,9 @@ ggmap.obs.sif <- function(site, timestr, sif.path, lon.lat, workdir,
 
   # draw a rectangle around the city
   d <- data.frame(
-    x = c(lon.lat[5] - 0.5, lon.lat[5] + 0.5, lon.lat[5] + 0.5, lon.lat[5] - 0.5),
-    y = c(lon.lat[6] - 0.5, lon.lat[6] - 0.5, lon.lat[6] + 0.5, lon.lat[6] + 0.5))
+    x = c(lon.lat$citylon - 0.5, rep(lon.lat$citylon + 0.5, 2), lon.lat$citylon - 0.5),
+    y = c(rep(lon.lat$citylat - 0.5, 2), rep(lon.lat$citylat + 0.5, 2)))
+
   d <- rbind(d, d[1,])
   c2 <- c1 + geom_path(data = d, aes(x, y), linetype = 2, size = 1.2,
       colour = 'gray50') +

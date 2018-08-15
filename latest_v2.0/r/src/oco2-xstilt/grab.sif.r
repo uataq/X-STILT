@@ -27,8 +27,8 @@ grab.sif <- function(sif.path, timestr, lon.lat){
       # select SIF in given region and scale SIF_771nm with sacling factor of
       # 1.35 (used in Luus et al., 2017) to calculate an averaged SIF
       sel.sif <- sif %>%
-        filter(lon >= lon.lat[1] & lon <= lon.lat[2] &
-               lat >= lon.lat[3] & lat <= lon.lat[4]) %>%
+        filter(lon >= lon.lat$minlon & lon <= lon.lat$maxlon &
+               lat >= lon.lat$minlat & lat <= lon.lat$maxlat) %>%
         mutate(avg.sif = (sif757 + sif771 * 1.35)/2)
 
       # assign months and seasons

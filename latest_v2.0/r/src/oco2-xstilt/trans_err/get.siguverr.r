@@ -32,8 +32,9 @@ get.siguverr <- function(site, timestr, errpath, nfTF = F, forwardTF = F,
       # select wind comparisons within 2x2 deg around the city center
       # select 1day comparisons
       nf <- met.rad %>% filter(
-          lon > (lon.lat[5] - 1) & lon < (lon.lat[5] + 1) &
-          lat > (lon.lat[6] - 1) & lat < (lon.lat[6] + 1) & time >= end.time)
+          lon > (lon.lat$minlon - 1) & lon < (lon.lat$minlon + 1) &
+          lat > (lon.lat$minlat - 1) & lat < (lon.lat$minlat + 1) &
+          time >= end.time)
 
       # if there are no data given above selection,
       # expanding time range first, then spatial domain
@@ -44,8 +45,8 @@ get.siguverr <- function(site, timestr, errpath, nfTF = F, forwardTF = F,
         for (l in 1:length(uni.time)) {
 
           nf <- met.rad %>% filter(
-              lon > (lon.lat[5] - 1) & lon < (lon.lat[5] + 1) &
-              lat > (lon.lat[6] - 1) & lat < (lon.lat[6] + 1) &
+              lon > (lon.lat$minlon - 1) & lon < (lon.lat$minlon + 1) &
+              lat > (lon.lat$minlat - 1) & lat < (lon.lat$minlat + 1) &
               time >= uni.time[l])
 
           if (nrow(nf) == 0) {nf <- NA; next}
@@ -55,10 +56,11 @@ get.siguverr <- function(site, timestr, errpath, nfTF = F, forwardTF = F,
         if (is.na(nf)) {
           cat("***** Missing raob, Extending spatial domain *****\n")
           # expanding spatial domain, now 8x8 deg around city center
-          nf <- met.rad %>%
-            filter(lon > (lon.lat[5] - 4) & lon < (lon.lat[5] + 4) &
-                   lat > (lon.lat[6] - 4) & lat < (lon.lat[6] + 4) &
-                   time >= end.time)
+          nf <- met.rad %>% filter(
+              lon > (lon.lat$minlon - 4) & lon < (lon.lat$minlon + 4) &
+              lat > (lon.lat$minlat - 4) & lat < (lon.lat$minlat + 4) &
+              time >= end.time)
+
           if (nrow(nf) == 0) {
             cat("*** Very POOR RAOB network for this event; returning NA ***\n")
             return()
@@ -86,7 +88,7 @@ get.siguverr <- function(site, timestr, errpath, nfTF = F, forwardTF = F,
     siguverr <- sqrt(mean((sel.met.rad$u.err^2 + sel.met.rad$v.err^2)/2))
     u.bias   <- mean(sel.met.rad$u.err)
     v.bias   <- mean(sel.met.rad$v.err)
-    
+
     stat <- data.frame(siguverr, u.bias, v.bias)
     return(list(sel.met.rad, stat))
 

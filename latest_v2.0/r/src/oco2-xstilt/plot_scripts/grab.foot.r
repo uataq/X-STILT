@@ -30,8 +30,9 @@ grab.foot <- function(stilt.ver, footfile, foot.sig = 1E-6, lon.lat = NULL){
   sel.foot <- melt.foot %>% filter(foot >= foot.sig)
 
   if (!is.null(lon.lat)) {
-    sel.foot <- sel.foot %>% filter(lon >= lon.lat[1] & lon <= lon.lat[2] &
-      lat >= lon.lat[3] & lon <= lon.lat[4])
+    sel.foot <- sel.foot %>% filter(
+      lon >= lon.lat$minlon & lon <= lon.lat$maxlon &
+      lat >= lon.lat$minlat & lat <= lon.lat$maxlat)
   }
 
   return(sel.foot)

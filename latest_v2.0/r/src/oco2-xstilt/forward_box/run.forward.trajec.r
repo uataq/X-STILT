@@ -20,8 +20,8 @@ run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
   zoom = 8, td = 0.05, clean.side = c('north','south', 'both')[3]){
 
   # get lat/lon for city center
-  clon <- signif(lon.lat[5], 6)
-  clat <- signif(lon.lat[6], 6)
+  clon <- signif(lon.lat$citylon, 6)
+  clat <- signif(lon.lat$citylon, 6)
   lonstr <- ifelse(clon > 0, paste0(clon, 'E'), paste0(abs(clon), 'W'))
   latstr <- ifelse(clat > 0, paste0(clat, 'N'), paste0(abs(clat), 'S'))
   cat(paste('run.forward.trajec(): Working on trajec at', latstr, '\n'))
@@ -51,14 +51,14 @@ run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
 
   # if running trajec
   if (overwrite) {
-    
+
     # delete previous directories and then create new one
     system(paste0('rm -rf ', outpath), ignore.stderr = T)
     dir.create(outpath, showWarnings = FALSE)
 
     # linking AER_NOAA_branch's hymodelc and other executables to outpath
-    exes <- list.files(file.path(workdir, 'exe/AER_NOAA_branch/'))
-    file.symlink(file.path(workdir, 'exe/AER_NOAA_branch/', exes), outpath)
+    exes <- list.files(file.path(workdir, 'exe/AER_NOAA_branch'))
+    file.symlink(file.path(workdir, 'exe/AER_NOAA_branch', exes), outpath)
 
     # if using multiple receptors, or box of receptors or sources, turn it on,
     # then call updated Trajecmulti() instead of Trajec()
@@ -70,7 +70,8 @@ run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
     for (r in 1:length(rel.date))
       metfiles <- c(metfiles, find_met_files(t_start = rel.date[r],
                                              met_file_format = met.format,
-                                             n_hours = nhrs, met_loc = met.path))
+                                             n_hours = nhrs,
+                                             met_loc = met.path))
     metfiles <- basename(unique(metfiles))
 
     #### try box receptors/sources, DW, 11/08/2017

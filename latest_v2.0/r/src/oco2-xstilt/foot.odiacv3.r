@@ -32,8 +32,8 @@ foot.odiacv3 <- function(foot.file, emiss.file, workdir, txtfile, lon.lat,
     colnames(emiss.df) <- list('lon', 'lat', 'emiss')
     emiss.df <- emiss.df %>% filter(emiss > 1)
 
-    mm <- ggplot.map(map = 'ggmap', center.lat = lon.lat[6],
-      center.lon = lon.lat[5], zoom = 8)
+    mm <- ggplot.map(map = 'ggmap', center.lat = lon.lat$citylat,
+      center.lon = lon.lat$citylon, zoom = 8)
 
     # grab observations using map lat/lon
     map.ext <- c(min(mm[[1]]$data$lon), max(mm[[1]]$data$lon),

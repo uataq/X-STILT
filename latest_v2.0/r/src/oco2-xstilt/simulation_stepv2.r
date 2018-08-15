@@ -16,6 +16,7 @@
 # add STILTv1 and Trajecfoot(), DW, 07/17/2018
 # add ziscale as list, remember to unlist, DW, 07/25/2018
 # change the path of hymodelc executable, DW, 07/31/2018
+# add met_files, default as NULL, DW, 08/08/2018
 
 # for debug --
 if(F){
@@ -34,9 +35,9 @@ simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
                             kmix0 = 250, kmixd = 3, kmsl = 0, kpuff = 0,
                             krnd = 6, kspl = 1, kzmix = 1, maxdim = 1,
                             maxpar = 10000, met_file_format, met_loc,
-                            mgmin = 2000, n_hours = -24, n_met_min = 1,
-                            ncycl = 0, ndump = 0, ninit = 1, nturb = 0,
-                            numpar = 200, oco2.path = NA, outdt = 0,
+                            met_files = NULL, mgmin = 2000, n_hours = -24,
+                            n_met_min = 1, ncycl = 0, ndump = 0, ninit = 1,
+                            nturb = 0, numpar = 200, oco2.path = NA, outdt = 0,
                             outfrac = 0.9, output_wd = file.path(stilt_wd,'out'),
                             p10f = 1, projection = '+proj=longlat', pwf.wgt = NA,
                             qcycle = 0, r_run_time, r_lati, r_long, r_zagl,
@@ -61,12 +62,14 @@ simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
       r_long  <- format(r_long[X], digits = 4, nsmall = 4)
       r_zagl  <- r_zagl[X]
       ziscale <- ziscale[X]
+      if (!is.null(met_files)) met_files <- met_files[X]
     }
 
     # Column trajectories use r_zagl passed as a list of values for lapply and
     # parLapply but a vector in slurm_apply
     r_zagl  <- unlist(r_zagl)
     ziscale <- unlist(ziscale)  # a vector now
+    if (!is.null(met_files)) met_files <- unlist(met_files)
 
     # Ensure dependencies are loaded for current node/process
     source(file.path(stilt_wd, 'r/dependencies.r'), local = T)
@@ -130,28 +133,30 @@ simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
                                    frvs, hscale, ichem, iconvect, initd, isot,
                                    ivmax, kbls, kblt, kdef, khmax, kmix0, kmixd,
                                    kmsl, kpuff, krnd, kspl, kzmix, maxdim,
-                                   maxpar, met_file_format, met_loc, mgmin,
-                                   ncycl, ndump, ninit, n_hours, outdt, outfrac,
-                                   p10f, qcycle, random, splitf, tkerd, tkern,
-                                   rm_dat, receptor = output$receptor, rundir,
-                                   timeout, tlfrac, tratio, tvmix, veght,
-                                   vscale, w_option, z_top)
-
+                                   maxpar, met_files, met_file_format,
+                                   met_loc, mgmin, ncycl, ndump, ninit, n_hours,
+                                   outdt, outfrac, p10f, qcycle, random, splitf,
+                                   tkerd, tkern, rm_dat, receptor = output$receptor,
+                                   rundir, timeout, tlfrac, tratio, tvmix, veght,
+                                   vscale, w_option, z_top)        
         # paste interpolated info to output$receptor
         output$receptor <- c(output$receptor, recp.var)
       }  # end if length(r_zagl) > 1
       ## ------------ END modifications for OCO-2/X-STILT ------------------ ##
 
+      # add prescribed met files, DW, 08/08/2018
+      # Find necessary met files, if no prescribed met files found
+      if (is.null(met_files)) {
+        met_files <- find_met_files(r_run_time, met_file_format, n_hours, met_loc)
 
-      # Find necessary met files
-      met_files <- find_met_files(r_run_time, met_file_format, n_hours, met_loc)
-      if (length(met_files) < n_met_min) {
-        warning('Insufficient amount of meteorological data found...')
-        cat('Insufficient amount of meteorological data found. Check ',
-            'specifications in run_stilt.r\n',
-            file = file.path(rundir, 'ERROR'))
-        return()
-      }
+        if (length(met_files) < n_met_min) {
+          warning('Insufficient amount of meteorological data found...')
+          cat('Insufficient amount of meteorological data found. Check ',
+              'specifications in run_stilt.r\n',
+              file = file.path(rundir, 'ERROR'))
+          return()
+        } # end if length
+      } # end if is.null
 
       particle <- calc_trajectory(varsiwant, conage, cpack, delt, dxf, dyf, dzf,
                                   emisshrs, frhmax, frhs, frme, frmr, frts, frvs,
