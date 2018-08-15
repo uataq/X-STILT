@@ -38,16 +38,15 @@ source('r/dependencies.r') # source all functions
 
 #------------------------------ STEP 1 --------------------------------------- #
 # insert target city
-site <- 'LV'
+site <- 'Riyadh'
 
 # OCO-2 version, path
-oco2.ver <- c('b7rb', 'b8r')[2]  # OCO-2 version
+oco2.ver <- c('b7rb', 'b8r')[1]  # OCO-2 version
 input.path <- file.path(homedir, 'lin-group5/wde/input_data')
 output.path <- file.path(homedir, 'lin-group5/wde/github/result')
 oco2.path <- file.path(input.path, paste0('OCO-2/L2/OCO2_lite_', oco2.ver))
 sif.path <- file.path(input.path, paste0('OCO-2/L2/OCO2_lite_SIF_', oco2.ver))
 txtpath <- file.path(output.path, 'oco2_overpass')
-#txtpath <- './'
 
 # date range for searching OCO-2 tracks, min, max YYYYMMDD
 date.range <- c('20140101', '20181230')
@@ -67,12 +66,12 @@ searchTF <- F
 
 # whether search for overpasses over urban region,
 # defined as city.lat +/- dlat, city.lon +/- dlon
-urbanTF <- T; dlon <- 0.5; dlat <- 0.5
+urbanTF <- T; dlon.urban <- 0.5; dlat.urban <- 0.5
 
 # call get.site.info() to get lon.lat and OCO2 overpasses info
 # PLEASE add lat lon info in 'get.site.track'
 site.info <- get.site.track(site, oco2.ver, oco2.path, searchTF, date.range,
-  thred.count.per.deg, lon.lat, urbanTF, dlon, dlat,
+  thred.count.per.deg, lon.lat, urbanTF, dlon.urban, dlat.urban,
   thred.count.per.deg.urban, txtpath)
 
 # get coordinate info and OCO2 track info from result 'site.info'
@@ -84,9 +83,6 @@ print(lon.lat)
 # one can further subset 'oco2.track' based on data quality
 # see columns 'qf.count' or 'wl.count' in 'oco2.track'
 # e.g., choose overpasses that have 100 soundings with QF == 0, & get reordered
-#if (urbanTF) oco2.track <- oco2.track %>% filter(tot.urban.count > 200)
-#if (oco2.ver == 'b7rb') oco2.track <- oco2.track %>% filter(qf.urban.count > 80)
-#if (oco2.ver == 'b8r') oco2.track <- oco2.track %>% filter(wl.urban.count > 100)
 oco2.track <- oco2.track %>% filter(qf.urban.count > 80)
 
 # finally narrow down and get timestr
@@ -222,26 +218,17 @@ cat(paste('Done with receptor setup...\n'))
 #------------------------------ STEP 4 --------------------------------------- #
 # path for the ARL format of WRF and GDAS
 # simulation_step() will find corresponding met files
-met        <- c('1km', 'gdas0p5', 'nest')[2]   # choose met fields
+met.indx   <- 1
+met        <- c('hrrr', '1km', 'gdas0p5')[met.indx] # choose met fields
 met.path   <- file.path(homedir, 'u0947337', met)
-met.num    <- 1                                # min number of met files needed
-met.format <- paste0('%Y%m%d_', met)           # met file name convention
-met.files  <- NULL
 
-### if using nested met fields, e.g., 1km and GDAS, prescribe them, DW, 08/08/2018
-if (met == 'nest') {
-  met.file  <- file.path(met.path,
-    rev(list.files(path = met.path, pattern = substr(timestr, 1, 6))))[2]
- print(met.file)
-  # expand it with dimensions of # of receptors
-  # !!! always order the 1st element for met field with highest resolution
-  met.files <- rep(list(met.file), nrecp)
-} # end if nested met fields
+# met file name convention
+met.format <- c('%Y%m%d.%Hz.hrrra', 'wrfout_', '%Y%m%d_gdas0p5')[met.indx]
+met.num    <- 1     # min number of met files needed
 
 # one can link to other direcetory that store trajec,
 # but need to have the same directory structure, including by-id, footprint...
-outdir <- file.path(workdir, 'out')  # path for storing trajec, foot
-
+outdir <- file.path(workdir, paste0('out_', timestr))  # path for storing trajec, foot
 
 #### Whether obtaining wind errors, transport error component
 # require wind error comparisons stored in txtfile *****
@@ -398,7 +385,7 @@ if (run_trajec | run_foot) {    ## if running trajec or footprint
   # requires trajec and footprints ready for running this sections:
   # Simulate XCO2.ff using ODIAC emissions, DW, 06/04/2018
   # grab footprint info
-  foot.path <- file.path(workdir, 'out/by-id')
+  foot.path <- file.path(outdir, 'by-id')
   foot.file <- file.path(foot.path, list.files(foot.path, pattern = 'foot.nc',
     recursive = T))
 
@@ -410,9 +397,10 @@ if (run_trajec | run_foot) {    ## if running trajec or footprint
     abs(nhrs), 'hrs_', dpar, 'dpar_sf', smooth_factor, '.txt'))
 
   # before simulations, subset emissions and convert tif format to nc format
-  vname <- '2017'; tiff.path <- file.path(homedir,
-    paste0('lin-group2/group_data/ODIAC/ODIAC', vname),
-    substr(timestr, 1,4))  # tif file from ODIAC website
+  # tif file from ODIAC website
+  vname <- '2017';
+  tiff.path <- file.path(homedir,
+    paste0('lin-group2/group_data/ODIAC/ODIAC', vname), substr(timestr, 1,4))
 
   # call tif2nc.odiacv2() to subset and get emiss file name
   # 'store.path' is the path for outputting emissions
@@ -425,15 +413,6 @@ if (run_trajec | run_foot) {    ## if running trajec or footprint
   cat('Start XCO2.ff simulations...\n')
   receptor <- foot.odiacv3(foot.file, emiss.file, workdir, txtfile, lon.lat,
     plotTF = F)
-
-  #ff2 <- read.table(txtfile, sep = ',', header = T)
-  #l1 <- ggplot() + geom_point(data = receptor, aes(lat, xco2.ff), colour = 'red')
-
-  ### add latitude integrations--
-  library(zoo)
-  auc <- diff(receptor$lat) * rollmean(receptor$xco2.ff, 2)
-  xco2.ff.int <- sum(auc[auc > 0])
-  cat(paste('Lat-integrated XCO2.ff:', signif(xco2.ff.int, 3), 'ppm\n'))
 } # end if run traj/foot/sim
 
 

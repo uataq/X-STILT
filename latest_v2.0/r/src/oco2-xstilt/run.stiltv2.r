@@ -119,7 +119,7 @@ run.stiltv2 <- function(namelist){
   n_nodes       <- namelist$n_nodes
 
   # Startup messages -----------------------------------------------------------
-  message('Initializing STILT')
+  message('Initializing X-STILT')
   message('Number of receptors: ', nrow(receptors))
   message('Number of parallel threads: ', n_nodes * n_cores)
 
