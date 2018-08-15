@@ -25,7 +25,7 @@ Modifications on top of STILTv2 are located in /src/oco2-xsilt. Users can start 
 Figure 1: Latitude integrated map of weighted column footprints [umol/m2/s] on 12/29/2014 from 70+ selected sounding/receptor over Riyadh.
 
 ![](wgt_sum_xco2_Riyadh_2015121610_gdas0p5_STILTv2_zoom8_-72hrs_100dpar.png)
-Figure 1: Latitude integrated XCO2.ff contribution maps [ppm] on 12/29/2014 from 70+ selected sounding/receptor over Riyadh.
+Figure 2: Latitude integrated XCO2.ff contribution maps [ppm] on 12/29/2014 from 70+ selected sounding/receptor over Riyadh.
 
 ## Reference:
 Wu, D., Lin, J. C., Oda, T., Ye, X., Lauvaux, T., Yang, E. G., and Kort, E. A.: A Lagrangian Approach Towards Extracting Signals of Urban CO2 Emissions from Satellite Observations of Atmospheric Column CO2 (XCO2): X-Stochastic Time-Inverted Lagrangian Transport model ("X-STILT v1.1"), Geosci. Model Dev. Discuss., https://doi.org/10.5194/gmd-2018-123, in review, 2018.
