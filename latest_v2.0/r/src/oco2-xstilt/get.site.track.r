@@ -9,7 +9,7 @@ get.site.track <- function(site, oco2.ver, oco2.path, searchTF = F,
   thred.count.per.deg.urban = NULL, txtpath){
 
   library(dplyr)
-  
+
   # instead of inputting all info mannually, use find.overpass() to find
   # overpasses given a city lat.lon
   # once have coordinate info, get OCO-2 overpasses,
@@ -23,7 +23,7 @@ get.site.track <- function(site, oco2.ver, oco2.path, searchTF = F,
 
     # find overpasses over all OCO-2 time period
     oco2.track <- find.overpass(date = c('20140901', '20181231'),
-      target.region = lon.lat, oco2.ver = oco2.ver, oco2.path = oco2.path,
+      lon.lat = lon.lat, oco2.ver = oco2.ver, oco2.path = oco2.path,
       urbanTF, dlon.urban, dlat.urban)
 
     write.table(oco2.track, file = file.path(txtpath, txtfile), sep = ",",

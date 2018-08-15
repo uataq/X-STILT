@@ -4,7 +4,6 @@
 
 # preserve original "run_stilt.r" and modify "run_stilt.r" as a subroutine
 # add ziscale, DW, 07/25/2018
-# add prescribed met.files if available, DW, 08/08/2018
 
 run.stiltv2 <- function(namelist){
 
@@ -154,7 +153,6 @@ run.stiltv2 <- function(namelist){
   met_directory   <- namelist$met.path
   met_file_format <- namelist$met.format
   n_met_min <- namelist$met.num
-  met_files <- namelist$met.files
 
   # Auto symlink the meteorological data path to the working directory to
   # eliminate issues with long (>80 char) paths in fortran. Note that this
@@ -187,7 +185,7 @@ run.stiltv2 <- function(namelist){
                         kmsl = kmsl, kpuff = kpuff, krnd = krnd, kspl = kspl,
                         kzmix = kzmix, maxdim = maxdim, maxpar = maxpar,
                         lib.loc = lib.loc, met_file_format = met_file_format,
-                        met_files = met_files, met_loc = met_loc, mgmin = mgmin,
+                        met_loc = met_loc, mgmin = mgmin,
                         n_hours = n_hours, n_met_min = n_met_min, ncycl = ncycl,
                         ndump = ndump, ninit = ninit, nturb = nturb,
                         numpar = numpar, oco2.path = oco2.path, outdt = outdt,
@@ -208,6 +206,6 @@ run.stiltv2 <- function(namelist){
                         xmn = xmn, xmx = xmx, xres = xres, ymn = ymn, ymx = ymx,
                         yres = yres, zicontroltf = zicontroltf,
                         ziscale = ziscale, z_top = z_top, zcoruverr = zcoruverr)
-  #q('no')
+  q('no')
 
 }

@@ -24,9 +24,6 @@
 #
 # for generating trajec with horizontal error compoennt,
 # use the same lat/lon from original trajec, DW, 07/31/2018
-#
-# add 'met.files'; if metfiles are given, no need to use find_met_files(),
-# if NULL, then use find_met_files() to find met files DW, 08/08/2018
 # -----------------------------------------------------------------------------
 
 #### source all functions and load all libraries
@@ -70,14 +67,9 @@ urbanTF <- T; dlon.urban <- 0.5; dlat.urban <- 0.5
 
 # call get.site.info() to get lon.lat and OCO2 overpasses info
 # PLEASE add lat lon info in 'get.site.track'
-site.info <- get.site.track(site, oco2.ver, oco2.path, searchTF, date.range,
+oco2.track <- get.site.track(site, oco2.ver, oco2.path, searchTF, date.range,
   thred.count.per.deg, lon.lat, urbanTF, dlon.urban, dlat.urban,
   thred.count.per.deg.urban, txtpath)
-
-# get coordinate info and OCO2 track info from result 'site.info'
-lon.lat <- site.info$lon.lat
-oco2.track <- site.info$oco2.track
-print(lon.lat)
 
 # one can further subset 'oco2.track' based on sounding # over near city center
 # one can further subset 'oco2.track' based on data quality
@@ -118,7 +110,7 @@ delt        <- 2    # fixed timestep [min]; set = 0 for dynamic timestep
 nhrs        <- -72  # number of hours backward (-) or forward (+)
 
 run_trajec  <- T    # run trajec, will overwrite existing 'out'
-run_foot    <- T    # run footprint, trajec requires
+run_foot    <- F    # run footprint, trajec requires
 run_sim     <- F    # calculate simulated XCO2.ff, see STEP 8
 
 run_hor_err <- F    # run traj with hor wind errors/calc trans error (see STEP3)
@@ -185,15 +177,15 @@ if (selTF) {
   num.peak <- 40   # e.g., every 40 pts in 1 deg
 
   # recp.indx: how to pick receptors from all screened soundings (QF = 0)
-  recp.indx <- c(seq(lon.lat[3],  peak.lat[1], 1/num.bg),
+  recp.indx <- c(seq(lon.lat$minlat,  peak.lat[1], 1/num.bg),
     seq(peak.lat[1], peak.lat[2], 1/num.peak),
-    seq(peak.lat[1], lon.lat[4],  1/num.bg))
+    seq(peak.lat[1], lon.lat$maxlat,  1/num.bg))
 } else {
   recp.indx <- NULL
 }
 
 # whether to subset receptors when debugging
-recp.num <- 1     # can be a number for max num of receptors
+recp.num <- NULL     # can be a number for max num of receptors
 find.lat <- NULL     # for debug or test, model one sounding
 
 # for generating trajec with horizontal error compoennt,
@@ -203,12 +195,15 @@ if (run_hor_err)
   trajpath <- file.path(homedir, 'lin-group5/wde/github/stilt/workdir',
     paste0('out_', timestr, '_72hrs_v8'), 'by-id')
 
+# data filtering, 1st for QF/WL, 2nd for max thredshold
+data.filter <- c('QF', 0)
+
 # select satellite soundings, plotTF for whether plotting OCO-2 observed XCO2
 recp.info <- get.recp.info(timestr = timestr, oco2.path = oco2.path,
   oco2.ver = oco2.ver, lon.lat = lon.lat, selTF = selTF,
   recp.indx = recp.indx, recp.num = recp.num, find.lat = find.lat, agl = agl,
   plotTF = F, run_trajec = run_trajec, run_hor_err = run_hor_err,
-  trajpath = trajpath, stilt.ver = stilt.ver)
+  trajpath = trajpath, stilt.ver = stilt.ver, data.filter = data.filter)
 
 nrecp <- nrow(recp.info)
 cat(paste('Done with receptor setup...\n'))
@@ -218,7 +213,7 @@ cat(paste('Done with receptor setup...\n'))
 #------------------------------ STEP 4 --------------------------------------- #
 # path for the ARL format of WRF and GDAS
 # simulation_step() will find corresponding met files
-met.indx   <- 1
+met.indx   <- 3
 met        <- c('hrrr', '1km', 'gdas0p5')[met.indx] # choose met fields
 met.path   <- file.path(homedir, 'u0947337', met)
 
@@ -346,8 +341,8 @@ namelist <- list(agl = agl, ak.wgt = ak.wgt, delt = delt, dmassTF = dmassTF,
   dpar = dpar, foot.info = foot.info, hnf_plume = hnf_plume, homedir = homedir,
   horcoruverr = horcoruverr, horcorzierr = horcorzierr, lon.lat = lon.lat,
   met = met, met.format = met.format, met.num = met.num, met.path = met.path,
-  met.files = met.files, nhrs = nhrs, numpar = numpar, outdir = outdir,
-  oco2.path = oco2.path, projection = projection, pwf.wgt = pwf.wgt,
+  nhrs = nhrs, numpar = numpar, outdir = outdir, oco2.path = oco2.path,
+  projection = projection, pwf.wgt = pwf.wgt,
   recp.info = recp.info, run_foot = run_foot, run_sim = run_sim,
   run_trajec = run_trajec, run_hor_err = run_hor_err, run_ver_err = run_ver_err,
   siguverr = siguverr, sigzierr = sigzierr, site = site,
@@ -356,13 +351,13 @@ namelist <- list(agl = agl, ak.wgt = ak.wgt, delt = delt, dmassTF = dmassTF,
   TLzierr = TLzierr, varstrajec = varstrajec, workdir = workdir,
   zicontroltf = zicontroltf, ziscale = ziscale, zcoruverr = zcoruverr)
 
-
+#stop()
 #------------------------------ STEP 7 --------------------------------------- #
 ## run trajec/footprint/simulations for backward simulations --
 if (run_trajec | run_foot) {    ## if running trajec or footprint
 
   ## use Ben's algorithm for parallel simulation settings
-  n_nodes  <- 1
+  n_nodes  <- 6
   n_cores  <- ceiling(nrecp/n_nodes)
   job.time <- '24:00:00'
   slurm    <- n_nodes > 1
