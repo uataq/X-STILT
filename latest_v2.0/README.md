@@ -21,13 +21,12 @@ Modifications on top of STILTv2 are located in /src/oco2-xsilt. Users can start 
    * Simulate FFCO2 XCO2 enhancements (footprint needed)       -> *run_sim*
 
 
-## Column footprints comparisons using difference model versions and smooth factors:
-![](xfoot_riyadh.png)
-Figure 1: Spatial map of weighted column footprints (umol/m2/s) on 12/29/2014 for one selected sounding/receptor over Riyadh.
-Upper panels: different footprints using different smooth factors (*calc_footprint* from STILT-R version2), based on trajectories with 100 particles per level.
-Panel D: footprint using *Trajecfoot* with dmass correction from STILTv1, based on trajectories with 100 particles per level.
-Panel E: footprint with NO smoothing (*calc_footprint* from STILT-R version2), based on trajectories with 2500 particles per level (Brute Force case).
+## Column footprints comparisons using footprint algorithms between model versions and smooth factors:
+![](wgt_sum_xfoot_Riyadh_2015121610_gdas0p5_STILTv2_zoom8_-72hrs_100dpar.png)
+Figure 1: Latitude integrated map of weighted column footprints [umol/m2/s] on 12/29/2014 from 70+ selected sounding/receptor over Riyadh.
 
+![](wgt_sum_xco2_Riyadh_2015121610_gdas0p5_STILTv2_zoom8_-72hrs_100dpar.png)
+Figure 1: Latitude integrated XCO2.ff contribution maps [ppm] on 12/29/2014 from 70+ selected sounding/receptor over Riyadh.
 
 ## Reference:
 Wu, D., Lin, J. C., Oda, T., Ye, X., Lauvaux, T., Yang, E. G., and Kort, E. A.: A Lagrangian Approach Towards Extracting Signals of Urban CO2 Emissions from Satellite Observations of Atmospheric Column CO2 (XCO2): X-Stochastic Time-Inverted Lagrangian Transport model ("X-STILT v1.1"), Geosci. Model Dev. Discuss., https://doi.org/10.5194/gmd-2018-123, in review, 2018.
