@@ -12,16 +12,18 @@
 # *** default output directory will be automatically created and under 'workdir',
 # in different Copies; make sure different nummodels are used for different
 # overpass events, DW, 07/31/2018
+# add customized data filtering, DW, 08/20/2018
 
 run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
   lon.lat, delt, dxyp, dzp, dtime, agl, numpar, nhrs, workdir, outpath = NULL,
   siguverr = NULL, TLuverr = NULL, zcoruverr = NULL, horcoruverr = NULL,
   met.format, met.path, met.num = 1, plotTF = F, oco2.path, oco2.ver,
-  zoom = 8, td = 0.05, clean.side = c('north','south', 'both')[3]){
+  zoom = 8, td = 0.05, perc = 0.2, clean.side = c('north','south', 'both')[3],
+  data.filter = c('QF', 0)){
 
   # get lat/lon for city center
   clon <- signif(lon.lat$citylon, 6)
-  clat <- signif(lon.lat$citylon, 6)
+  clat <- signif(lon.lat$citylat, 6)
   lonstr <- ifelse(clon > 0, paste0(clon, 'E'), paste0(abs(clon), 'W'))
   latstr <- ifelse(clat > 0, paste0(clat, 'N'), paste0(abs(clat), 'S'))
   cat(paste('run.forward.trajec(): Working on trajec at', latstr, '\n'))
@@ -104,8 +106,9 @@ run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
                                      oco2.path = oco2.path,
                                      oco2.ver = oco2.ver, zoom = zoom,
                                      lon.lat = lon.lat, td = td,
-                                     font.size = rel(1.2),
-                                     clean.side = clean.side)
+                                     font.size = rel(1.2), perc = perc,
+                                     clean.side = clean.side,
+                                     data.filter = data.filter)
     return(bg.info)
   } else {
     return()

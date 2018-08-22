@@ -5,6 +5,7 @@
 # preserve original "run_stilt.r" and modify "run_stilt.r" as a subroutine
 # add ziscale, DW, 07/25/2018
 
+
 run.stiltv2 <- function(namelist){
 
   # User inputs ----------------------------------------------------------------
@@ -118,7 +119,7 @@ run.stiltv2 <- function(namelist){
   n_nodes       <- namelist$n_nodes
 
   # Startup messages -----------------------------------------------------------
-  message('Initializing X-STILT')
+  message('Initializing STILT')
   message('Number of receptors: ', nrow(receptors))
   message('Number of parallel threads: ', n_nodes * n_cores)
 
@@ -185,8 +186,8 @@ run.stiltv2 <- function(namelist){
                         kmsl = kmsl, kpuff = kpuff, krnd = krnd, kspl = kspl,
                         kzmix = kzmix, maxdim = maxdim, maxpar = maxpar,
                         lib.loc = lib.loc, met_file_format = met_file_format,
-                        met_loc = met_loc, mgmin = mgmin,
-                        n_hours = n_hours, n_met_min = n_met_min, ncycl = ncycl,
+                        met_loc = met_loc, mgmin = mgmin, n_hours = n_hours,
+                        n_met_min = n_met_min, ncycl = ncycl,
                         ndump = ndump, ninit = ninit, nturb = nturb,
                         numpar = numpar, oco2.path = oco2.path, outdt = outdt,
                         outfrac = outfrac, output_wd = output_wd, p10f = p10f,
@@ -206,6 +207,6 @@ run.stiltv2 <- function(namelist){
                         xmn = xmn, xmx = xmx, xres = xres, ymn = ymn, ymx = ymx,
                         yres = yres, zicontroltf = zicontroltf,
                         ziscale = ziscale, z_top = z_top, zcoruverr = zcoruverr)
-  q('no')
+  #q('no')
 
 }

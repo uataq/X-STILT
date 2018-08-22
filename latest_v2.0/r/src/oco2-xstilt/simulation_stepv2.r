@@ -34,9 +34,9 @@ simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
                             kmix0 = 250, kmixd = 3, kmsl = 0, kpuff = 0,
                             krnd = 6, kspl = 1, kzmix = 1, maxdim = 1,
                             maxpar = 10000, met_file_format, met_loc,
-                            mgmin = 2000, n_hours = -24,
-                            n_met_min = 1, ncycl = 0, ndump = 0, ninit = 1,
-                            nturb = 0, numpar = 200, oco2.path = NA, outdt = 0,
+                            mgmin = 2000, n_hours = -24, n_met_min = 1,
+                            ncycl = 0, ndump = 0, ninit = 1, nturb = 0,
+                            numpar = 200, oco2.path = NA, outdt = 0,
                             outfrac = 0.9, output_wd = file.path(stilt_wd,'out'),
                             p10f = 1, projection = '+proj=longlat', pwf.wgt = NA,
                             qcycle = 0, r_run_time, r_lati, r_long, r_zagl,
@@ -125,22 +125,23 @@ simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
         # height [m] along w. u-, v- and w- component instantaneous wind
         # given receptor lat/lon/time/agl=5 (near ground)
         # remove ziscale and zicontroltf from get.ground.hgt(), DW
+        receptor <- output$receptor
         recp.var <- get.ground.hgt(varsiwant, conage, cpack, dxf, dyf, dzf,
                                    emisshrs, frhmax, frhs, frme, frmr, frts,
                                    frvs, hscale, ichem, iconvect, initd, isot,
                                    ivmax, kbls, kblt, kdef, khmax, kmix0, kmixd,
                                    kmsl, kpuff, krnd, kspl, kzmix, maxdim,
                                    maxpar, met_file_format, met_loc, mgmin,
-                                   ncycl, ndump, ninit, n_hours,
-                                   outdt, outfrac, p10f, qcycle, random, splitf,
-                                   tkerd, tkern, rm_dat, receptor = output$receptor,
-                                   rundir, timeout, tlfrac, tratio, tvmix, veght,
-                                   vscale, w_option, z_top)
+                                   ncycl, ndump, ninit, n_hours, outdt, outfrac,
+                                   p10f, qcycle, random, splitf, tkerd, tkern,
+                                   rm_dat, receptor, rundir, timeout, tlfrac,
+                                   tratio, tvmix, veght, vscale, w_option, z_top)
         # paste interpolated info to output$receptor
         output$receptor <- c(output$receptor, recp.var)
       }  # end if length(r_zagl) > 1
       ## ------------ END modifications for OCO-2/X-STILT ------------------ ##
 
+      # Find necessary met files, if no prescribed met files found
       met_files <- find_met_files(r_run_time, met_file_format, n_hours, met_loc)
 
       if (length(met_files) < n_met_min) {

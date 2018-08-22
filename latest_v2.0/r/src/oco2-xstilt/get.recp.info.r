@@ -7,14 +7,12 @@
 # use variables instead of namelist, DW, 07/25/2018
 # for generating trajec with horizontal error compoennt,
 # use the same lat.lon from original trajec, DW, 07/31/2018
-# add data.filtering, DW, 08/13/2018
 
-get.recp.info <- function(timestr, oco2.path, oco2.ver, lon.lat, selTF,
+get.recp.info <- function(timestr, oco2.path, lon.lat, selTF,
   recp.indx, recp.num, find.lat, agl, plotTF = F, run_trajec, run_hor_err,
   trajpath = NULL, stilt.ver = 2, data.filter = c('QF', 0)){
 
   # ------------------- Step 1. READ IN OCO-2 LITE FILES ------------------- #
-  source('r/dependencies.r') # source all functions
   oco2 <- grab.oco2(oco2.path, timestr, lon.lat)
 
   # filter by quality flag too, more receptors when XCO2 is high

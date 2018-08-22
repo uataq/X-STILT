@@ -39,3 +39,7 @@ run_XSTILT_*
 *.conf
 *.txt
 _rslurm*
+
+*DS_Store
+r/*DS_Store/
+r/src/*DS_Store/

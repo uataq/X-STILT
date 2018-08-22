@@ -41,8 +41,7 @@ get.ground.hgt <- function(varsiwant, conage, cpack, dxf, dyf, dzf, emisshrs,
                           long = receptor$long, zagl = r_zagl)
 
   # get met files for + or - 1 hour
-  met_files <- find_met_files(receptor$run_time, met_file_format,
-                              n_hours, met_loc)
+  met_files <- find_met_files(receptor$run_time, met_file_format, n_hours, met_loc)
 
   # Execute particle trajectory simulation, and read results into data frame
   if (!file.exists(output$file)) {
@@ -67,7 +66,7 @@ get.ground.hgt <- function(varsiwant, conage, cpack, dxf, dyf, dzf, emisshrs,
     cat('get.ground.hgt(): trajec found...\n')
     particle <- readRDS(output$file)
   }
-  
+print(str(particle))
   # select the min timestep, which is the most closed to the receptor
   sel <- abs(particle$time) == min(unique(abs(particle$time)))
   sel.part <- particle[sel, ]

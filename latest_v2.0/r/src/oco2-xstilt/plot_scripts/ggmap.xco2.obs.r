@@ -1,68 +1,83 @@
 # script to plot XCO2 contribution with observed XCO2 on spatial maps,
 # written by Dien Wu, 06/18/2018
 
-ggmap.xco2.obs <- function(mm, lon.lat, site, facet.nrow, nhrs.back, dpar, sf,
-  zisf, stilt.ver, timestr, font.size = rel(0.9), recp.lon, recp.lat, obs, xco2,
-  picname, storeTF, width = 12, height = 8){
+# last update, DW, 08/22/2018
+
+ggmap.xco2.obs <- function(mm, lon.lat, site, oco2.path, facet.nrow, nhrs, dpar,
+  foot.sf, zisf, met, stilt.ver, timestr, font.size = rel(0.9), recp.lon,
+  recp.lat, xco2, xco2.sig = xco2.sig, titleTF = T, sumTF = T, picname,
+  storeTF = T, width = 12, height = 8){
 
   col <- def.col()
-  m1 <- mm[[1]] + theme_bw() + coord_equal(1.0)
+  m1 <- mm[[1]] + theme_bw() + coord_equal(1.1)
 
   # grab observations using map lat/lon
-  map.ext <- c(min(mm[[1]]$data$lon), max(mm[[1]]$data$lon),
-    min(mm[[1]]$data$lat), max(mm[[1]]$data$lat))
+  map.ext <- data.frame(
+    minlon = min(mm[[1]]$data$lon),
+    maxlon = max(mm[[1]]$data$lon),
+    minlat = min(mm[[1]]$data$lat),
+    maxlat = max(mm[[1]]$data$lat))
   cat('Reading OCO-2 data according to the spatial domain of ggmap...\n')
-  obs <- grab.oco2(ocopath = oco2.path, timestr, lon.lat = map.ext) # grab obs
+  obs <- grab.oco2(ocopath = oco2.path, timestr = timestr, lon.lat = map.ext)
 
   # select xco2 using map.ext
   library(dplyr)
   sel.xco2 <- xco2 %>% filter(
-    lon >= map.ext[1] & lon <= map.ext[2] &
-    lat >= map.ext[3] & lat <= map.ext[4])
-  sum.xco2 <- sel.xco2 %>% group_by(fac) %>% dplyr::summarize(sum = sum(xco2))
+    lon >= map.ext$minlon & lon <= map.ext$maxlon &
+    lat >= map.ext$minlat & lat <= map.ext$maxlat &
+    xco2 >= xco2.sig)
 
-  title <- paste('Spatial contribution of XCO2 [ppm] (',
-    nhrs.back, ' hours back; dpar =', dpar, '; smooth factor =', sf,
-    '; ziscale =', zisf, ')\nusing STILT version', stilt.ver, 'for overpass on',
-    timestr, 'over', site,
-    '\nSmall XCO2 enhancements < 1E-6 ppm are displayed in gray')
+  title <- paste('Spatial contribution of XCO2 [ppm] (', nhrs, ' hours; dpar =',
+    dpar, '; smooth factor =', foot.sf, '; ziscale =', zisf, '; met = ', met,
+    ')\nusing STILT version', stilt.ver, 'for overpass on', timestr, 'over', site,
+    '\nOnly large XCO2 enhancements >', xco2.sig, 'ppm are displayed')
+  if (titleTF == F) title <- NULL
 
   # plot and label receptors and add title/xy axis
   p1 <- m1 + labs(title = title, x = 'LONGITUDE [E]', y = 'LATITUDE [N]')
 
-  if (length(unique(xco2$fac)) > 1){
+  if ('fac' %in% colnames(sel.xco2)){
+    if (length(unique(sel.xco2$fac)) > 1){
 
-    # receptor locations and add receptors on map
-    sel.recp <- data.frame(lon = recp.lon, lat = recp.lat,
-      fac = unique(xco2$fac)) %>% full_join(sum.xco2, by = 'fac')
-    sel.recp$x <- map.ext[2] - 0.8
-    sel.recp$y <- map.ext[4] - 0.5
-    print(sel.recp)
+      # summing the values within map domain
+      sum.xco2 <- sel.xco2 %>% group_by(fac) %>% dplyr::summarize(sum = sum(xco2))
 
-    p1 <- p1 +
-      geom_point(data = sel.recp, aes(lon, lat), size = 1, colour = 'purple') +
-      facet_wrap(~ fac, nrow = facet.nrow) +
-      geom_text(data = sel.recp, aes(lon + 1, lat), size = 2, colour = 'purple',
-        label = 'receptor', fontface = 2) +
-      facet_wrap(~fac, nrow = facet.nrow) +
-      geom_text(data = sel.recp, aes(x, y, label = signif(sum, 3)),
-        fontface = 2, size = 4)
+      # receptor locations and add receptors on map
+      sel.recp <- data.frame(lon = recp.lon, lat = recp.lat,
+        fac = unique(xco2$fac)) %>% full_join(sum.xco2, by = 'fac') %>%
+        mutate(x = map.ext$maxlon - (map.ext$maxlon - map.ext$minlon) / 10,
+               y = map.ext$maxlat - (map.ext$maxlon - map.ext$minlon) / 10)
+      print(sel.recp)
+
+      p1 <- p1 +
+        geom_point(data = sel.recp, aes(lon, lat), size = 1, colour = 'purple') +
+        facet_wrap(~ fac, nrow = facet.nrow) +
+        geom_text(data = sel.recp, aes(lon + 1, lat), size = 2, colour = 'purple',
+          label = 'receptor', fontface = 2) +
+        facet_wrap(~fac, nrow = facet.nrow)
+
+      if (sumTF) p1 <- p1 + geom_text(data = sel.recp,
+          aes(x, y, label = signif(sum, 3)), fontface = 2, size = 4)
+    }  # end if
   }  # end if
 
   # plot observed XCO2, add xco2 raster layer
   p2 <- p1 +
-    geom_point(data = obs, aes(lon, lat, colour = xco2),size = 0.3) +
+    geom_point(data = obs[obs$qf == 0, ], aes(lon, lat, colour = xco2),
+      size = 0.3) +
     geom_raster(data = sel.xco2, aes(lon + mm[[3]], lat + mm[[2]], fill = xco2),
       alpha = 0.8) +
-    scale_fill_gradientn(limits = c(1E-6, max(sel.xco2$xco2)),
+    scale_fill_gradientn(limits = c(xco2.sig, max(sel.xco2$xco2)),
       name = 'SIM XCO2 [ppm]', colours = col, trans = 'log10',
-      breaks = c(1E-6, 1E-4, 1E-2, 0.1, 1.0),
-      labels = c(1E-6, 1E-4, 1E-2, 0.1, 1.0))
+      breaks = sort(unique(c(xco2.sig, 1E-6, 1E-4, 1E-2, 0.1, 1.0))),
+      labels = sort(unique(c(xco2.sig, 1E-6, 1E-4, 1E-2, 0.1, 1.0))))
 
-  if (length(unique(sel.xco2$fac)) > 1){
-    p2 <- p2 + facet_wrap(~fac, nrow = facet.nrow) +
-      theme(strip.text = element_text(size = font.size))
-  }
+  if ('fac' %in% colnames(sel.xco2)){
+    if (length(unique(sel.xco2$fac)) > 1){
+      p2 <- p2 + facet_wrap(~fac, nrow = facet.nrow) +
+        theme(strip.text = element_text(size = font.size))
+    }
+  }  # end if
 
   p3 <- p2 + theme(legend.position = 'bottom',
     legend.text = element_text(size = font.size),

@@ -14,12 +14,11 @@ grab.oco2 <- function(ocopath, timestr, lon.lat){
   oco.lon   <- ncvar_get(ocodat, "longitude")
   xco2.obs  <- ncvar_get(ocodat, "xco2")
   xco2.obs[xco2.obs == -999999] <- NA
-
   xco2.obs.uncert <- ncvar_get(ocodat, "xco2_uncertainty")
 
   wl <- ncvar_get(ocodat, "warn_level")
   qf <- ncvar_get(ocodat, "xco2_quality_flag")
-  foot<-ncvar_get(ocodat, "Sounding/footprint")
+  foot <- ncvar_get(ocodat, "Sounding/footprint")
 
   # YYYY MM DD HH mm ss m (millisecond) f (footprint)
   id <- as.character(ncvar_get(ocodat, "sounding_id"))
@@ -51,7 +50,6 @@ grab.oco2 <- function(ocopath, timestr, lon.lat){
   sel.hr   <- as.numeric(substr(sel.time, 12, 13))
   sel.min  <- as.numeric(substr(sel.time, 15, 16))
   sel.sec  <- as.numeric(substr(sel.time, 18, 19))
-
   sel.foot <- as.numeric(foot[region.index])
   sel.wl   <- as.numeric(wl[region.index])
   sel.qf   <- as.numeric(qf[region.index])

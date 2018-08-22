@@ -1,10 +1,14 @@
-# Compute background XCO2, given different methods:
-# M1. Trajec-endpoint (using CarbonTracker)
-# M2H. Regional daily median (based on Hakkareinen et al., 2016)
-# M2S. Localized normal statistics (based on Silva and Arellano, 2017)
-# M3. X-STILT overpass-specific (based on Wu et al., GMDD)
-# originated from 'create_namelist_oco2-xsilt.r'
-# written by DW, 04/18/2018
+#' Compute background XCO2, given different methods:
+#' M1. Trajec-endpoint (using CarbonTracker)
+#' M2H. Regional daily median (based on Hakkareinen et al., 2016)
+#' M2S. Localized normal statistics (based on Silva and Arellano, 2017)
+#' M3. X-STILT overpass-specific (based on Wu et al., GMDD)
+#' originated from 'create_namelist_oco2-xsilt.r'
+#' @author Dien Wu, 04/18/2018
+
+#' @updates:
+#' add customized data filtering, DW, 08/20/2018
+
 
 #### source all functions and load all libraries
 # CHANGE working directory ***
@@ -30,7 +34,7 @@ txtpath <- file.path(output.path, 'oco2_overpass')
 date.range <- c('20140101', '20181231')
 
 # input dlat, dlon for spatial domain around city center
-lon.lat <- get.lon.lat(site, dlon = 1, dlat = 1)
+lon.lat <- get.lon.lat(site, dlon = 1, dlat = 3)
 
 # 'thred.count' for at least how many soundings needed per 1deg lat range
 # -> calculate a total thred on total # of soundings given 'lon.lat'
@@ -48,13 +52,9 @@ urbanTF <- T; dlon.urban <- 0.5; dlat.urban <- 0.5
 
 # call get.site.info() to get lon.lat and OCO2 overpasses info
 # PLEASE add lat lon info in 'get.site.track'
-site.info <- get.site.track(site, oco2.ver, oco2.path, searchTF,
-  date.range, thred.count.per.deg, lon.lat, urbanTF, dlon, dlat,
+oco2.track <- get.site.track(site, oco2.ver, oco2.path, searchTF,
+  date.range, thred.count.per.deg, lon.lat, urbanTF, dlon.urban, dlat.urban,
   thred.count.per.deg.urban, txtpath)
-
-# get coordinate info and OCO2 track info from result 'site.info'
-lon.lat <- site.info$lon.lat
-oco2.track <- site.info$oco2.track
 
 # one can further subset 'oco2.track' based on sounding # over near city center
 # one can further subset 'oco2.track' based on data quality
@@ -162,7 +162,7 @@ if (method == 'M3') {
 
   bg.info <- NULL
   for (t in 1:length(all.timestr)) {
-
+  #t = 1
     timestr <- all.timestr[t]
     print(timestr)
 
@@ -170,8 +170,8 @@ if (method == 'M3') {
     #### Whether forward/backward, release from a column or a box
     forwardTF  <- T  # forward or backward traj, if forward, release from a box
     delt       <- 2  # fixed timestep [min]; set = 0 for dynamic timestep
-    run_trajec <- T  # whether to run forward traj, if T, will overwrite existing
-    plotTF     <- F  # whether to calculate background and plot 2D density
+    run_trajec <- F  # whether to run forward traj, if T, will overwrite existing
+    plotTF     <- T  # whether to calculate background and plot 2D density
 
     ### MUST-HAVE parameters about errors
     run_hor_err <- T  # run trajec with hor wind errors/calc trans error
@@ -264,12 +264,17 @@ if (method == 'M3') {
     #------------------------------ STEP 5.3 -------------------------------- #
     # !!! need to add makefile for AER_NOAA_branch in fortran ;
     # link two hymodelcs in exe directory
-    #clean.side <- c('south', 'both', 'both', 'north', 'south', 'north', 'south')[t]
-    clean.side <- c('south', 'both', 'north', 'south', 'north')[t]
+    #clean.side <- c('south', 'both', 'north', 'south', 'north')[t]  # Riyadh
+    clean.side <- 'south'  # all northern part for clean background for LV
     print(clean.side)
 
     if (run_trajec == T) outpath <- NULL  # will be in copies
-    if (run_trajec == F) outpath <- file.path(workdir, 'out_forward/')
+    if (run_trajec == F)
+      outpath <- file.path(homedir, 'lin-group5/wde/github/stilt', site,
+        'out_forward/')
+
+    # data filtering on observations
+    data.filter <- c('QF', 0)
     tmp.info <- run.forward.trajec(site = site, timestr = timestr,
                                    overwrite = run_trajec, nummodel = t,
                                    lon.lat = lon.lat, delt = delt, dxyp = dxyp,
@@ -282,11 +287,13 @@ if (method == 'M3') {
                                    met.format = met.format, met.path = met.path,
                                    met.num = 1, plotTF = plotTF,
                                    oco2.path = oco2.path, oco2.ver = oco2.ver,
-                                   zoom = 7, td = 0.05, clean.side = clean.side)
+                                   zoom = 7, td = 0.05, perc = 0.05,
+                                   clean.side = clean.side,
+                                   data.filter = data.filter)
     print(tmp.info)
     bg.info <- rbind(bg.info, tmp.info)
   } # end for t
 
-  write.table(bg.info, file = paste0('M3_bg_', site, '_', oco2.ver, '.txt'),
-    quote = F, row.names = F, sep = ',')
+  write.table(bg.info, quote = F, row.names = F, sep = ',',
+    file = file.path(outpath, paste0('M3_bg_', site, '_', oco2.ver, '.txt')))
 } # end if method == 'M3'

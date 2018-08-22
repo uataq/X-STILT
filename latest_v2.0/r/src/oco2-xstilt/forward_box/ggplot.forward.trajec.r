@@ -6,10 +6,14 @@
 # convert kernel density to percentile, DW, 11/15/2017
 # return latitude range, DW, 11/16/2017
 # use readRDS instead of getr (have changed in Trajecmulti), DW, 07/29/2018
+# add customized data filtering, DW, 08/20/2018
+
+# add perc for adjustable background extension length, DW, 08/21/2018
+# e.g., perc = 0.2 -> extend derived enhanced lat range by 20% on both side
 
 ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
   oco2.path, oco2.ver, zoom = 8, lon.lat, font.size = rel(1.2), td = 0.05,
-  clean.side = c('north','south', 'both')[3]){
+  perc, clean.side = c('north','south', 'both')[3], data.filter = c('QF', 0)){
 
   # call grab.oco2() to read in observations and compute overpass time
   # lon.lat used for grabbing OCO2 should be wider, e.g., by 2 deg +
@@ -21,7 +25,7 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
   obs.datestr <- as.POSIXlt(as.character(obs$time),
     format = '%Y-%m-%d %H:%M:%S', tz = 'UTC')
 
-  # get overpass durations, and further allow for fwe more mins
+  # get satellite crossing durations, and further allow for fwe more mins
   # allow for 2 more minutes, convert to sec
   min.xtime <- min(obs.datestr) - 2 * 60
   max.xtime <- max(obs.datestr) + 2 * 60
@@ -88,14 +92,15 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
   }
 
   p1 <- p1 + geom_point(data = sel.trajdat, aes(lon, lat, colour = dens.level),
-    size = 0.4, alpha = 0.5)
+    size = 0.2, alpha = 0.5)
 
   # add observed soundings
   max.y <- 406; min.y <- 394
   if(timestr >= '20160101'){max.y <- 410; min.y <- 400}
 
-  p2 <- p1 + geom_point(data = obs, aes(lon, lat, fill = xco2), shape = 21,
-      colour = 'gray90') +
+  # only plot SCREENED data, QF == 0
+  p2 <- p1 + geom_point(data = obs[obs$qf == 0, ], aes(lon, lat, fill = xco2),
+      shape = 21, colour = 'gray90') +
     scale_fill_gradientn(colours = def.col(), name = 'XCO2',
       limits = c(min.y, max.y), breaks = seq(min.y, max.y, 2),
       labels = seq(min.y, max.y, 2))
@@ -106,11 +111,26 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
     mutate(POS = 1:nrow(wide.bound), PID = 1)
 
   # if diff is too large, meaning there are more than one polygon
-  #if (length(which(abs(diff(bound.traj$Y)) > td)) > 0)
-  #  bound.traj <- bound.traj[1:which(abs(diff(bound.traj$Y)) > td),]
+  abs.dy <- abs(diff(bound.traj$Y))
+  abs.dx <- abs(diff(bound.traj$X))
 
-  #if (length(which(abs(diff(bound.traj$X)) > td)) > 0)
-  #  bound.traj <- bound.traj[1:which(abs(diff(bound.traj$X)) > td),]
+  # select the polygon we need, bug fixed, DW, 08/21/2018
+  if (length(which(abs.dy > td)) > 0 | length(which(abs.dx > td)) > 0){
+    cutoff.yindx <- which(abs.dy > td)
+    cutoff.xindx <- which(abs.dx > td)
+
+    y.vec <- c(1, cutoff.yindx, nrow(bound.traj)); dy.indx <- diff(y.vec)
+    x.vec <- c(1, cutoff.xindx, nrow(bound.traj)); dx.indx <- diff(x.vec)
+
+    # now select polygons
+    plg.yindx <- which(dy.indx == max(dy.indx))  # polygon index
+    plg.xindx <- which(dx.indx == max(dx.indx))  # polygon index
+    plg.xy <- intersect(
+      seq(y.vec[plg.indx], y.vec[plg.yindx + 1], 1),
+      seq(x.vec[plg.indx], x.vec[plg.xindx + 1], 1)
+    )
+    bound.traj <- bound.traj[plg.xy, ]
+  }  # end if 
 
   p3 <- p2 + geom_polygon(data = bound.traj, aes(X, Y), colour = 'gray10',
     linetype = 1, fill = NA, size = 0.9, alpha = 0.5)
@@ -139,21 +159,20 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
 
     # get obs that fall into the polluted lat range
     pol.index <- point.in.polygon(obs$lon, obs$lat, pol.bound$X, pol.bound$Y)
-    pol.obs   <- obs[pol.index >0,]
+    pol.obs   <- obs[pol.index > 0,]
 
-    # plot overlap polygon and polluted obs
+    # plot overlap polygon and polluted obs (only screened data), DW, 08/20/2018
     p3 <- p3 + geom_polygon(data = pol.bound, aes(X, Y), colour = 'gray50',
         fill = 'gray40', alpha = 0.5) +
-      geom_point(data = pol.obs, aes(lon, lat, fill = xco2),
+      geom_point(data = pol.obs[pol.obs$qf == 0, ], aes(lon, lat, fill = xco2),
         shape = 21, colour = 'gray50')
 
-    p4 <- p3 +
-      annotate('text', x = unique(info$recp.lon) + mm[[3]],
+    p4 <- p3 + annotate('text', x = unique(info$recp.lon) + mm[[3]],
         y = unique(info$recp.lat) + mm[[2]] - 0.05, label = site, size = 6) +
       annotate('point', x = info$recp.lon + mm[[3]],
         y = info$recp.lat + mm[[2]], size = 2, shape = 17)
 
-    p5 <- p4 + theme(legend.position = 'right',
+    p5 <- p3 + theme(legend.position = 'right',
       legend.key.width = unit(0.5, 'cm'),
       legend.key.height = unit(1.5, 'cm'),
       legend.text = element_text(size = font.size),
@@ -168,8 +187,8 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
     if (nrow(pol.obs) > 0) {
 
       # screen obs data
-      if (oco2.ver == 'b7rb') scr.obs <- obs %>% filter(qf == 0)
-      if (oco2.ver == 'b8r') scr.obs <- obs %>% filter(wl <= 1)
+      if (data.filter[1] == 'QF') scr.obs <- obs %>% filter(qf <= data.filter[2])
+      if (data.filter[1] == 'WL') scr.obs <- obs %>% filter(wl <= data.filter[2])
 
       # get Enhanced latitude range
       pol.min.lat <- min(pol.obs$lat)
@@ -177,8 +196,8 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
 
       # allow for some uncertainty, to avoid including high XCO2
       dlat <- pol.max.lat - pol.min.lat
-      pol.min.lat <- pol.min.lat - dlat * 0.3
-      pol.max.lat <- pol.max.lat + dlat * 0.3
+      pol.min.lat <- pol.min.lat - dlat * perc
+      pol.max.lat <- pol.max.lat + dlat * perc
       cat(paste('Enhanced lat range:', signif(pol.min.lat, 4), '-',
         signif(pol.max.lat, 4),'N\n'))
 

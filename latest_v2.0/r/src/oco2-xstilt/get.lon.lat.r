@@ -3,13 +3,15 @@
 
 #' @update:
 #' use geocode and SpatialPoints to find lat/lon coordinates,
-#' country and reg name, DW, 08/15/2018
+#' country and reg name, DW, DR, 08/15/2018
 
 #' site can be a vector
 get.lon.lat <- function(site, dlon, dlat) {
 
   # spatial domains placing receptors and city center, help select OCO-2 data
   library(ggmap); library(rworldmap); library(sp)
+
+  if ('LV'%in%site) site[grep('LV', site)] <- 'Las Vegas'
 
   # location name to lon, lat coordinates
   city.loc <- geocode(location = site, output = 'latlon', source = 'google',

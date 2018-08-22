@@ -165,11 +165,7 @@ if (columnTF) {
 selTF <- T  # whether select receptors; or simulate all soundings
 if (selTF) {
   # lat range in deg N for placing denser receptors, required for backward run
-  if (site == 'Riyadh')    peak.lat <- c(24, 25)
-  if (site == 'Jerusalem') peak.lat <- c(31.75, 32.25)
-  if (site == 'Cairo')     peak.lat <- c(29.5, 30.5)
-  if (site == 'Phoenix')   peak.lat <- c(33.0, 34.0)
-  if (site == 'Baghdad')   peak.lat <- c(32.5, 33.5)
+  peak.lat <- c(lon.lat$citylat - 0.5, lon.lat$citylat + 0.5)
 
   # number of points to aggregate within 1deg over small/large enhancements,
   # i.e., over background/enhancements, binwidth will be 1deg/num
@@ -200,10 +196,10 @@ data.filter <- c('QF', 0)
 
 # select satellite soundings, plotTF for whether plotting OCO-2 observed XCO2
 recp.info <- get.recp.info(timestr = timestr, oco2.path = oco2.path,
-  oco2.ver = oco2.ver, lon.lat = lon.lat, selTF = selTF,
-  recp.indx = recp.indx, recp.num = recp.num, find.lat = find.lat, agl = agl,
-  plotTF = F, run_trajec = run_trajec, run_hor_err = run_hor_err,
-  trajpath = trajpath, stilt.ver = stilt.ver, data.filter = data.filter)
+  lon.lat = lon.lat, selTF = selTF, recp.indx = recp.indx, recp.num = recp.num,
+  find.lat = find.lat, agl = agl, plotTF = F, run_trajec = run_trajec,
+  run_hor_err = run_hor_err, trajpath = trajpath, stilt.ver = stilt.ver,
+  data.filter = data.filter)
 
 nrecp <- nrow(recp.info)
 cat(paste('Done with receptor setup...\n'))
@@ -305,13 +301,13 @@ foot.res <- 1/120  # footprint resolution, 1km for ODIAC
 # these variables will determine resoluation and spatial domain of footprint
 # 20x20 degree domain around the city center
 foot.info <- data.frame(
-  xmn = round(lon.lat[5]) - 10, xmx = round(lon.lat[5]) + 10,
-  ymn = round(lon.lat[6]) - 10, ymx = round(lon.lat[6]) + 10,
+  xmn = round(lon.lat$minlon) - 10, xmx = round(lon.lat$minlon) + 10,
+  ymn = round(lon.lat$minlat) - 10, ymx = round(lon.lat$minlat) + 10,
   xres = foot.res, yres = foot.res
 )
 # OR customize foot domain, in deg E and deg N
-foot.info <- data.frame(xmn = 30, xmx = 50, ymn = 15, ymx = 35, xres = foot.res,
-  yres = foot.res)
+#foot.info <- data.frame(xmn = 30, xmx = 50, ymn = 15, ymx = 35, xres = foot.res,
+#  yres = foot.res)
 print(foot.info)
 
 ## whether weighted footprint by AK and PW for column simulations
