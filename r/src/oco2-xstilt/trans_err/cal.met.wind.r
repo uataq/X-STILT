@@ -20,8 +20,9 @@ cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
 
     # grab RAOB
     raob <- grab.raob(raob.path, timestr, workdir, nhrs, format = raob.format,
-      overwrite) %>% dplyr::rename(temp.raob = temp, u.raob = u, v.raob = v,
-      ws.raob = ws, wd.raob = wd)
+                      overwrite) %>% 
+            dplyr::rename(temp.raob = temp, u.raob = u, v.raob = v,
+                          ws.raob = ws, wd.raob = wd)
 
     # compute unique receptors (time, lat, lon)
     recpstr <- paste(raob$timestr, raob$lat, raob$lon)
@@ -36,7 +37,7 @@ cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
       run_time = as.POSIXct(uni.recp[, 'time'], '%Y%m%d%H', tz = 'UTC'))
 
     rundir <- file.path(workdir, paste0('out_wind_', timestr, '_', met))
-    var1 <- c('time', 'index', 'lon', 'lat', 'agl', 'grdht', 'zi', 'temp', 'pres')
+    #var1 <- c('time', 'index', 'lon', 'lat', 'agl', 'grdht', 'zi', 'temp', 'pres')
     var2 <- c('time', 'indx', 'long', 'lati', 'zagl', 'zsfc', 'mlht', 'temp', 'pres')
 
     # Ensure necessary files and directory structure are established in the
@@ -58,9 +59,10 @@ cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
 
       # obtain ground hgts, if no rds found, will start to generate trajec
       tmp.info <- get.ground.hgt(varsiwant = var2, met_loc = met.path,
-        met_file_format = met.format, n_hours = 1, receptor = receptor[i,],
-        rundir = rundir, timeout = 10 * 60, met_files = met.files, 
-        run_trajec = T)
+                                 met_file_format = met.format, n_hours = 1, 
+                                 receptor = receptor[i,], rundir = rundir, 
+                                 timeout = 10 * 60, met_files = met.files, 
+                                 run_trajec = T)
       grdhgt <- tmp.info$zsfc
 
       # METHOD 2 to int winds --
@@ -77,26 +79,29 @@ cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
       # if no postive AGL
       if (length(pos.agl) == 0) next
       int.info <- get.ground.hgt(varsiwant = var2, met_loc = met.path,
-        met_file_format = met.format, n_hours = 1, receptor = receptor[i,],
-        rundir = rundir, timeout = 20 * 60, r_zagl = pos.agl, run_trajec = T) %>%
-        mutate(zagl = pos.agl)
+                                 met_file_format = met.format, n_hours = 1, 
+                                 receptor = receptor[i,], rundir = rundir, 
+                                 timeout = 20 * 60, r_zagl = pos.agl, 
+                                 run_trajec = T) %>%
+                  mutate(zagl = pos.agl)
 
       # merge obs and sim
       merge.info <- cbind(pos.raob, int.info) %>%
         rename(u.met = ubar, v.met = vbar, w.met = wbar, temp.met = temp)
 
       # calculate ws and wd (FROM which dir, degree from true North)
-      merge.info <- merge.info %>% mutate(
-          ws.met = sqrt(u.met^2 + v.met^2),
-          wd.met = atan2(u.met/ws.met, v.met/ws.met) * 180 / pi + 180)
+      merge.info <- merge.info %>% 
+        mutate(ws.met = sqrt(u.met^2 + v.met^2),
+               wd.met = atan2(u.met/ws.met, v.met/ws.met) * 180 / pi + 180)
 
       # when ws == 0, wd is NA, thus, replace NA with 0
       merge.info[is.na(merge.info$wd.met), 'wd.met'] <- 0
 
       # calculate wind errors
-      tmp.err.info <- merge.info %>% mutate(temp.err = temp.met - temp.raob,
-        u.err  = u.met  - u.raob,  v.err  = v.met  - v.raob,
-        ws.err = ws.met - ws.raob, wd.err = wd.met - wd.raob)
+      tmp.err.info <- merge.info %>% 
+        mutate(temp.err = temp.met - temp.raob, u.err  = u.met  - u.raob,  
+               v.err  = v.met  - v.raob, ws.err = ws.met - ws.raob, 
+               wd.err = wd.met - wd.raob)
 
       # if wd.err is closed to -360 or 360, cycle it, DW, 08/31/2018
       tmp.err.info[abs(tmp.err.info$wd.err) > 180, 'wd.err'] <-
@@ -105,7 +110,8 @@ cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
       colTF <- F; if (i == 1) colTF <- T
       appTF <- T; if (i == 1) appTF <- F
       write.table(tmp.err.info, file = filename, append = appTF, sep = ',',
-        quote = F, row.names = F, col.names = colTF)
+                  quote = F, row.names = F, col.names = colTF)
+
       err.info <- rbind(err.info, tmp.err.info)
     } # end for i
 
