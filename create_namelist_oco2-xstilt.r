@@ -36,8 +36,10 @@ site <- 'Riyadh'   # choose a city
 
 # error may occur on the following line, due to limit of google API
 #please insert your own API for finding city lat/lon
-register_google(key = 'AIzaSyAHWX5uI57V4JrkIKOFbQlumgCRoT-RI1s') 
-lon.lat <- get.lon.lat(site, dlon = 1, dlat = 2)
+#register_google(key = 'AIzaSyAHWX5uI57V4JrkIKOFbQlumgCRoT-RI1s') 
+lon.lat <- get.lon.lat(site, dlon = 1, dlat = 2, 
+                       city.loc = data.frame(lon = 46.7166, lat = 24.6333))
+
 
 # required paths
 oco2.ver   <- c('b7rb', 'b8r')[1]  # OCO-2 version
@@ -232,7 +234,8 @@ hor.err <- get.uverr(run_hor_err, site, timestr, workdir, overwrite = F,
                      raob.path, raob.format = 'fsl', nhrs, met, met.path, 
                      met.format, met.files, lon.lat, agl)
 
-## get horizontal transport error component if run_hor_err = T
+## get vertical transport error component if run_ver_err = T
+# set zisf = 1 if run_ver_err = F
 zisf <- c(0.6, 0.8, 1.0, 1.2, 1.4)[3]
 pbl.err <- get.zierr(run_ver_err, nhrs.zisf = 24, const.zisf = zisf)
 cat('Done with choosing met & inputting wind errors...\n')

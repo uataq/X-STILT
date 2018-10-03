@@ -33,7 +33,7 @@ vignettes/*.pdf
 *.knit.md
 
 old/*
-output/*
+out*
 *.sh
 run_XSTILT_*
 *.conf

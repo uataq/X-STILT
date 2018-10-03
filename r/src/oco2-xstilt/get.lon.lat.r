@@ -14,8 +14,9 @@ get.lon.lat <- function(site, dlon, dlat) {
   if ('LV' %in% site) site[grep('LV', site)] <- 'Las Vegas'
 
   # location name to lon, lat coordinates
-  city.loc <- geocode(location = site, output = 'latlon', source = 'google',
-    override_limit = T)
+  if (is.null(city.loc)) 
+    city.loc <- geocode(location = site, output = 'latlon', source = 'google',
+      override_limit = T)
 
   # from https://stackoverflow.com/questions/21708488/
   # get-country-and-continent-from-longitude-and-latitude-point-in-r
