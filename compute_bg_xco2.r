@@ -87,7 +87,7 @@ if (method == 'M2S') {
   library(MASS)
 
   # 4x4 deg box around hotsplot, from Silva and Arellano, 2017
-  lon.lat <- get.lon.lat(site, dlat = 2, dlon = 2, city.loc = city.loc)
+  lon.lat <- get.lon.lat(site, dlat = 2, dlon = 2)
 
   silva.bg <- NULL
   for (t in 1:length(all.timestr)) {
