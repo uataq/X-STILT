@@ -17,11 +17,15 @@
 # add dlat range for background range, DW, 08/24.2018
 # add numbers of soundings used for background, DW, 09/05/2018
 # add background uncertainty (including spread sd + retrieval err), DW, 09/07/2018
+# bug fixed if there's no intersection between overpass and forward plume, DW, 10/03/2018
 
-ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
-  oco2.path, oco2.ver, zoom = 8, lon.lat, font.size = rel(1.2), td = 0.05,
-  bg.dlat = 0.5, perc = 0.2, clean.side = c('north','south', 'both')[3],
-  data.filter = c('QF', 0)){
+
+ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path, 
+                                  oco2.ver, zoom = 8, lon.lat, 
+                                  font.size = rel(1.2), td = 0.05, 
+                                  bg.dlat = 0.5, perc = 0.2, 
+                                  clean.side = c('north','south', 'both')[3],
+                                  data.filter = c('QF', 0)){
 
   # call grab.oco2() to read in observations and compute overpass time
   # lon.lat used for grabbing OCO2 should be wider, e.g., by 2 deg +
@@ -31,7 +35,7 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
 
   obs <- grab.oco2(oco2.path, timestr, mod.lon.lat)
   obs.datestr <- as.POSIXlt(as.character(obs$time),
-    format = '%Y-%m-%d %H:%M:%S', tz = 'UTC')
+                            format = '%Y-%m-%d %H:%M:%S', tz = 'UTC')
 
   # get satellite crossing durations, and further allow for fwe more mins
   # allow for 2 more minutes, convert to sec
@@ -41,10 +45,16 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
   # read in forward trajec
   cat('\n\nggplot.forward.trajec(): reading forward trajec, it takes time...\n')
   trajdat <- NULL
-  for (f in 1:length(ident)) {
+  for (f in 1 : length(ident)) {
+
+    if (!file.exists(paste0(trajpath, ident[f]))) {
+      cat('***** NO forward trajec found...returning NA *****\n')
+      return()
+    }
+
     tmp.trajdat <- readRDS(paste0(trajpath, ident[f]))
     trajdat <- rbind(trajdat, tmp.trajdat)
-  }
+  } # end for f
 
   # before subsetting trajec, grab box receptor
   recp.trajdat <- trajdat %>% filter(time == min(time))
@@ -67,25 +77,28 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
 
   # load map
   mm <- ggplot.map(map = 'ggmap', center.lon = unique(info$recp.lon),
-    center.lat = unique(info$recp.lat), zoom = zoom)
+                   center.lat = unique(info$recp.lat), zoom = zoom)
 
   # draw receptor box
-  m1 <- mm[[1]] + geom_polygon(data = box.recp, aes(lon, lat), linetype = 3,
-    fill = 'gray30', alpha = 0.5)
+  m1 <- mm[[1]] + geom_polygon(data = box.recp, aes(lon, lat), linetype = 3, 
+                               fill = 'gray30', alpha = 0.5)
 
   ### calculate 2D kernel density and Normalized by the max density
   cat('ggplot.forward.trajec(): calculating kernel density...\n')
   dens <- kde2d(sel.trajdat$lon, sel.trajdat$lat, h = c(0.1, 0.1), n = 100)
   densf <- data.frame(expand.grid(lon = dens$x, lat = dens$y),
-    prob = as.vector(dens$z)) %>% mutate(norm.prob = prob / max(prob))
+                      prob = as.vector(dens$z)) %>% 
+           mutate(norm.prob = prob / max(prob))
 
   # plot kernel density on map
   lab.norm <- c(td, seq(0, 1, 0.1)[-1])
-  p1 <- m1 + geom_contour(data = densf, aes(x = lon, y = lat, z = norm.prob,
-      colour = ..level..), breaks = lab.norm, size = 1.3) +
+  p1 <- m1 + 
+    geom_contour(data = densf, aes(x = lon, y = lat, z = norm.prob,
+                 colour = ..level..), breaks = lab.norm, size = 1.3) +
     scale_colour_gradient(name = 'Normalized\nKernel\nDensity',
-      low = 'lightblue', high = 'purple', breaks = lab.norm, labels = lab.norm,
-      limits = c(0, max(lab.norm)))
+                          low = 'lightblue', high = 'purple', 
+                          breaks = lab.norm, labels = lab.norm,
+                          limits = c(0, max(lab.norm)))
 
   ### get plotting info, i.e., different kernel density levels
   kd.info <- ggplot_build(p1)$data[[5]]
@@ -96,7 +109,7 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
   for (u in 1:length(uni.level)) {
     tmp.kd <- kd.info %>% filter(level == uni.level[u])
     tmp.index <- point.in.polygon(sel.trajdat$lon, sel.trajdat$lat,
-      tmp.kd$x, tmp.kd$y)
+                                  tmp.kd$x, tmp.kd$y)
     sel.trajdat[tmp.index > 0, 'dens.level'] <- uni.level[u]
   } # end for u
 
@@ -104,20 +117,22 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
     size = 0.2, alpha = 0.5)
 
   # add observed soundings
-  max.y <- 406; min.y <- 394
-  if(timestr >= '20160101'){max.y <- 410; min.y <- 400}
+  max.y <- ceiling(max(obs[obs$qf == 0, 'xco2']))
+  min.y <- floor(min(obs[obs$qf == 0, 'xco2']))
 
   # only plot SCREENED data, QF == 0
-  p2 <- p1 + geom_point(data = obs[obs$qf == 0, ], aes(lon, lat, fill = xco2),
-      shape = 21, colour = 'gray90') +
+  p2 <- p1 + 
+    geom_point(data = obs[obs$qf == 0, ], aes(lon, lat, fill = xco2),
+               shape = 21, colour = 'gray90') +
     scale_fill_gradientn(colours = def.col(), name = 'XCO2',
-      limits = c(min.y, max.y), breaks = seq(min.y, max.y, 2),
-      labels = seq(min.y, max.y, 2))
+                         limits = c(min.y, max.y), 
+                         breaks = seq(min.y, max.y, 2),
+                         labels = seq(min.y, max.y, 2))
 
   # compute outmost boundary
   wide.bound <- kd.info %>% filter(level == td)
   bound.traj <- wide.bound %>% dplyr::select(X = x, Y = y) %>%
-    mutate(POS = 1:nrow(wide.bound), PID = 1)
+                               mutate(POS = 1:nrow(wide.bound), PID = 1)
 
   # if diff is too large, meaning there are more than one polygon
   abs.dy <- abs(diff(bound.traj$Y))
@@ -141,8 +156,9 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
     bound.traj <- bound.traj[plg.xy, ]
   }  # end if
 
+  # add bounrdary of city plume
   p3 <- p2 + geom_polygon(data = bound.traj, aes(X, Y), colour = 'gray10',
-    linetype = 1, fill = NA, size = 0.9, alpha = 0.5)
+                          linetype = 1, fill = NA, size = 0.9, alpha = 0.5)
 
   # further select OCO2 soundings over OCO-2 track
   sel.obs <- obs %>%
@@ -160,7 +176,8 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
     hpts <- chull(x = sel.obs$lon, y = sel.obs$lat); hpts <- c(hpts, hpts[1])
     narrow.bound <- sel.obs[hpts,]
     bound.obs <- data.frame(X = narrow.bound$lon, Y = narrow.bound$lat,
-      PID = rep(2, nrow(narrow.bound)), POS = 1:nrow(narrow.bound))
+                            PID = rep(2, nrow(narrow.bound)), 
+                            POS = 1:nrow(narrow.bound))
 
     # find overlapping region and find all points in overlapping polygon
     joint.bound <- joinPolys(bound.traj, bound.obs) # in PBS Mapping package
@@ -170,30 +187,33 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
     pol.index <- point.in.polygon(obs$lon, obs$lat, pol.bound$X, pol.bound$Y)
     pol.obs   <- obs[pol.index > 0,]
 
-    # plot overlap polygon and polluted obs (only screened data), DW, 08/20/2018
-    p3 <- p3 + geom_polygon(data = pol.bound, aes(X, Y), colour = 'gray50',
-        fill = 'gray40', alpha = 0.5) +
-      geom_point(data = pol.obs[pol.obs$qf == 0, ], aes(lon, lat, fill = xco2),
-        shape = 21, colour = 'gray50')
-
-    p4 <- p3 + annotate('text', x = unique(info$recp.lon) + mm[[3]],
-        y = unique(info$recp.lat) + mm[[2]] - 0.05, label = site, size = 6) +
-      annotate('point', x = info$recp.lon + mm[[3]],
-        y = info$recp.lat + mm[[2]], size = 2, shape = 17)
-
-    p5 <- p4 + theme(legend.position = 'right',
-      legend.key.width = unit(0.5, 'cm'),
-      legend.key.height = unit(1.5, 'cm'),
-      legend.text = element_text(size = font.size),
-      legend.key = element_blank(),
-      axis.title.y = element_text(size = font.size,angle = 90),
-      axis.title.x = element_text(size = font.size,angle = 0),
-      axis.text = element_text(size = font.size),
-      axis.ticks = element_line(size = font.size),
-      title = element_text(size = font.size))
-
     # compute mean background for both northern and southern
     if (nrow(pol.obs) > 0) {
+
+      # plot overlap polygon and polluted obs (only screened data), DW, 08/20/2018
+      p3 <- p3 + 
+        geom_polygon(data = pol.bound, aes(X, Y), colour = 'gray50',
+                     fill = 'gray40', alpha = 0.5) +
+        geom_point(data = pol.obs[pol.obs$qf == 0, ], aes(lon, lat, fill = xco2),
+                   shape = 21, colour = 'gray50')
+
+      p4 <- p3 + 
+        annotate('text', x = unique(info$recp.lon) + mm[[3]],
+                         y = unique(info$recp.lat) + mm[[2]] - 0.05, 
+                         label = site, size = 6) +
+        annotate('point', x = info$recp.lon + mm[[3]],
+                          y = info$recp.lat + mm[[2]], size = 2, shape = 17)
+
+      p5 <- p4 + theme(legend.position = 'right',
+                       legend.key.width = unit(0.5, 'cm'),
+                       legend.key.height = unit(1.5, 'cm'),
+                       legend.text = element_text(size = font.size),
+                       legend.key = element_blank(),
+                       axis.title.y = element_text(size = font.size, angle = 90),
+                       axis.title.x = element_text(size = font.size, angle = 0),
+                       axis.text = element_text(size = font.size),
+                       axis.ticks = element_line(size = font.size),
+                       title = element_text(size = font.size))
 
       # screen obs data
       if (data.filter[1] == 'QF') {
@@ -346,38 +366,39 @@ ggplot.forward.trajec <- function(ident, trajpath = outpath, site, timestr,
                        legend.key = element_blank(), 
                        panel.grid.minor=element_blank(),
                        axis.title.y = element_text(size = font.size, angle = 90), 
-                       axis.title.x = element_text(size = font.size, angle=0), 
+                       axis.title.x = element_text(size = font.size, angle = 0), 
                        axis.text = element_text(size = font.size), 
                        axis.ticks = element_line(size = font.size),
                        title = element_text(size = font.size)) + 
                 guides(fill = guide_legend(nrow = 2, byrow = F),
                        colour = guide_legend(nrow = 2, byrow = TRUE))
 
-      #l4 <- ggarrange(l4, labels = 'b)')
-      picname <- paste0('LS_forward_bg_', site, '_', timestr, '.png')
+      picname <- file.path(trajpath, paste0('LS_forward_bg_', site, '_', timestr, '.png'))
       ggsave(l4, filename = picname, width = 13, height = 7)
 
     } else {  # if no intersection
 
-      cat('ggplot.forward.trajec(): No intersection with OCO-2 track...\n')
+      cat('ggplot.forward.trajec(): No intersection with OCO-2 track...return NA\n')
       north.bg <- NA; south.bg <- NA; mean.bg  <- NA; bg.sd <- NA
-      sd.spread <- NA; sd.retriv <- NA
-      pol.min.lat <- NA; pol.max.lat <- NA
+      sd.spread <- NA; sd.retriv <- NA; num.bg <- NA
+      pol.min.lat <- NA; pol.max.lat <- NA; north.min.lat <- NA 
+      north.max.lat <- NA; south.min.lat <- NA; south.max.lat <- NA
+
+      p5 <- p3  # pass the last fig to p5 and plot it later
     }  # end if nrow(pol.obs)
 
     title <- paste('Forward-time urban plume for overpass on', timestr)
     p5 <- p5 + labs(x = 'LONGITUDE', y = 'LATITUDE', title = title)
 
-    picname <- paste0('urban_plume_forward_', site, '_', timestr, '_', oco2.ver,
-      '.png')
-    picname <- file.path(trajpath, picname)
+    picname <- file.path(trajpath, 
+      paste0('urban_plume_forward_', site, '_', timestr, '_', oco2.ver, '.png'))
     ggsave(p5, filename = picname, width = 12, height = 12)
 
     # also, return the max min latitude ranges for polluted range
     bg.info <- data.frame(timestr, north.bg, south.bg, final.bg = mean.bg,
-      final.bg.sd = bg.sd, sd.spread, sd.retriv, num.bg,
-      pol.min.lat, pol.max.lat, clean.side,
-      north.min.lat, north.max.lat, south.min.lat, south.max.lat)
+                          final.bg.sd = bg.sd, sd.spread, sd.retriv, num.bg,
+                          pol.min.lat, pol.max.lat, clean.side, north.min.lat, 
+                          north.max.lat, south.min.lat, south.max.lat)
     return(bg.info)
   } # end if
 

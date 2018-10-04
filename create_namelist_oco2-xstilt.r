@@ -34,7 +34,7 @@ source('r/dependencies.r') # source all functions
 # input dlat, dlon to get spatial domain around city center
 site <- 'Riyadh'   # choose a city
 
-# please get a google API and insert in the "" as below
+# please get a google API and insert in the "" below
 register_google(key = '')
 lon.lat  <- get.lon.lat(site = site, dlon = 1, dlat = 2)
 
@@ -215,11 +215,11 @@ cat(paste('Done with receptor setup...total', nrecp, 'receptors..\n'))
 ## path for the ARL format of WRF and GDAS
 # simulation_step() will find corresponding met files
 met.indx   <- 3
-met        <- c('hrrr', 'wrf', 'gdas0p5')[met.indx] # choose met fields
+met        <- c('hrrr', 'wrf', 'gdas0p5', 'edas40')[met.indx] # choose met fields
 met.path   <- file.path(homedir, 'u0947337', met)
 
 # met file name convention
-met.format <- c('%Y%m%d.%Hz.hrrra', 'wrfout_', '%Y%m%d_gdas0p5')[met.indx]
+met.format <- c('%Y%m%d.%Hz.hrrra', 'wrfout_', '%Y%m%d_gdas0p5', 'edas.%Y%m')[met.indx]
 met.num    <- 1     # min number of met files needed
 met.files  <- NULL
 if (met == 'wrf')

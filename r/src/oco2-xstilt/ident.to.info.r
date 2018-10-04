@@ -53,8 +53,8 @@ ident.to.info <- function(ident, stilt.ver, aglTF = T){
       recp.lon <- as.numeric(substr(tmp.info$lon, 1, nchar(tmp.info$lon) - 1))
 
       # if for western or southern hemisphere
-      if (length(grep(tmp.info$lon, 'W')) != 0) recp.lon <- recp.lon * (-1)
-      if (length(grep(tmp.info$lat, 'S')) != 0) recp.lat <- recp.lat * (-1)
+      if (grepl('W',tmp.info$lon)) recp.lon <- recp.lon * (-1)
+      if (grepl('S',tmp.info$lon)) recp.lat <- recp.lat * (-1)
 
       npar <- as.numeric(gsub('P', '', tmp.info$numpar))
       agl.info <- as.character(tmp.info$agl)  # get AGL info, 'agl.info'

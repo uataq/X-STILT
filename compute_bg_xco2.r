@@ -111,8 +111,8 @@ if (method == 'M3') {
 
   #------------------------------ STEP 1 --------------------------------- #
   #### Whether forward/backward, release from a column or a box
-  run_trajec <- T  # whether to run forward traj, if T, will overwrite existing
-  plotTF     <- F  # whether to calculate background and plot 2D density
+  run_trajec <- F  # whether to run forward traj, if T, will overwrite existing
+  plotTF     <- T  # whether to calculate background and plot 2D density
   delt       <- 2  # fixed timestep [min]; set = 0 for dynamic timestep
   
   ### MUST-HAVE parameters about errors
@@ -148,10 +148,9 @@ if (method == 'M3') {
   if (run_trajec == F) outpath <- file.path(output.path, 'out_forward/') 
   data.filter <- c('QF', 0)      # data filtering on observations
 
-  # which side for background, north, south, or both
+  # **** NEED CHANGES: which side for background, north, south, or both
   # can be interpolated from forward-plume, after being generated
-  #if (site == 'Riyadh') clean.side <- c('south', 'both', 'north', 'south', 'north')
-  clean.side <- 'south'
+  clean.side <- rep('south', length(all.timestr))
 
   # path for radiosonde data, 
   # needed if adding wind error component, run_hor_err = T
@@ -159,9 +158,10 @@ if (method == 'M3') {
 
   ### loop over each overpass
   bg.info <- NULL
-  for (t in 1:length(all.timestr)) {
+  for (t in 1 : length(all.timestr)) {
 
-    timestr <- all.timestr[t]; print(timestr)
+    timestr <- all.timestr[t]
+    cat(paste('\n\n## ----- working on overpass on', timestr, '----- ##\n'))
 
    #------------------------------ STEP 3 --------------------------------- #
     ## get horizontal transport error component if run_hor_err = T
@@ -181,7 +181,6 @@ if (method == 'M3') {
     #------------------------------ STEP 4 -------------------------------- #
     # !!! need to add makefile for AER_NOAA_branch in fortran ;
     # link two hymodelcs in exe directory
-    source('r/dependencies.r') # source all functions
     tmp.info <- run.forward.trajec(site = site, timestr = timestr,
                                    overwrite = run_trajec, nummodel = t,
                                    lon.lat = lon.lat, delt = delt, dxyp = dxyp,
@@ -195,6 +194,7 @@ if (method == 'M3') {
                                    zoom = 7, td = 0.05, bg.dlat = 1,
                                    perc = 0.1, clean.side = clean.side[t],
                                    data.filter = data.filter)
+    if (is.null(tmp.info)) next
     bg.info <- rbind(bg.info, tmp.info)
   } # end for t
 
