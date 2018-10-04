@@ -34,12 +34,9 @@ source('r/dependencies.r') # source all functions
 # input dlat, dlon to get spatial domain around city center
 site <- 'Riyadh'   # choose a city
 
-# error may occur on the following line, due to limit of google API
-#please insert your own API for finding city lat/lon
-#register_google(key = 'AIzaSyAHWX5uI57V4JrkIKOFbQlumgCRoT-RI1s') 
-lon.lat <- get.lon.lat(site, dlon = 1, dlat = 2, 
-                       city.loc = data.frame(lon = 46.7166, lat = 24.6333))
-
+# please get a google API and insert in the "" as below
+register_google(key = '')
+lon.lat  <- get.lon.lat(site = site, dlon = 1, dlat = 2)
 
 # required paths
 oco2.ver   <- c('b7rb', 'b8r')[1]  # OCO-2 version

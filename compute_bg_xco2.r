@@ -22,8 +22,10 @@ source('r/dependencies.r') # source all functions
 
 #------------------------------ STEP 1 --------------------------------------- #
 # insert target city
-site     <- 'Phoenix'
-register_google(key = 'AIzaSyCclbyhfEC1W6bO5zWaPw646aLjN5r2WZ8')
+site     <- 'Riyadh'
+
+# please get a google API and insert in the "" as below
+register_google(key = '')
 lon.lat  <- get.lon.lat(site = site, dlon = 1, dlat = 2)
 
 oco2.ver  <- c('b7rb', 'b8r')[2]  # OCO-2 version
