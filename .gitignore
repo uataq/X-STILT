@@ -34,6 +34,7 @@ vignettes/*.pdf
 
 old/*
 out*
+Copy*
 *.sh
 run_XSTILT_*
 *.conf

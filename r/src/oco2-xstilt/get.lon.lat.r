@@ -6,7 +6,7 @@
 #' country and reg name, DW, DR, 08/15/2018
 
 #' site can be a vector
-get.lon.lat <- function(site, dlon, dlat) {
+get.lon.lat <- function(site, dlon, dlat, city.loc = NULL) {
 
   # spatial domains placing receptors and city center, help select OCO-2 data
   library(ggmap); library(rworldmap); library(sp)

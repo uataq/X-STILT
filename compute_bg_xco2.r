@@ -22,11 +22,11 @@ source('r/dependencies.r') # source all functions
 
 #------------------------------ STEP 1 --------------------------------------- #
 # insert target city
-site     <- 'Riyadh'
-city.loc <- data.frame(lon = 46.7166, lat = 24.6333)
-lon.lat  <- get.lon.lat(site = site, dlon = 1, dlat = 2, city.loc = city.loc)
+site     <- 'Phoenix'
+register_google(key = 'AIzaSyCclbyhfEC1W6bO5zWaPw646aLjN5r2WZ8')
+lon.lat  <- get.lon.lat(site = site, dlon = 1, dlat = 2)
 
-oco2.ver  <- c('b7rb', 'b8r')[1]  # OCO-2 version
+oco2.ver  <- c('b7rb', 'b8r')[2]  # OCO-2 version
 oco2.path <- file.path(homedir, 'lin-group5/wde/input_data/OCO-2/L2', 
                        paste0('OCO2_lite_', oco2.ver))
 
@@ -133,7 +133,7 @@ if (method == 'M3') {
   #------------------------------ STEP 2 --------------------------------- #
   # path for the ARL format of WRF and GDAS
   # simulation_step() will find corresponding met files
-  met.indx   <- 3
+  met.indx   <- 4
   met        <- c('hrrr', '1km', 'gdas0p5', 'edas40')[met.indx]
   met.path   <- file.path(homedir, 'u0947337', met)
   met.num    <- 1     # min number of met files needed
@@ -148,7 +148,8 @@ if (method == 'M3') {
 
   # which side for background, north, south, or both
   # can be interpolated from forward-plume, after being generated
-  if (site == 'Riyadh') clean.side <- c('south', 'both', 'north', 'south', 'north')
+  #if (site == 'Riyadh') clean.side <- c('south', 'both', 'north', 'south', 'north')
+  clean.side <- 'south'
 
   # path for radiosonde data, 
   # needed if adding wind error component, run_hor_err = T
@@ -178,15 +179,14 @@ if (method == 'M3') {
     #------------------------------ STEP 4 -------------------------------- #
     # !!! need to add makefile for AER_NOAA_branch in fortran ;
     # link two hymodelcs in exe directory
+    source('r/dependencies.r') # source all functions
     tmp.info <- run.forward.trajec(site = site, timestr = timestr,
                                    overwrite = run_trajec, nummodel = t,
                                    lon.lat = lon.lat, delt = delt, dxyp = dxyp,
                                    dzp = 0, dtime = dtime, agl = agl,
                                    numpar = numpar, nhrs = nhrs,
                                    workdir = workdir, outpath = outpath,
-                                   siguverr = siguverr, TLuverr = TLuverr,
-                                   zcoruverr = zcoruverr,
-                                   horcoruverr = horcoruverr,
+                                   hor.err = hor.err, pbl.err = pbl.err,
                                    met.format = met.format, met.path = met.path,
                                    met.num = 1, plotTF = plotTF,
                                    oco2.path = oco2.path, oco2.ver = oco2.ver,

@@ -16,11 +16,13 @@
 # add customized data filtering, DW, 08/20/2018
 
 run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
-  lon.lat, delt, dxyp, dzp, dtime, agl, numpar, nhrs, workdir, outpath = NULL,
-  siguverr = NULL, TLuverr = NULL, zcoruverr = NULL, horcoruverr = NULL,
-  met.format, met.path, met.num = 1, plotTF = F, oco2.path, oco2.ver,
-  zoom = 8, td = 0.05, bg.dlat = 0.5, perc = 0.2,
-  clean.side = c('north', 'south', 'both')[3], data.filter = c('QF', 0)){
+                               lon.lat, delt, dxyp, dzp, dtime, agl, numpar, 
+                               nhrs, workdir, outpath = NULL, hor.err = NULL, 
+                               pbl.err = NULL, met.format, met.path, met.num = 1, 
+                               plotTF = F, oco2.path, oco2.ver, zoom = 8, 
+                               td = 0.05, bg.dlat = 0.5, perc = 0.2,
+                               clean.side = c('north', 'south', 'both')[3], 
+                               data.filter = c('QF', 0)){
 
   # get lat/lon for city center
   clon <- signif(lon.lat$citylon, 6)
@@ -94,8 +96,9 @@ run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
                 outpath = outpath, overwrite = overwrite,
                 metfile = metfiles, metlib = paste0(met.path, '/'),
                 doublefiles = T, rundir = paste0(workdir, '/'),
-                varsout = varstrajec, siguverr = siguverr, TLuverr = TLuverr,
-                zcoruverr = zcoruverr, horcoruverr = horcoruverr,
+                varsout = varstrajec, siguverr = hor.err$siguverr, 
+                TLuverr = hor.err$TLuverr, zcoruverr = hor.err$zcoruverr, 
+                horcoruverr = hor.err$horcoruverr,
                 setup.list = list(DELT = delt, VEGHT = 0.5)) %>%
     invisible()
   } # end if overwrite
