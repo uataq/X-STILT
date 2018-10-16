@@ -1,5 +1,5 @@
 # create a namelist for running X-STILT trajectories
-# written by DW, 04/18/2018
+# written by Dien Wu, 04/18/2018
 
 # --------------------------------- updates ---------------------------------
 # now build upon Ben's STILT-R version 2 codes, DW, 05/23/2018
@@ -20,6 +20,7 @@
 # DW, 08/31/2018
 #
 # add emission uncertainty, DW, 09/06/2018
+# update code according to v9 changes, DW, 10/15/2018
 # -----------------------------------------------------------------------------
 
 #### source all functions and load all libraries
@@ -39,7 +40,7 @@ register_google(key = '')
 lon.lat  <- get.lon.lat(site = site, dlon = 1, dlat = 2)
 
 # required paths
-oco2.ver   <- c('b7rb', 'b8r')[1]  # OCO-2 version
+oco2.ver   <- c('b7rb', 'b8r', 'b9r')[1]  # OCO-2 version
 input.path <- file.path(homedir, 'lin-group5/wde/input_data')
 oco2.path  <- file.path(input.path, paste0('OCO-2/L2/OCO2_lite_', oco2.ver))
 sif.path   <- file.path(input.path, paste0('OCO-2/L2/OCO2_lite_SIF_', oco2.ver))

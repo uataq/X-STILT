@@ -3,7 +3,7 @@
 # use grab.oco2 to read observations, DW, 08/07/2018
 
 ggmap.obs.xco2 <- function(site, timestr, oco2.path, lon.lat, workdir,
-  plotdir = file.path(workdir, 'plot'), zoom = 8){
+                           plotdir = file.path(workdir, 'plot'), zoom = 8){
 
   library(ggmap); library(ggplot2)
   obs.all <- grab.oco2(ocopath = oco2.path, timestr, lon.lat)
@@ -12,11 +12,11 @@ ggmap.obs.xco2 <- function(site, timestr, oco2.path, lon.lat, workdir,
   alpha <- 1; font.size <- rel(1.2); col <- def.col()
 
   m1 <- ggplot.map(map = 'ggmap', zoom = zoom, center.lat = lon.lat$citylat,
-    center.lon = lon.lat$citylon)[[1]] + theme_bw()
+                   center.lon = lon.lat$citylon)[[1]] + theme_bw()
   c1 <- m1 + geom_point(data = obs.all, aes(lon, lat, colour = xco2)) +
     scale_colour_gradientn(name = 'OCO-2 XCO2 [ppm]', colours = col,
       limits = c(max(390, min(obs.all$xco2, na.rm = T)),
-        max(obs.all$xco2, na.rm = T)), breaks = seq(380, 420, 2),
+                 max(obs.all$xco2, na.rm = T)), breaks = seq(380, 420, 2),
       labels = seq(380, 420, 2)) +
     labs(x = 'Longitude', y = 'Latitude') +
     labs(title = paste('OCO-2 XCO2 [ppm] for', site, 'on', timestr))
@@ -28,24 +28,25 @@ ggmap.obs.xco2 <- function(site, timestr, oco2.path, lon.lat, workdir,
 
   d <- rbind(d, d[1,])
   c2 <- c1 + geom_path(data = d, aes(x, y), linetype = 2, size = 1.2,
-    colour = 'gray50')
+                       colour = 'gray50')
 
   c2 <- c2 + theme(legend.position = 'bottom',
-    legend.text = element_text(size = font.size),
-    legend.key = element_blank(), legend.key.height = unit(0.5, 'cm'),
-    legend.key.width = unit(3, 'cm'),
-    axis.title.y = element_text(size = font.size, angle = 90),
-    axis.title.x = element_text(size = font.size, angle = 0),
-    axis.text = element_text(size = font.size),
-    axis.ticks = element_line(size = font.size),
-    title = element_text(size = font.size))
+                   legend.text = element_text(size = font.size),
+                   legend.key = element_blank(), 
+                   legend.key.height = unit(0.5, 'cm'),
+                   legend.key.width = unit(3, 'cm'),
+                   axis.title.y = element_text(size = font.size, angle = 90),
+                   axis.title.x = element_text(size = font.size, angle = 0),
+                   axis.text = element_text(size = font.size),
+                   axis.ticks = element_line(size = font.size),
+                   title = element_text(size = font.size))
 
   # plot on latitude-series
   l1 <- ggplot() + theme_bw() +
     geom_point(data = obs.all, aes(lat, xco2), colour = 'gray70', shape = 17,
-      size = 3) +
+               size = 3) +
     geom_point(data = obs.all[obs.all$qf == 0, ], aes(lat, xco2), size = 3,
-      colour = 'black', shape = 17)
+               colour = 'black', shape = 17)
 
   # merge map and latseries
   library(ggpubr)

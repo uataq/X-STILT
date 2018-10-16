@@ -19,6 +19,7 @@
 # store output contribution map into the same by-d directory,
 #   remove store.path, DW, 07/26/2018
 # remove foot.path, use full path as foot.file, DW, 07/26/2018
+# fix a minor bug in interpreting footprint filename, DW, 10/11/2018 
 
 foot.odiacv3 <- function(foot.file, emiss.file, workdir, txtfile = NULL,
   lon.lat = NULL, plotTF = F, writeTF = F){
@@ -33,7 +34,7 @@ foot.odiacv3 <- function(foot.file, emiss.file, workdir, txtfile = NULL,
     emiss.df <- emiss.df %>% filter(emiss > 1)
 
     mm <- ggplot.map(map = 'ggmap', center.lat = lon.lat$citylat,
-      center.lon = lon.lat$citylon, zoom = 8)
+                    center.lon = lon.lat$citylon, zoom = 8)
 
     # grab observations using map lat/lon
     map.ext <- c(min(mm[[1]]$data$lon), max(mm[[1]]$data$lon),
@@ -46,11 +47,11 @@ foot.odiacv3 <- function(foot.file, emiss.file, workdir, txtfile = NULL,
 
     e1 <- mm[[1]] + coord_equal() +
       geom_raster(data = sel.emiss, aes(lon + mm[[3]], lat + mm[[2]],
-        fill = emiss)) +
+                  fill = emiss)) +
       scale_fill_gradientn(trans = 'log10', colours = def.col(),
-        limits = c(1, 1E5))
+                           limits = c(1, 1E5))
     ggsave(plot = e1, filename = gsub('.nc', '.png', emiss.file),
-      width = 8, hright = 8)
+           width = 8, hright = 8)
   }
 
   # if cannot find the correct format of nc file for emissions given selected area
@@ -66,16 +67,19 @@ foot.odiacv3 <- function(foot.file, emiss.file, workdir, txtfile = NULL,
   }  # end if emiss.file
 
   # from foot.file, get receptor info
-  receptor <- unlist(strsplit(gsub('_X_foot.nc', '', basename(foot.file)), '_'))
-  receptor <- as.data.frame(matrix(receptor, byrow = T, ncol = 3),
-    stringsAsFactors = F) %>% mutate_all(funs(as.numeric), colnames(receptor))
-    # mutate_all() convert character to numberic
-  colnames(receptor) <- list('timestr', 'lon', 'lat')
+  # fix a minor bug in interpreting footprint filename, DW, 10/11/2018 
+  nbin <- str_count(basename(foot.file[1]), '_') + 1
+  receptor <- unlist(strsplit(basename(foot.file), '_'))
+  receptor <- as.data.frame(matrix(receptor, byrow = T, ncol = nbin),
+                            stringsAsFactors = F) %>%
+              dplyr::select('V1', 'V2', 'V3') %>% 
+              # mutate_all() convert character to numberic
+              mutate_all(funs(as.numeric), colnames(receptor)) %>% 
+              rename(timestr = V1, lon = V2, lat = V3)
 
   order.index <- order(receptor$lat)
-  receptor <- receptor[order.index, ]
+  receptor  <- receptor[order.index, ]
   foot.file <- foot.file[order.index]
-
   receptor$xco2.ff <- NA
 
   # then loop over each receptor
@@ -89,7 +93,7 @@ foot.odiacv3 <- function(foot.file, emiss.file, workdir, txtfile = NULL,
     # NOW, foot and emiss should have the same dimension,
     # multiple them to get contribution map of CO2 enhancements
     xco2.ff.sp <- raster::overlay(x = emiss.dat, y = foot.dat,
-      fun = function(x, y){return(x * y)})    # spatial xco2.ff
+                                  fun = function(x, y){return(x * y)}) # spatial xco2.ff
     if (plotTF) plot(log10(xco2.ff.sp))
 
     # sum the map to get the XCO2 enhancements,
@@ -107,8 +111,8 @@ foot.odiacv3 <- function(foot.file, emiss.file, workdir, txtfile = NULL,
     crs(xco2.ff.sp) <-
       '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0'
     writeRaster(xco2.ff.sp, outfile, overwrite = TRUE, format = 'CDF',
-      varname = 'xco2', varunit = 'PPM', xname = 'lon', yname = 'lat',
-      longname = 'XCO2 enhancemnets due to ODIAC emission')
+                varname = 'xco2', varunit = 'PPM', xname = 'lon', yname = 'lat',
+                longname = 'XCO2 enhancemnets due to ODIAC emission')
   }  # end for r
 
   # finally, write in a txt file

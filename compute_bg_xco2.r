@@ -11,7 +11,7 @@
 #' get overpass dates from existing back traj, DW, 08/23/2018
 #' add background uncertainty (including spread sd + retrieval err), DW, 09/07/2018
 #' add CT-derived background M1, DW, 09/14/2018
-
+#' update code according to v9 changes, DW, 10/15/2018
 
 ## source all functions and load all libraries
 # CHANGE working directory ***
@@ -28,7 +28,7 @@ site     <- 'Riyadh'
 register_google(key = '')
 lon.lat  <- get.lon.lat(site = site, dlon = 1, dlat = 2)
 
-oco2.ver  <- c('b7rb', 'b8r')[2]  # OCO-2 version
+oco2.ver  <- c('b7rb', 'b8r', 'b9r')[2]  # OCO-2 version
 oco2.path <- file.path(homedir, 'lin-group5/wde/input_data/OCO-2/L2', 
                        paste0('OCO2_lite_', oco2.ver))
 
@@ -37,7 +37,7 @@ txtpath  <- file.path(homedir, 'lin-group5/wde/github/result/oco2_overpass')
 
 # lon.lat: minlon, maxlon, minlat, maxlat, city.lon, city.lat
 oco2.track <- get.site.track(site, oco2.ver, oco2.path, searchTF = F,
-                             date.range = c('20140901', '20171231'), 
+                             date.range = c('20140901', '20181231'), 
                              thred.count.per.deg = 200, lon.lat = lon.lat, 
                              urbanTF = T, dlon.urban = 0.5, dlat.urban = 0.5,
                              thred.count.per.deg.urban = 100, txtpath = txtpath)
@@ -135,7 +135,7 @@ if (method == 'M3') {
   #------------------------------ STEP 2 --------------------------------- #
   # path for the ARL format of WRF and GDAS
   # simulation_step() will find corresponding met files
-  met.indx   <- 4
+  met.indx   <- 3
   met        <- c('hrrr', '1km', 'gdas0p5', 'edas40')[met.indx]
   met.path   <- file.path(homedir, 'u0947337', met)
   met.num    <- 1     # min number of met files needed
@@ -150,7 +150,7 @@ if (method == 'M3') {
 
   # **** NEED CHANGES: which side for background, north, south, or both
   # can be interpolated from forward-plume, after being generated
-  clean.side <- rep('south', length(all.timestr))
+  clean.side <- rep('south', length(all.timestr))  # just an example
 
   # path for radiosonde data, 
   # needed if adding wind error component, run_hor_err = T
