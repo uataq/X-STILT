@@ -10,7 +10,7 @@
 # --- c(min.lon, max.lon, min.lat, max.lat, city.lon, city.lat), DW
 # add a flag ''urbanTF' for searching soundings near urban region, DW, 06/15/2018
 # dlat, dlon for lat,lon from city center
-# update for v9 data, DW, 10/15/2018 
+# update for v9 data, DW, 10/19/2018 
 
 find.overpass <- function(date.range, lon.lat, oco2.ver = c('b7rb','b8r', 'b9r'),
                           oco2.path, urbanTF = F, dlon = 0.5, dlat = 0.5){
@@ -60,16 +60,19 @@ find.overpass <- function(date.range, lon.lat, oco2.ver = c('b7rb','b8r', 'b9r')
     xco2 <- ncvar_get(dat, 'xco2'); xco2[xco2 == -999999] <- NA
     qf <- ncvar_get(dat, 'xco2_quality_flag')
     id <- as.character(ncvar_get(dat, 'sounding_id'))
-
-    # Warn level being removed for lite v9 data, DW, 10/15/2018 
-    if (oco2.ver != 'b9r') wl <- ncvar_get(dat, 'warn_level')
-     
     obs <- data.frame(lat = as.numeric(oco2.lat), lon = as.numeric(oco2.lon), 
                       qf = as.numeric(qf), xco2 = as.numeric(xco2), 
                       timestr = as.numeric(substr(id, 1, 10)), 
-                      stringsAsFactors = F) %>% 
-            filter(lat >= lon.lat$minlat & lat <= lon.lat$maxlat &
-                   lon >= lon.lat$minlon & lon <= lon.lat$maxlon) 
+                      stringsAsFactors = F) 
+    
+    # Warn level being removed for lite v9 data, DW, 10/15/2018 
+    if (oco2.ver != 'b9r') {
+      wl <- ncvar_get(dat, 'warn_level')
+      obs <- obs %>% mutate(wl = wl)
+    } # end if not v9
+
+    obs <- obs %>% filter(lat >= lon.lat$minlat & lat <= lon.lat$maxlat &
+                          lon >= lon.lat$minlon & lon <= lon.lat$maxlon) 
 
     # count overpasses
     tot.count <- nrow(obs)
