@@ -25,7 +25,7 @@ ident.to.info <- function(ident, stilt.ver, aglTF = T){
       tmp.ident <- ident[i]
       tmp.info  <- unlist(strsplit(tmp.ident, 'x'))
       tmp.info  <- as.data.frame(matrix(tmp.info, ncol = tmp.ncol, byrow = TRUE),
-        stringsAsFactors = F)
+                                 stringsAsFactors = F)
 
       ##### get receptor info, 'recp.info'
       dxyp <- NA; dpar <- NA; recp.min <- NA
@@ -34,7 +34,7 @@ ident.to.info <- function(ident, stilt.ver, aglTF = T){
         colnames(tmp.info) <- colnms.mm
         recp.min <- as.numeric(tmp.info$min)
         timestr <- paste0(tmp.info$year, tmp.info$mon, tmp.info$day,
-          tmp.info$hour, tmp.info$min)
+                          tmp.info$hour, tmp.info$min)
 
       } else {
         colnames(tmp.info) <- colnms[1:tmp.ncol]
@@ -126,7 +126,8 @@ ident.to.info <- function(ident, stilt.ver, aglTF = T){
     colnames(recp.info) <- list('timestr', 'recp.lon', 'recp.lat')
 
     recp.info <- recp.info %>% mutate_all(funs(factor)) %>%
-      mutate_all(funs(as.character)) %>% mutate_all(funs(as.numeric))
+                               mutate_all(funs(as.character)) %>% 
+                               mutate_all(funs(as.numeric))
 
     return(recp.info)
   } # end if stilt.ver

@@ -1,7 +1,11 @@
-# separate script that includes all site information, including timestr, lat, lon \
-# by DW, 06/15/2018
+#' separate script that includes all site information, including timestr, lat, lon \
+#' @author: Dien Wu, 06/15/2018
 
-# 'urbanTF, dlon, dlat' for find.overpass(), e.g., city.lat +/- dlat
+#' @variables:
+#' urbanTF, dlon, dlat: for find.overpass(), e.g., city.lat +/- dlat
+#' site: name of site, e.g., "Riyadh"
+#' thred.count.per.deg: sounding thredshold, # of soundings per 1 degree lat
+#' txtpath: path to store an output txtfile
 
 get.site.track <- function(site, oco2.ver, oco2.path, searchTF = F,
                            date.range = c('20140101', '20181231'), 

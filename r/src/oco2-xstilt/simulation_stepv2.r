@@ -16,34 +16,36 @@
 # add STILTv1 and Trajecfoot(), DW, 07/17/2018
 # add ziscale as list, remember to unlist, DW, 07/25/2018
 # change the path of hymodelc executable, DW, 07/31/2018
+# add PW and Ak weighting for trajec with error as well, DW, 10/21/2018
+# add horizontal transport error here, DW, 10/21/2018 
 
 simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
-                            ak.wgt = NA, conage = 48, cpack = 1, delt = 0,
-                            dmassTF = F, dxf = 1, dyf = 1, dzf = 0.01,
-                            emisshrs = 0.01, frhmax = 3, frhs = 1, frme = 0.1,
-                            frmr = 0, frts = 0.1, frvs = 0.1, hnf_plume = T,
-                            hscale = 10800, horcoruverr = NA, horcorzierr = NA,
-                            ichem = 0, iconvect = 0, initd = 0, isot = 0,
-                            kbls = 1, kblt = 1, kdef = 1, khmax = 9999,
-                            kmix0 = 250, kmixd = 3, kmsl = 0, kpuff = 0,
-                            krnd = 6, kspl = 1, kzmix = 1, maxdim = 1,
-                            maxpar = 10000, met_file_format, met_loc,
-                            mgmin = 2000, n_hours = -24, n_met_min = 1,
-                            ncycl = 0, ndump = 0, ninit = 1, nturb = 0,
-                            numpar = 200, oco2.path = NA, outdt = 0,
-                            outfrac = 0.9, output_wd = file.path(stilt_wd,'out'),
-                            p10f = 1, projection = '+proj=longlat', pwf.wgt = NA,
-                            qcycle = 0, r_run_time, r_lati, r_long, r_zagl,
-                            random = 1, run_foot = T, run_trajec = T,
-                            siguverr = NA, sigzierr = NA, smooth_factor = 1,
-                            splitf = 1, stilt.ver = 2, time_integrate = F,
-                            timeout = 3600, tkerd = 0.18, tkern = 0.18,
-                            tlfrac = 0.1, tluverr = NA, tlzierr = NA,
-                            tratio = 0.9, tvmix = 1, varsiwant = NULL,
-                            veght = 0.5, vscale = 200,
-                            w_option = 0, xmn = -180, xmx = 180, xres = 0.1,
-                            ymn = -90, ymx = 90, yres = xres, zicontroltf = 0,
-                            ziscale = NULL, z_top = 25000, zcoruverr = NA) {
+                              ak.wgt = NA, conage = 48, cpack = 1, delt = 0,
+                              dmassTF = F, dxf = 1, dyf = 1, dzf = 0.01,
+                              emisshrs = 0.01, frhmax = 3, frhs = 1, frme = 0.1,
+                              frmr = 0, frts = 0.1, frvs = 0.1, hnf_plume = T,
+                              hscale = 10800, horcoruverr = NA, horcorzierr = NA,
+                              ichem = 0, iconvect = 0, initd = 0, isot = 0,
+                              kbls = 1, kblt = 1, kdef = 1, khmax = 9999,
+                              kmix0 = 250, kmixd = 3, kmsl = 0, kpuff = 0,
+                              krnd = 6, kspl = 1, kzmix = 1, maxdim = 1,
+                              maxpar = 10000, met_file_format, met_loc,
+                              mgmin = 2000, n_hours = -24, n_met_min = 1,
+                              ncycl = 0, ndump = 0, ninit = 1, nturb = 0,
+                              numpar = 200, oco2.path = NA, outdt = 0,
+                              outfrac = 0.9, output_wd = file.path(stilt_wd,'out'),
+                              p10f = 1, projection = '+proj=longlat', pwf.wgt = NA,
+                              qcycle = 0, r_run_time, r_lati, r_long, r_zagl,
+                              random = 1, run_foot = T, run_trajec = T, 
+                              siguverr = NA, sigzierr = NA, smooth_factor = 1, 
+                              splitf = 1, stilt.ver = 2, time_integrate = F, 
+                              timeout = 3600, tkerd = 0.18, tkern = 0.18, 
+                              tlfrac = 0.1, tluverr = NA, tlzierr = NA, 
+                              tratio = 0.9, tvmix = 1, varsiwant = NULL, 
+                              veght = 0.5, vscale = 200, w_option = 0, 
+                              xmn = -180, xmx = 180, xres = 0.1, ymn = -90, 
+                              ymx = 90, yres = xres, zicontroltf = 0,
+                              ziscale = NULL, z_top = 25000, zcoruverr = NA) {
   try({
     # If using lapply or parLapply, receptors are passed as vectors and need to
     # be subsetted for the specific simulation index
@@ -243,14 +245,12 @@ simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
         # call weight.trajecfootv3() to start weighting trajec-level footprint,
         # before calculating 2D footprint; ak.wgt and pwf.wgt as weighting flags
         output$file <- wgt.file      # overwrite filename
-        wgt.output <- wgt.trajec.footv3(output = output, oco2.info = oco2.info,
-                                        ak.wgt = ak.wgt, pwf.wgt = pwf.wgt)
+        wgt.output  <- wgt.trajec.footv3(output = output, oco2.info = oco2.info,
+                                         ak.wgt = ak.wgt, pwf.wgt = pwf.wgt)
       }  # end if file.exists()
 
-      ## returns the ak pw profiles at for all levels & the weighted footprint
-      combine.prof <- wgt.output$wgt.prof	 # all vertical profs, ak, pw, apriori
-
       # overwrite 'particle' with weighted trajec
+      # only use trajec without error to generate footprint
       particle <- wgt.output$particle
     }  # end if length(r_zagl) > 1
     ## ------------ END modifications for OCO-2/X-STILT -------------------- ##
@@ -259,9 +259,9 @@ simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
     if (run_foot) {
       
       # add foot.res on foot_file, DW, 09/15/2018
-      foot_file <- file.path(rundir, 
-        paste0(basename(rundir), '_', signif(xres, 3), 'x', signif(yres, 3), 
-          '_foot.nc'))
+      foot_file <- file.path(rundir, paste0(basename(rundir), '_', 
+                                            signif(xres, 3), 'x', signif(yres, 3), 
+                                            '_foot.nc'))
         
       ### ------- add Trajecfoot() if stilt.ver = 1, DW, 07/17/2018 -------- ##
       if (stilt.ver == 1) {

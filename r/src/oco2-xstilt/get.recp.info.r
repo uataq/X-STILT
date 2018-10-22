@@ -9,8 +9,8 @@
 # use the same lat.lon from original trajec, DW, 07/31/2018
 
 get.recp.info <- function(timestr, oco2.path, lon.lat, selTF, recp.indx,
-  recp.num, find.lat, agl, plotTF = F, trajpath = NULL,  stilt.ver = 2,
-  data.filter = c('QF', 0)){
+                          recp.num, find.lat, agl, plotTF = F, trajpath = NULL, 
+                          stilt.ver = 2, data.filter = c('QF', 0)){
 
   # ------------------- Step 1. READ IN OCO-2 LITE FILES ------------------- #
   oco2 <- grab.oco2(oco2.path, timestr, lon.lat)
@@ -57,7 +57,7 @@ get.recp.info <- function(timestr, oco2.path, lon.lat, selTF, recp.indx,
   # if generate trajec with horizontal error component,
   # use the same lat.lon from original trajec, DW, 07/31/2018
   trajfile  <- list.files(path = trajpath, pattern = 'X_traj.rds',
-    recursive = T, full.names = T)
+                          recursive = T, full.names = T)
 
   if (length(trajfile) > 0) {
 
@@ -71,7 +71,7 @@ get.recp.info <- function(timestr, oco2.path, lon.lat, selTF, recp.indx,
       dplyr::select('lati' = 'recp.lat', 'long' = 'recp.lon') %>%
       left_join(sel.oco2, by = c('lati' = 'find.lat', 'long' = 'find.lon')) %>%
       mutate(run_times_utc = as.POSIXct(substr(id, 1, 14), '%Y%m%d%H%M%S',
-        tz = 'UTC'))
+                                        tz = 'UTC'))
 
   } else {
 
@@ -92,7 +92,7 @@ get.recp.info <- function(timestr, oco2.path, lon.lat, selTF, recp.indx,
     # that are used for each simulation and match Ben's code
     recp.info <- recp.info %>%
       mutate(run_times_utc = as.POSIXct(substr(id, 1, 14), '%Y%m%d%H%M%S',
-        tz = 'UTC'))
+                                        tz = 'UTC'))
   } # end if trajec file existed
 
   recp.info <- recp.info[order(recp.info$lat), ]

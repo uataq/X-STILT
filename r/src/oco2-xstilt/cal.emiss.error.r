@@ -64,13 +64,13 @@ cal.emiss.err <- function (site, timestr, odiac.file.2008, edgar.file,
     df <- df %>% left_join(df2, by = c('lon', 'lat'))
     # select fractional uncertainty over large ODIAC
 
-    m1 <- ggplot.map(map = 'black', 
-      minlon = crop.extent[1], maxlon = crop.extent[2], 
-      minlat = crop.extent[3], maxlat = crop.extent[4])
+    m1 <- ggplot.map(map = 'black', minlon = crop.extent[1], 
+                     maxlon = crop.extent[2], minlat = crop.extent[3], 
+                     maxlat = crop.extent[4])
     e1 <- m1 + 
       geom_raster(data = df[df$emiss > 1, ], aes(lon, lat, fill = abs.uncert * 100)) + 
       scale_fill_gradient(low = 'yellow', high = 'red', 
-        name = 'Fractional emission error [%]')
+                          name = 'Fractional emission error [%]')
   } # end if plotTF
 
   return(filename)

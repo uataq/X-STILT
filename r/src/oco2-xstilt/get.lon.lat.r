@@ -11,8 +11,6 @@ get.lon.lat <- function(site, dlon, dlat, city.loc = NULL) {
   # spatial domains placing receptors and city center, help select OCO-2 data
   library(ggmap); library(rworldmap); library(sp)
 
-  if ('LV' %in% site) site[grep('LV', site)] <- 'Las Vegas'
-
   # location name to lon, lat coordinates
   if (is.null(city.loc)) 
     city.loc <- geocode(location = site, output = 'latlon', source = 'google',

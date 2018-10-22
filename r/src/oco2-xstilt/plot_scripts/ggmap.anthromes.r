@@ -1,7 +1,8 @@
 # subroutine to read anthromes data, DW, 07/05/2018
 
 ggmap.anthromes <- function(lon.lat, anthro.path, mm = NULL, site = NULL,
-  picpath = NULL, font.size = rel(1.0), width = 10, height = 11){
+                            picpath = NULL, font.size = rel(1.0), 
+                            width = 10, height = 11){
 
   anthro.file <- file.path(anthro.path, 'anthro2_a2000.nc')
 
@@ -20,11 +21,9 @@ ggmap.anthromes <- function(lon.lat, anthro.path, mm = NULL, site = NULL,
   melt.atm <- raster::as.data.frame(atm, xy = T)
   colnames(melt.atm) <- c('lon', 'lat', 'class')
 
-  sel.atm <- melt.atm %>%
-    filter(lon >= lon.lat$minlon & lon <= lon.lat$maxlon &
-           lat >= lon.lat$minlat & lat <= lon.lat$maxlat) %>%
-    filter(!is.na(class))
-
+  sel.atm <- melt.atm %>% filter(lon >= lon.lat$minlon, lon <= lon.lat$maxlon,
+                                 lat >= lon.lat$minlat, lat <= lon.lat$maxlat, 
+                                 !is.na(class)) 
   ### anthro biomes legend
   #GRID Values = Anthrome classes**
   #-------------------------------
@@ -84,10 +83,9 @@ ggmap.anthromes <- function(lon.lat, anthro.path, mm = NULL, site = NULL,
       "53" = "Remote woodlands", "54" = "Inhabited treeless and barren lands",
       "61" = "Wild woodlands", "62" = "Wild treeless and barren lands")
 
-    a1 <- mm[[1]] +
-      theme_bw() + coord_equal(1.1) +
+    a1 <- mm[[1]] + theme_bw() + coord_equal(1.1) +
       geom_raster(data = sel.atm, aes(lon + mm[[3]], lat + mm[[2]],
-        fill = as.factor(class)), alpha = 0.7)
+                  fill = as.factor(class)), alpha = 0.7)
 
     a2 <- a1 +
       scale_fill_manual(name = "Land cover", values = col.val, labels = lab) +
@@ -96,15 +94,16 @@ ggmap.anthromes <- function(lon.lat, anthro.path, mm = NULL, site = NULL,
       #,title="Land over map from Anthropogenic Biomesv2 [Ellis et al., 2010]")
 
     a3 <- a2 + theme(legend.position = 'bottom',
-      legend.text = element_text(size = font.size),
-      legend.key = element_blank(), legend.key.width = unit(2, 'cm'),
-      legend.key.height = unit(0.6, 'cm'),
-      axis.title.y = element_text(size = font.size, angle = 90),
-      axis.title.x = element_text(size = font.size, angle = 0),
-      axis.text = element_text(size = font.size),
-      axis.ticks = element_line(size = font.size),
-      title = element_text(size = font.size),
-      strip.text.x = element_text(size = font.size))
+                     legend.text = element_text(size = font.size),
+                     legend.key = element_blank(), 
+                     legend.key.width = unit(2, 'cm'),
+                     legend.key.height = unit(0.6, 'cm'),
+                     axis.title.y = element_text(size = font.size, angle = 90),
+                     axis.title.x = element_text(size = font.size, angle = 0),
+                     axis.text = element_text(size = font.size),
+                     axis.ticks = element_line(size = font.size),
+                     title = element_text(size = font.size),
+                     strip.text.x = element_text(size = font.size))
 
     picname <- paste0('anthromes_', site, '.png')
     picname <- file.path(picpath, picname)

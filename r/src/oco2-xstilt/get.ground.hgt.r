@@ -96,9 +96,9 @@ get.ground.hgt <- function(varsiwant, conage = 48, cpack = 1, dxf = 1, dyf = 1,
     for (s in 1:length(r_zagl)) {
       tmp.part <- sel.part[s, ]
       delx <- distCosine(p1 = c(tmp.part$long,    receptor$lati),
-                        p2 = c(receptor$long, receptor$lati)) # in meter
+                         p2 = c(receptor$long, receptor$lati)) # in meter
       dely <- distCosine(p1 = c(receptor$long, tmp.part$lati),
-                        p2 = c(receptor$long, receptor$lati))
+                         p2 = c(receptor$long, receptor$lati))
       delz <- abs(tmp.part$zagl - r_zagl[s])
 
       # U-, V- and W- velocities [m/s]

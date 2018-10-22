@@ -21,8 +21,8 @@ grab.sif <- function(sif.path, timestr, lon.lat){
       igbp   <- ncvar_get(sif.dat, 'IGBP_index')
 
       sif <- data.frame(timestr = timestr, lat = as.numeric(lat),
-        lon = as.numeric(lon), sif757 = as.numeric(sif757),
-        sif771 = as.numeric(sif771), igbp = as.numeric(igbp))
+                        lon = as.numeric(lon), sif757 = as.numeric(sif757),
+                        sif771 = as.numeric(sif771), igbp = as.numeric(igbp))
 
       # select SIF in given region and scale SIF_771nm with sacling factor of
       # 1.35 (used in Luus et al., 2017) to calculate an averaged SIF

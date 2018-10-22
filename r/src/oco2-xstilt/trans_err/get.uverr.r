@@ -10,10 +10,11 @@
 # 'overwrite': T for re-interpolating raob and met winds (using get.ground.hgt.r)
 
 get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
-  raob.path = NULL, raob.format = c('fsl', 'ncdf'), nhrs = -120,
-  met = c('gdas1', 'gdas0p5', 'hrrr'), met.path, met.format, met.files = NULL,
-  lon.lat, agl, TLuverr = NULL, zcoruverr = NULL, horcoruverr = NULL, 
-  nfTF = F, forwardTF = F, err.path) {
+                      raob.path = NULL, raob.format = c('fsl', 'ncdf'), 
+                      nhrs = -120, met = c('gdas1', 'gdas0p5', 'hrrr'), 
+                      met.path, met.format, met.files = NULL, lon.lat, agl, 
+                      TLuverr = NULL, zcoruverr = NULL, horcoruverr = NULL, 
+                      nfTF = F, forwardTF = F, err.path) {
 
   if (run_hor_err) {
 
@@ -28,7 +29,6 @@ get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
     # grab modeled winds, *** if no file found, this takes a long time to run
     raob.file <- file.path(err.path, paste0(site, '_', met, '_rad_', timestr, '.txt'))
 
-
     if (!file.exists(raob.file)) {
       cat('no wind error comparisons found; 
            make a consevative assumption of siguverr of 2 m/s...\n')
@@ -40,12 +40,12 @@ get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
 
     } else {
       met.raob <- cal.met.wind(filename = raob.file, met, met.path, met.format, 
-                              met.files, workdir, site, timestr, overwrite, 
-                              raob.path, nhrs = -120, raob.format)
+                               met.files, workdir, site, timestr, overwrite, 
+                               raob.path, nhrs = -120, raob.format)
 
       # call get.SIGUVERR() to interpolate most near-field wind errors
       err.stat <- get.siguverr(met.raob, nfTF, forwardTF, lon.lat, nhrs, agl, 
-                              recp.time = timestr)
+                               recp.time = timestr)
       siguverr <- err.stat$siguverr
     }  # end if file.exists
   

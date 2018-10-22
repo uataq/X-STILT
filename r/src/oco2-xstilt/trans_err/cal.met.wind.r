@@ -12,8 +12,8 @@
 # add surface wind from ASOS, DW, 09/19/2018 
 
 cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
-  workdir, site, timestr, overwrite = F, raob.path = NULL, nhrs = -120,
-  raob.format = 'fsl'){
+                         workdir, site, timestr, overwrite = F, 
+                         raob.path = NULL, nhrs = -120, raob.format = 'fsl'){
 
   # loop over each time period
   if (overwrite == T | !file.exists(filename)){

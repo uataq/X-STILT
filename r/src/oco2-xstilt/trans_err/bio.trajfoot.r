@@ -1,19 +1,21 @@
-# subroutine to readin CarbonTracker-NeatRealTime for OCO-2 project
-# and calculate the dCO2 for each trajec for both biospheric signal)
-# by Dien Wu, 04/11/2017
-# fix a bug, (all footprint columns are zero), 05/11/2017
-# add dmassTF for weighting footprint if violate mass conservation, DW, 10/20/2017
+#' subroutine to readin CarbonTracker-NeatRealTime for OCO-2 project
+#' and calculate the dCO2 for each trajec for both biospheric signal)
+#' @author: Dien Wu, 04/11/2017
 
-# generalizt to merge with Ben's code, DW, 07/23/2018
-# read bio fluxes as raster layer that is more efficient, DW, 07/23/2018
-# add stilt.ver, if v = 1, convert colnames--
-# remove dmass correction
+#' @variables:
+#' default ct.hr = 0, 3, 6, 9, 12, 15, 18, 21 UTC, left-edge hr, not centered hr
+#' default variable name when reading as raster, 'bio_flux_opt' used in CT
 
-# default ct.hr = 0, 3, 6, 9, 12, 15, 18, 21 UTC, left-edge hr, not centered hr
-# default variable name when reading as raster, 'bio_flux_opt' used in CT
+#' @updates:
+#' fix a bug, (all footprint columns are zero), 05/11/2017
+#' add dmassTF for weighting footprint if violate mass conservation, DW, 10/20/2017
+#' generalizt to merge with Ben's code, DW, 07/23/2018
+#' read bio fluxes as raster layer that is more efficient, DW, 07/23/2018
+#' add stilt.ver, if v = 1, convert colnames--
+#' remove dmass correction
 
 bio.trajfoot <- function(trajdat, timestr, ctflux.path, ct.hr = seq(0, 21, 3),
-  varname = 'bio_flux_opt'){
+                         varname = 'bio_flux_opt'){
 
   library(raster)
 
@@ -47,18 +49,19 @@ bio.trajfoot <- function(trajdat, timestr, ctflux.path, ct.hr = seq(0, 21, 3),
   for (d in 1:length(uni.date.hr)){
 
     # open the daily file just once
-    ctfile <- list.files(path = ctpath, pattern = substr(uni.date.hr[d], 1, 8))
+    ctfile <- list.files(path = ctflux.path, pattern = substr(uni.date.hr[d], 1, 8))
 
     # read as raster, find the correct band from 'bands'
-    bio <- raster(file.path(ctpath, ctfile), band = bands[d], varname = varname)
+    bio <- raster(file.path(ctflux.path, ctfile), band = bands[d], varname = varname)
 
     # find corresponding 1x1deg CT grid for biospheric fluxes
     sel.trajdat <- trajdat %>% filter(match.date.hr == uni.date.hr[d])
     trajcor <- sel.trajdat %>% dplyr::select(long, lati)
 
     # get bio fluxes (convert to umol/m2/s) and finally get co2.bio
-    sel.trajdat <- sel.trajdat %>% mutate(
-      find.bio = extract(x = bio * 1E6, y = trajcor), co2 = find.bio * foot)
+    sel.trajdat <- sel.trajdat %>% 
+      mutate(find.bio = raster::extract(x = bio * 1E6, y = trajcor), 
+             co2 = find.bio * foot)
 
     # store trajdat
     new.trajdat <- rbind(new.trajdat, sel.trajdat)
@@ -66,7 +69,7 @@ bio.trajfoot <- function(trajdat, timestr, ctflux.path, ct.hr = seq(0, 21, 3),
 
   # also, compute total dCO2 for each traj over all backwards hours
   sum.trajdat <- new.trajdat %>% group_by(indx) %>%
-    dplyr::summarize(bio.sum = sum(co2))
+                                 dplyr::summarize(bio.sum = sum(co2))
 
   return(sum.trajdat)
 } # end of subroutine

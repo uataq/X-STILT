@@ -1,6 +1,6 @@
 #### subroutine to readin ODIAC emissions and then couple with STILT footprint
 # as footprints have already been weighted by AK and PW,
-# just multiple emission with 2D footprint map
+# just multiple emission with 2D footprint map, originated from 'foot.odiacv3'
 # written by Dien Wu, 09/13/2016
 
 # Updates:
@@ -21,11 +21,50 @@
 # remove foot.path, use full path as foot.file, DW, 07/26/2018
 # fix a minor bug in interpreting footprint filename, DW, 10/11/2018 
 
-foot.odiacv3 <- function(foot.file, emiss.file, workdir, txtfile = NULL,
-  lon.lat = NULL, plotTF = F, writeTF = F){
+run.xco2.sim <- function(site, timestr, vname, tiff.path, outdir, foot.res, 
+                         workdir, store.path, nhrs, dpar, smooth_factor, zisf, 
+                         oco2.ver, met, lon.lat, run_emiss_err, edgar.file = NULL, 
+                         ffdas.file = NULL, plotTF = F, writeTF = T){
 
-  library(raster)
+  # grab footprint files and get footprint domain
+  foot.path <- file.path(outdir, 'by-id')
+  foot.patt <- paste0(signif(foot.res, 3), 'x', signif(foot.res, 3), '_foot.nc')
+  foot.file <- list.files(foot.path, foot.patt, recursive = T, full.names = T)
+  tmp.foot  <- raster(foot.file[1])
+  foot.extent <- extent(tmp.foot)
 
+  # call tif2nc.odiacv2() to subset and get emiss file name
+  # get cropped ODIAC emission for the overpass month
+  # moved from main script to this subroutine, DW, 10/21/2018
+  emiss.file <- tif2nc.odiacv3(site, timestr, vname, workdir, foot.extent,
+                               tiff.path, gzTF = F)
+
+  # txt file name for outputting model results
+  txtfile <- file.path(store.path, paste0(timestr, '_', site, '_XCO2ff_', 
+                                          abs(nhrs), 'hrs_', dpar, 'dpar_sf', 
+                                          smooth_factor, '_zisf', zisf, '_', 
+                                          oco2.ver, '_', met, '.txt'))
+  
+  # add emission error file with absolute emission uncertainty and txtfile
+  if (run_emiss_err) {
+
+    # get emission files for ODIAC, FFDAS, EDGAR
+    # use year 2008 emissions to calculate absolute emission errors
+    odiac.file.2008 <- tif2nc.odiacv3(site, timestr = '20081229', vname, workdir,
+                                      foot.extent, tiff.path, gzTF = F)
+
+    # get absolute emission eror that can further be convolved with footprints
+    # **** in 0.1 deg resolution, need to generate 0.1 deg res of footprint
+    emiss.file <- cal.emiss.err(site, timestr, odiac.file.2008, edgar.file,
+                                ffdas.file, emiss.file, overwrite = F)
+
+    # txt file name for outputting model results
+    txtfile <- file.path(store.path, paste0(timestr, '_', site, '_XCO2ff_emiss_err_', 
+                                            abs(nhrs), 'hrs_', dpar, 'dpar_sf', 
+                                            smooth_factor, '_zisf', zisf, '_', 
+                                            oco2.ver, '_', met, '.txt'))
+  }  # end if run_emiss_err
+                                        
   # plot emissions
   if (plotTF) {
     emiss <- raster(emiss.file)
@@ -34,15 +73,14 @@ foot.odiacv3 <- function(foot.file, emiss.file, workdir, txtfile = NULL,
     emiss.df <- emiss.df %>% filter(emiss > 1)
 
     mm <- ggplot.map(map = 'ggmap', center.lat = lon.lat$citylat,
-                    center.lon = lon.lat$citylon, zoom = 8)
+                     center.lon = lon.lat$citylon, zoom = 8)
 
     # grab observations using map lat/lon
     map.ext <- c(min(mm[[1]]$data$lon), max(mm[[1]]$data$lon),
                  min(mm[[1]]$data$lat), max(mm[[1]]$data$lat))
 
-    sel.emiss <- emiss.df %>% filter(
-      lon >= map.ext[1] & lon <= map.ext[2] &
-      lat >= map.ext[3] & lat <= map.ext[4])
+    sel.emiss <- emiss.df %>% filter(lon >= map.ext[1] & lon <= map.ext[2] &
+                                     lat >= map.ext[3] & lat <= map.ext[4])
     print(sel.emiss[sel.emiss$emiss >= 100, ])
 
     e1 <- mm[[1]] + coord_equal() +
@@ -52,12 +90,13 @@ foot.odiacv3 <- function(foot.file, emiss.file, workdir, txtfile = NULL,
                            limits = c(1, 1E5))
     ggsave(plot = e1, filename = gsub('.nc', '.png', emiss.file),
            width = 8, hright = 8)
-  }
+  } # end if plotTF
+
 
   # if cannot find the correct format of nc file for emissions given selected area
   # and return ODIAC file name with path in front
   if (length(emiss.file) == 0) {
-    cat('NO nc file found, check tif2nc.odiacv2() to create one...\n')
+    cat('run.xco2.sim(): NO nc file found, check ODIAC tiff file...\n')
     return()
 
   } else {
@@ -80,15 +119,14 @@ foot.odiacv3 <- function(foot.file, emiss.file, workdir, txtfile = NULL,
   order.index <- order(receptor$lat)
   receptor  <- receptor[order.index, ]
   foot.file <- foot.file[order.index]
-  receptor$xco2.ff <- NA
+  if (run_emiss_err) {receptor$xco2.ff.err <- NA} else {receptor$xco2.ff <- NA}
 
   # then loop over each receptor
   for (r in 1:nrow(receptor)) {
 
     # read in footprint
-    foot.dat <- raster(file.path(foot.file[r]))
-    crs(foot.dat) <- '+proj=longlat'
-    #plot(log10(foot.dat))
+    foot.dat <- raster(foot.file[r])
+    #crs(foot.dat) <- '+proj=longlat'
 
     # NOW, foot and emiss should have the same dimension,
     # multiple them to get contribution map of CO2 enhancements
@@ -99,20 +137,33 @@ foot.odiacv3 <- function(foot.file, emiss.file, workdir, txtfile = NULL,
     # sum the map to get the XCO2 enhancements,
     # note that AK and PW have been incorporated in footprint
     tmp.xco2.ff <- sum(getValues(xco2.ff.sp), na.rm = T)
-    receptor$xco2.ff[r] <- tmp.xco2.ff
+    
+    if (run_emiss_err) {
+      receptor$xco2.ff.err[r] <- tmp.xco2.ff
+    } else {
+      receptor$xco2.ff[r] <- tmp.xco2.ff
+    }
     print(tmp.xco2.ff)
 
     ### store emission * column footprint = XCO2 contribution grid into .nc file
     # store into the same workding dir
     outfile <- file.path(dirname(foot.file[r]),
-      gsub('foot', 'foot_emiss', basename(foot.file[r])))
+                         gsub('foot', 'foot_emiss', basename(foot.file[r])))
     print(outfile)
 
     crs(xco2.ff.sp) <-
       '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0'
+    
+    longname <- 'XCO2 enhancemnets due to ODIAC emission'; varname <- 'XCO2'
+    if (run_emiss_err) {
+      longname <- 'XCO2 error due to ODIAC emission error'
+      varname <- 'XCO2 error'
+    } 
+
+    # write raster in nc file
     writeRaster(xco2.ff.sp, outfile, overwrite = TRUE, format = 'CDF',
-                varname = 'xco2', varunit = 'PPM', xname = 'lon', yname = 'lat',
-                longname = 'XCO2 enhancemnets due to ODIAC emission')
+                varname = varname, varunit = 'PPM', xname = 'lon', yname = 'lat',
+                longname = longname)
   }  # end for r
 
   # finally, write in a txt file

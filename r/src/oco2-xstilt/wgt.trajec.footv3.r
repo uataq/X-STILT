@@ -11,6 +11,7 @@
 # trajec with level column is not passed to weight.trajecfoot(), DW, 05/22/2017
 # version 3 for matching Ben's STILTv2, DW, 05/29/2018
 # use 'xhgt' instead of 'level', DW, 06/01/2018
+# add PW and Ak weighting for trajec with error and fix a bug, DW, 10/21/2018
 
 wgt.trajec.footv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 
@@ -18,10 +19,16 @@ wgt.trajec.footv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
   trajdat <- output$particle  # now a data.frame
   trajdat <- trajdat[order(abs(trajdat$time)), ]    # order by time
 
+	# add PW and Ak weighting for trajec with error as well, DW, 10/21/2018
+	errTF <- 'particle_error' %in% names(output)
+	if (errTF) {
+		trajdat.err <- output$particle_error 
+		trajdat.err <- trajdat.err[order(abs(trajdat.err$time)), ]
+	}
+	
 	# HERE, ak.wgt and pwf.wgt is passed on for weighting trajec
 	combine.prof <- get.wgt.funcv3(output = output, oco2.info = oco2.info,
 		                             ak.wgt = ak.wgt, pwf.wgt = pwf.wgt)
-  #print(str(combine.prof))
 
 	### STARTing weighting trajec based on profiles
 	if (ak.wgt == F & pwf.wgt == F) {
@@ -30,7 +37,8 @@ wgt.trajec.footv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 		# no longer need any following weighting...
 		# !!! but still need to return weighting functions and other info
 		cat('weight.trajecfootv3(): NO weighting turned on...\n')
-		result <- list(combine.prof, trajdat)
+		wgt.prof <- trajdat  # still the same trajec
+    if (errTF) wgt.prof <- list(trajdat, trajdat.err)
 
 	} else {
 
@@ -43,7 +51,7 @@ wgt.trajec.footv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
     nlevel <- length(uni.xhgt)
 
 		# initialize weighted foot column with normal footprint
-		trajdat$newfoot <- NA
+		trajdat$newfoot <- NA; if (errTF) trajdat.err$newfoot <- NA
 
 		# weighting newfoot by multipling AK and PW profiles from 'combine.prof',
 		# along with number of STILT levels
@@ -72,6 +80,11 @@ wgt.trajec.footv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
       # calculates the spatial footprint based on average footprint in a column
       # thus, resultant 'newfoot' should have similar order of mag as of 'foot'
 			trajdat$newfoot[hgt.indx] <- trajdat$foot[hgt.indx] * wgt.prof[h] * nlevel
+
+			# also weight the trajec with error, DW, 10/21/2018
+			if (errTF) 
+			  trajdat.err$newfoot[hgt.indx] <- 
+				  trajdat.err$newfoot[hgt.indx] * wgt.prof[h] * nlevel
 		} # end loop h
 
 	} # end if all flags, ak.wgt & pwf.wgt
@@ -81,11 +94,19 @@ wgt.trajec.footv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 	newtraj <- trajdat[, -which(colnames(trajdat) == 'foot')]
 	colnames(newtraj)[colnames(newtraj) == 'newfoot'] <- 'foot'
 
+  if (errTF) {
+		newtraj.err <- trajdat.err[, -which(colnames(trajdat.err) == 'foot')]
+		colnames(newtraj.err)[colnames(newtraj.err) == 'newfoot'] <- 'foot'
+	}
+
 	# add interpolated profiles in RData files as well, DW, 04/19/2017
 	# put 'newtraj' back to 'output'
 	wgt.output <- output
 	wgt.output$particle <- newtraj # overwrite with weighted trajec
-	wgt.output$wgt.prof <- combine.prof  # add interpolated AK, PW profiles
+	if (errTF) wgt.output$particle.err <- newtraj.err
+
+  # add interpolated AK, PW profiles
+	wgt.output$wgt.prof <- combine.prof  
 	wgt.output$file <- gsub('X_traj.rds', 'X_wgttraj.rds', output$file)
   saveRDS(wgt.output, wgt.output$file)
 

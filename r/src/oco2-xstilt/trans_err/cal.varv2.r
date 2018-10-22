@@ -6,18 +6,17 @@
 
 # generalize and clear up the code, DW, 07/23/2018
 
-cal.varv2 <- function(x, func = c('normal', 'lognormal'), colname, pct = 0.99){
+cal.varv2 <- function(x, colname, pct = 0.99, func = 'normal'){
 
 	library(MASS)
 	uni.level <- unique(x$level)
-	var.tot <- NULL
-	mean.tot <- NULL
-	sd.tot <- NULL
+	var.tot <- NULL; mean.tot <- NULL; sd.tot <- NULL
 
 	# decide to go with test III -- upper 1st percentile
-	for (l in 1:length(uni.level)){
+	for (l in 1:length(uni.level)) {
 
-		tmp <-x %>% filter(level = uni.level[l]) %>% dplyr::select(colname)
+		tmp <- x %>% filter(level == uni.level[l]) %>% dplyr::select(colname)
+        tmp <- as.numeric(unlist(tmp))
 
 		# add filtering to remove outliers, DW, 01/08/2018
 		# for some case, anthro with error goes up to 2000ppm,
@@ -34,7 +33,7 @@ cal.varv2 <- function(x, func = c('normal', 'lognormal'), colname, pct = 0.99){
 
 		# decide to go with test III -- remove upper 1st percentile per level
 		crit3 <- quantile(sort(tmp), pct)
-		sel3 <- tmp[tmp <= crit3]
+		sel3  <- tmp[tmp <= crit3]
 
 		# calculate the mean and sd
 		fit.tmp  <- fitdistr(sel3, densfun = func)
@@ -43,11 +42,11 @@ cal.varv2 <- function(x, func = c('normal', 'lognormal'), colname, pct = 0.99){
 		var.tmp  <- sd.tmp ^ 2
 
 		# storing...
-		mean.tot <- c(mean.tot, mean.tmp)
-		sd.tot   <- c(sd.tot, sd.tmp)
+		mean.tot <- c(mean.tot, mean.tmp); sd.tot   <- c(sd.tot, sd.tmp)
 		var.tot  <- c(var.tot, var.tmp)
 	}
 
-	result <- data.frame(mean.tot, sd.tot, var.tot, uni.level)
+	result <- data.frame(mean = mean.tot, sd = sd.tot, var = var.tot, 
+	                     level = uni.level)
 	return(result)
 }

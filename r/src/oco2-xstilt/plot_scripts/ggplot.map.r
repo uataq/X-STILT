@@ -23,8 +23,7 @@ ggplot.map <- function(map = c("black","ggmap"), maptype = 'roadmap',
                        shape.path = "/uufs/chpc.utah.edu/common/home/lin-group5/wde/world_shapefile",
                        minlat, maxlat, minlon, maxlon, land.col = "black",
                        land.outline = "gray30", ocean.col = "lightsteelblue2",
-                       ocean.outline = 'grey', center.lat, center.lon,
-                       zoom = 8){
+                       ocean.outline = 'grey', center.lat, center.lon, zoom = 8){
 
   ## if load map with black background for land and blue for ocean (default col)
   if (map == "black") {

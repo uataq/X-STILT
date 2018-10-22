@@ -10,9 +10,8 @@
 #    10% violation is a good value, DW, 10/20/2017
 
 # cut particles beyond emission grid, fix bug for summertime track, DW, 12/04/2017
-
 # generalizt to merge with Ben's code, DW, 07/23/2018
-# change to read 'emiss' in the form of raster, DW, 07/23/2018
+# change the form of 'emiss' as raster, DW, 07/23/2018
 # remove dmass correction
 
 #########
@@ -21,30 +20,32 @@ ff.trajfoot <- function(trajdat, emiss){
   library(dplyr)
 
   # cut particles beyond emission grid
-  trajdat <- trajdat %>% filter(
-    long >= extent(emiss)@xmin & long < extent(emiss)@xmax &
-    lati >= extent(emiss)@ymin & lati < extent(emiss)@ymax)
+  trajdat <- trajdat %>% filter(long >= extent(emiss)@xmin,
+                                long <  extent(emiss)@xmax, 
+                                lati >= extent(emiss)@ymin,
+                                lati <  extent(emiss)@ymax)
 
   # find emissions and calculate CO2
-  trajcor <- trajdat %>% dplyr::select(long, lati)
-  trajdat <- trajdat %>%
-    mutate(find.emiss = extract(x = emiss, y = trajcor), co2 = find.emiss * foot)
+  trajcor <- trajdat %>% dplyr::select(long, lati) 
+  coordinates(trajcor) <- c('long', 'lati')
+  trajdat <- trajdat %>% mutate(find.emiss = raster::extract(x = emiss, y = trajcor),
+                                co2 = find.emiss * foot)
 
-  # verify--
+  # checking --
   if (F) {
-    m1 <- ggplot.map(map = 'ggmap', center.lat = lon.lat$citylat,
-      center.lon = lon.lat$citylon + 0.1, zoom = 8)[[1]]
+    m1 <- ggplot.map(map = 'ggmap', center.lat = lon.lat$citylat + 0.5,
+                     center.lon = lon.lat$citylon + 0.1, zoom = 7)[[1]]
     c1 <- m1 + geom_point(data = trajdat[trajdat$indx < 2000, ],
-        aes(long, lati, colour = co2)) +
-        scale_colour_gradient(low = 'yellow', high = 'red', trans = 'log10')
+                          aes(long, lati, colour = co2)) +
+               scale_colour_gradient(low = 'yellow', high = 'red', trans = 'log10')
     e1 <- m1 + geom_point(data = trajdat[trajdat$indx < 2000, ],
-        aes(long, lati, colour = find.emiss)) +
-        scale_colour_gradient(low = 'yellow', high = 'red', trans = 'log10')
+                          aes(long, lati, colour = find.emiss)) +
+               scale_colour_gradient(low = 'yellow', high = 'red', trans = 'log10')
   }
 
   # also, compute total dCO2 for each traj over all backwards hours
-  sum.trajdat <- trajdat %>% group_by(indx) %>%
-    dplyr::summarize(ff.sum = sum(co2))
+  sum.trajdat <- trajdat %>% group_by(indx) %>%   
+                             dplyr::summarize(ff.sum = sum(co2)) %>% ungroup()
 
   return(sum.trajdat)
 

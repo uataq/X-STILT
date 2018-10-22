@@ -11,7 +11,7 @@
 #' get overpass dates from existing back traj, DW, 08/23/2018
 #' add background uncertainty (including spread sd + retrieval err), DW, 09/07/2018
 #' add CT-derived background M1, DW, 09/14/2018
-#' update code according to v9 changes, DW, 10/15/2018
+#' update code according to v9 changes, DW, 10/19/2018
 
 ## source all functions and load all libraries
 # CHANGE working directory ***
@@ -20,30 +20,16 @@ workdir <- file.path(homedir, 'lin-group5/wde/github/XSTILT') #current dir
 setwd(workdir)   # move to working directory
 source('r/dependencies.r') # source all functions
 
+
+# insert your API for the use of ggplot and ggmap
+api.key <- ''
+register_google(api.key)
+
+
 #------------------------------ STEP 1 --------------------------------------- #
-# insert target city
-site     <- 'Riyadh'
-
-# please get a google API and insert in the "" as below
-register_google(key = '')
+site     <- 'Riyadh'  # insert target city
 lon.lat  <- get.lon.lat(site = site, dlon = 1, dlat = 2)
-
-oco2.ver  <- c('b7rb', 'b8r', 'b9r')[2]  # OCO-2 version
-oco2.path <- file.path(homedir, 'lin-group5/wde/input_data/OCO-2/L2', 
-                       paste0('OCO2_lite_', oco2.ver))
-
-# path for storing overpass info by 'get,site.track'
-txtpath  <- file.path(homedir, 'lin-group5/wde/github/result/oco2_overpass')
-
-# lon.lat: minlon, maxlon, minlat, maxlat, city.lon, city.lat
-oco2.track <- get.site.track(site, oco2.ver, oco2.path, searchTF = F,
-                             date.range = c('20140901', '20181231'), 
-                             thred.count.per.deg = 200, lon.lat = lon.lat, 
-                             urbanTF = T, dlon.urban = 0.5, dlat.urban = 0.5,
-                             thred.count.per.deg.urban = 100, txtpath = txtpath)
-oco2.track  <- oco2.track %>% filter(qf.urban.count > 80)
-all.timestr <- oco2.track$timestr
-print(all.timestr)
+oco2.ver <- c('b7rb', 'b8r', 'b9r')[1]  # OCO-2 version
 
 ## choose which background method:
 # M1. Trajec-endpoint (using CarbonTracker)
@@ -53,10 +39,22 @@ print(all.timestr)
 method <- c('M1', 'M2H', 'M2S', 'M3')[4]
 
 ## output and input paths, txtfile name for storing background values
-input.path  <- '/uufs/chpc.utah.edu/common/home/lin-group5/wde/input_data'
-output.path <- file.path(homedir, 'lin-group5/wde/github/stilt', site)
+input.path  <- file.path(homedir, 'lin-group5/wde/input_data')
+output.path <- file.path(workdir, gsub(' ', '', lon.lat$regid), site)
 txtfile     <- file.path(output.path, 
                          paste0(method, '_bg_', site, '_', oco2.ver, '.txt'))
+oco2.path   <- file.path(input.path, 'OCO-2/L2', paste0('OCO2_lite_', oco2.ver))
+
+# path for storing overpass sampling info by 'get,site.track'
+txt.path   <- file.path(input.path, 'OCO-2/overpass_city') 
+oco2.track <- get.site.track(site, oco2.ver, oco2.path, searchTF = F,
+                             date.range = c('20140901', '20181231'), 
+                             thred.count.per.deg = 200, lon.lat = lon.lat, 
+                             urbanTF = T, dlon.urban = 0.5, dlat.urban = 0.5,
+                             thred.count.per.deg.urban = 100, txt.path) %>% 
+              filter(qf.urban.count > 80)
+all.timestr <- oco2.track$timestr; print(all.timestr)
+
 
 # ----------------------------- M1 Trajec endpoint  ------------------------- #
 # need to convolve footprint with diff fluxes and get endpoint CO2 as well
@@ -66,21 +64,22 @@ if (method == 'M1') {
   ct.ver    <- ifelse(substr(all.timestr, 1, 4) >= '2016', 'v2017', 'v2016-1')
   flux.path <- file.path(input.path, 'CT-NRT', ct.ver, 'fluxes/optimized')
   mf.path   <- file.path(input.path, 'CT-NRT', ct.ver, 'molefractions/co2_total')
-  foot.path <- file.path(output.path, paste0('out_', all.timestr,'_v7_zisf1p0'), 
+  foot.path <- file.path(output.path, paste('out', timestr, site, sep = '_'), 
                          'by-id')
   traj.path <- foot.path 
   
   # call function to get background
-  source('r/dependencies.r') # source all functions
   bg.info <- calc.M1.bg(all.timestr, foot.path, traj.path, ct.ver, flux.path, 
-                        mf.path, output.path = file.path(output.path, 'bg'), 
-                        oco2.ver, txtfile, writeTF = T, nhrs = -72)
+                        mf.path, output.path, oco2.ver, txtfile, writeTF = T, 
+                        nhrs = -72)
 } # end if M1
+
 
 # ------------------------ M2H. Regional daily median  ---------------------- #
 if (method == 'M2H')
   bg.info <- calc.M2H.bg(lon.lat, all.timestr, output.path, oco2.ver, oco2.path, 
                          txtfile, plotTF = F)
+
 
 # ------------------------ M2S. Normal statistics  -------------------------- #
 if (method == 'M2S') {
@@ -174,7 +173,7 @@ if (method == 'M3') {
 
     ## get vertical transport error component if run_ver_err = T
     # set zisf = 1 if run_ver_err = F
-    zisf    <- c(0.6, 0.8, 1.0, 1.2, 1.4)[3]   
+    zisf    <- c(0.6, 0.8, 1.0, 1.2, 1.4)[3]; if (!run_ver_err) zisf <- 1.0
     pbl.err <- get.zierr(run_ver_err, nhrs.zisf = 24, const.zisf = zisf)
     cat('Done with choosing met & inputting wind errors...\n')
 

@@ -2,15 +2,14 @@
 # by DW, 05/25/2017
 # modify original script as a function, 08/29/2018
 
-grab.raob <- function(raob.path, timestr, workdir, nhrs,
-  format = c('ncdf', 'fsl'), overwrite = F){
+grab.raob <- function(raob.path, timestr, workdir, nhrs, format = c('ncdf', 'fsl'), 
+                      overwrite = F){
 
   filename <- file.path(workdir, paste0(site, '_rad_', timestr, '.txt'))
   
   if (file.exists(filename) & overwrite == F) {
     options(scipen = 999)
-    merge.var <- read.table(filename, sep = ',', header = T,
-      stringsAsFactors = F)
+    merge.var <- read.table(filename, sep = ',', header = T, stringsAsFactors = F)
 
   } else {
 
@@ -59,7 +58,7 @@ grab.raob <- function(raob.path, timestr, workdir, nhrs,
         list(wind.mag, wind.dir, pres, hgt, temp)) %>%
         left_join(merge.raob, by = 'nobs') %>%
         filter(ws < 1E36, wd < 1E36, pres < 1E36, hgt < 1E36, temp < 1E36,
-          lat <= 90, lon <= 180) %>%
+               lat <= 90, lon <= 180) %>%
         mutate(temp = temp - 273.15)
     } # end of ncdf format
 
@@ -71,12 +70,12 @@ grab.raob <- function(raob.path, timestr, workdir, nhrs,
       raob.file  <- raob.files[grep(substr(timestr, 1, 8), raob.files)]
 
       # reading line by line, originate from JCL's
-      dat <- scan(file.path(raob.path, raob.file), sep = '\n', what = '')
+      dat  <- scan(file.path(raob.path, raob.file), sep = '\n', what = '')
       type <- as.numeric(substr(dat, 5, 7))   #type of identification line
 
       # grab time
-      yr <- as.numeric(substr(dat[type == 254], 35, 39))
-      hr <- as.numeric(substr(dat[type == 254], 13, 14))
+      yr  <- as.numeric(substr(dat[type == 254], 35, 39))
+      hr  <- as.numeric(substr(dat[type == 254], 13, 14))
       day <- as.numeric(substr(dat[type == 254], 20, 21))
       MON <- substr(dat[type == 254], 28, 30) # in character, change to number
 
@@ -95,7 +94,7 @@ grab.raob <- function(raob.path, timestr, workdir, nhrs,
 
       site.elev <- as.numeric(substr(dat[type == 1], 37, 42))
       merge.raob <- data.frame(lon = site.lon, lat = site.lat, elev = site.elev,
-        timestr = rel.timestr)
+                               timestr = rel.timestr)
 
       # start to grab wind info
       # units of wind speed 'ms' = tenths of meters/sec; 'kt' = knots
@@ -117,24 +116,25 @@ grab.raob <- function(raob.path, timestr, workdir, nhrs,
         # 8 = maximum wind level (GTS or merged data);
         # 9 = surface level
         sel <- !is.na(match(as.numeric(substr(sel.dat, 5, 7)),
-          c(9, 4, 5, 6, 7, 8)))
+                            c(9, 4, 5, 6, 7, 8)))
         dat.obs <- sel.dat[sel]
 
         # grab pressure, altitude, temp, dew points, wind dir and speeds
         pres <- as.numeric(substr(dat.obs, 10, 14)) * 0.1  # convert to mb
         hgt  <- as.numeric(substr(dat.obs, 17, 21))
         temp <- as.numeric(substr(dat.obs, 24, 28)) * 0.1
-        wd <- as.numeric(substr(dat.obs, 38, 42))
-        ws <- as.numeric(substr(dat.obs, 45, 49))
+        wd   <- as.numeric(substr(dat.obs, 38, 42))
+        ws   <- as.numeric(substr(dat.obs, 45, 49))
 
         # unit conversion
         if (units[i] == 'kt') ws <- ws * 1.61 * 1000 / (60 * 60)
         if (units[i] == 'ms') ws <- ws / 10
         #if unit is 'ms', then denotes TENTHS of [m/s]
 
-        result <- data.frame(timestr = rel.timestr[i],
-          lat = site.lat[i], lon = site.lon[i], elev = site.elev[i],
-          pres = pres, hgt = hgt, temp = temp, ws = ws, wd = wd)
+        result <- data.frame(timestr = rel.timestr[i], lat = site.lat[i], 
+                             lon = site.lon[i], elev = site.elev[i],
+                             pres = pres, hgt = hgt, temp = temp, 
+                             ws = ws, wd = wd)
         merge.var <- rbind(merge.var, result)
       }  # end for i
 
@@ -144,9 +144,8 @@ grab.raob <- function(raob.path, timestr, workdir, nhrs,
 
     # !!! degree true: from the true North to the wind barb,
     # so the actual wind direction is degree-true minus 180deg
-    merge.var <- merge.var %>% mutate(
-      u = sin((wd - 180) * pi/180) * ws,
-      v = cos((wd - 180) * pi/180) * ws)
+    merge.var <- merge.var %>% mutate(u = sin((wd - 180) * pi/180) * ws,
+                                      v = cos((wd - 180) * pi/180) * ws)
 
     # store in txt file
     write.table(merge.var, file = filename, sep = ',', quote = F, row.names = F)
@@ -159,8 +158,8 @@ grab.raob <- function(raob.path, timestr, workdir, nhrs,
 
   merge.var$timestr <- substr(merge.var$timestr, 1, 10)
   options(scipen = 0)
-  sel.var <- merge.var %>%
-    filter(timestr >= min(date1, date2), timestr <= max(date1, date2))
+  sel.var <- merge.var %>% filter(timestr >= min(date1, date2), 
+                                  timestr <= max(date1, date2))
   return(sel.var)
 }
 

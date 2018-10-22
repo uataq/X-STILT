@@ -8,7 +8,7 @@
 # read bio fluxes as raster layer that is more efficient, DW, 07/23/2018
 # weight endpts with AK, DW, 07/23/2018
 
-endpts.trajfoot <- function(trajdat, ctmole.path, combine.prof){
+endpts.trajfoot <- function(trajdat, timestr, ctmole.path, combine.prof){
 
   #### NOW grab a CO2.bio fluxes for each selected trajec ###
   # match 3-houly footprint and 3-houly biosperhic fluxes
@@ -18,12 +18,13 @@ endpts.trajfoot <- function(trajdat, ctmole.path, combine.prof){
 
   # NOW, grab the endtraj for those min.time, using STRING MATCHING METHOD
   endtraj <- trajdat %>% group_by(indx) %>% filter(time == min(time)) %>%
-    mutate(date = recp.date + time * 60, timestr = substr(date, 1, 10),
-      yr  = as.numeric(substr(date, 1, 4)),
-      mon = as.numeric(substr(date, 6, 7)),
-      day = as.numeric(substr(date, 9, 10)),
-      hr  = as.numeric(substr(date, 12, 13))
-    ) %>% ungroup()
+                         mutate(date = recp.date + time * 60, 
+                                timestr = substr(date, 1, 10),
+                                yr  = as.numeric(substr(date, 1, 4)),
+                                mon = as.numeric(substr(date, 6, 7)),
+                                day = as.numeric(substr(date, 9, 10)),
+                                hr  = as.numeric(substr(date, 12, 13))) %>% 
+                         ungroup()
   uni.date <- unique(endtraj$timestr)
 
   # grab CT-NRT files for all backwards hours, and then put in a 3D fluxes array
@@ -117,11 +118,13 @@ endpts.trajfoot <- function(trajdat, ctmole.path, combine.prof){
 
   # weight endpts with AK, DW 07/23/2018
   uni.xhgt <- unique(endtraj$xhgt)
-  combine.prof <- combine.prof %>%
-    mutate(level = as.numeric(rownames(combine.prof))) %>% filter(stiltTF == T)
+  combine.prof <- combine.prof %>% 
+      mutate(level = as.numeric(rownames(combine.prof))) %>% 
+      filter(stiltTF == T)
 
   wgt.endtraj <- endtraj %>% mutate(level = findInterval(xhgt, uni.xhgt)) %>%
-    full_join(combine.prof, by = 'level') %>% mutate(wgt.co2 = co2 * ak.norm)
+                             full_join(combine.prof, by = 'level') %>% 
+                             mutate(wgt.co2 = co2 * ak.norm)
 
   edp.co2 <- data.frame(indx = wgt.endtraj$indx, edp = wgt.endtraj$wgt.co2)
 

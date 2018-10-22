@@ -36,7 +36,8 @@ old/*
 out*
 Copy*
 *.sh
-run_XSTILT_*
+Eurasia
+in
 *.conf
 *.txt
 _rslurm*

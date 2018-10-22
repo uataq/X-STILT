@@ -7,7 +7,7 @@
 # 'const.zisf': constant PBL scaling factors for all receptors, during 'nhrs.zisf'
 
 get.zierr <- function(run_ver_err, nhrs.zisf = NULL, const.zisf = NULL,
-  sigzierr = NA, TLzierr = NA, horcorzierr = NA){
+                      sigzierr = NA, TLzierr = NA, horcorzierr = NA){
 
   ### Besides horizontal wind error, do we want to account for PBL height?
   if (run_ver_err) {    # add vertical trans error via ziscale *****
@@ -24,8 +24,8 @@ get.zierr <- function(run_ver_err, nhrs.zisf = NULL, const.zisf = NULL,
     ziscale     <- const.zisf
   } # end if run_ver_err
 
-  err.stat <- list(run_ver_err = run_ver_err,
-    zicontroltf = zicontroltf, ziscale = ziscale,
-    sigzierr = sigzierr, TLzierr = TLzierr, horcorzierr = horcorzierr)
+  err.stat <- list(run_ver_err = run_ver_err, zicontroltf = zicontroltf, 
+                   ziscale = ziscale, sigzierr = sigzierr, TLzierr = TLzierr, 
+                   horcorzierr = horcorzierr)
   return(err.stat)
 }

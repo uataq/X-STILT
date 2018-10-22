@@ -11,14 +11,14 @@
 # update variables according to output from cal.met.wind(), DW, 08/31/2018
 
 get.siguverr <- function(met.raob, nfTF = F, forwardTF = F, lon.lat = NULL,
-  nhrs = NULL, agl = NULL, recp.time = NULL){
+                         nhrs = NULL, agl = NULL, recp.time = NULL){
 
   # get max time, ie., receptor time
   max.time <- as.numeric(substr(recp.time, 1, 8))
 
   # filter pressure levels
   met.raob <- met.raob %>% na.omit() %>% filter(pres >= 300) %>%
-    mutate(time = as.numeric(substr(timestr, 1, 8)))
+                           mutate(time = as.numeric(substr(timestr, 1, 8)))
 
   # select nearfield radiosondes
   # also true for forward-time definition of background
@@ -27,8 +27,10 @@ get.siguverr <- function(met.raob, nfTF = F, forwardTF = F, lon.lat = NULL,
     # 1. select wind comparisons within 2x2 deg around the city center
     # select 1day comparisons
     nf <- met.raob %>% filter(time >= max.time,
-        lon >= (lon.lat$minlon - 1), lon <= (lon.lat$minlon + 1),
-        lat >= (lon.lat$minlat - 1), lat <= (lon.lat$minlat + 1))
+                              lon >= (lon.lat$minlon - 1), 
+                              lon <= (lon.lat$minlon + 1),
+                              lat >= (lon.lat$minlat - 1), 
+                              lat <= (lon.lat$minlat + 1))
 
     # 2. if there are no data given above selection,
     # expanding time range first, then spatial domain

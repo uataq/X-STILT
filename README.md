@@ -5,11 +5,11 @@ Scripts and subroutines for X-STILT, modified from the Stochastic Time-Inverted 
 Model developments are ongoing towards a more flexible model framework that can be more easily applied to other column measurements. Contributions from other users are welcomed and highly appreciated. Please contact Dien (Dien.Wu@utah.edu) if you have any questions/comments/suggestions. Thank you.
 
 
-## Details for X-STILTv2.0 based on STILT-R version 2 [*Fasoli et al*., 2018]:
+## Details for X-STILT based on STILT-R version 2 [*Fasoli et al*., 2018]:
 We're been merging column features with the new STILT-R version 2 [*Fasoli et al*., 2018] with improved model efficiency and more realistic "footprint" values (https://uataq.github.io/stilt/). Still, one can use Trajecfoot() from STILTv1 for generating footprints, if setting stilt.ver to 1.
-Modifications on top of STILTv2 are located in /src/oco2-xsilt. Users can start with 'create_namelist_oco2-xsilt.r' for model and parameter initializations.
+Modifications on top of STILTv2 are located in /src/oco2-xsilt. Users can start with 'run_xstilt.r' for model and parameter initializations.
 
-- X-STILTv2 features:
+- X-STILT features:
 1. Select OCO-2 overpasses and make spatial plots of retrieved XCO2 given a city
 2. Select OCO-2 soundings based on latitude binwidths for each overpass
 3. Create namelist with model parameters

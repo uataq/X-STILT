@@ -11,8 +11,9 @@
 # fix wd err, if wd.err is closed to -360 or 360, cycle it, DW, 08/31/2018
 # add surface wind from ASOS, DW, 09/19/2018 
 
-cal.met.wind.asos <- function(filename, met, met.path, met.format, met.files = NULL,
-  workdir, site, timestr, overwrite = F, asos.file, nhrs = -120){
+cal.met.wind.asos <- function(filename, met, met.path, met.format, 
+                              met.files = NULL, workdir, site, timestr, 
+                              overwrite = F, asos.file, nhrs = -120){
 
   # loop over each time period
   if (overwrite == T | !file.exists(filename)){
@@ -78,12 +79,11 @@ cal.met.wind.asos <- function(filename, met, met.path, met.format, met.files = N
 
       # if no postive AGL
       source('r/dependencies.r') # source all functions
-      int.info <- get.ground.hgt(
-        varsiwant = var2, met_loc = met.path,
-        met_file_format = met.format, n_hours = 1, receptor = receptor[i,],
-        rundir = rundir, timeout = 20 * 60, r_zagl = receptor$zagl[i], 
-        run_trajec = T) 
-      
+      int.info <- get.ground.hgt(varsiwant = var2, met_loc = met.path,
+                                 met_file_format = met.format, n_hours = 1, 
+                                 receptor = receptor[i,], rundir = rundir, 
+                                 timeout = 20 * 60, r_zagl = receptor$zagl[i], 
+                                 run_trajec = T) 
       if (is.null(int.info)) next
 
       # merge obs and sim
@@ -99,10 +99,11 @@ cal.met.wind.asos <- function(filename, met, met.path, met.format, met.files = N
       merge.info[is.na(merge.info$wd.met), 'wd.met'] <- 0
 
       # calculate wind errors
-      tmp.err.info <- merge.info %>% mutate(
-          temp.err = temp.met - temp.asos,
-          u.err  = u.met  - u.asos,  v.err  = v.met  - v.asos,
-          ws.err = ws.met - ws.asos, wd.err = wd.met - wd.asos)
+      tmp.err.info <- merge.info %>% mutate(temp.err = temp.met - temp.asos,
+                                            u.err  = u.met - u.asos,  
+                                            v.err  = v.met - v.asos,
+                                            ws.err = ws.met - ws.asos, 
+                                            wd.err = wd.met - wd.asos)
 
       # if wd.err is closed to -360 or 360, cycle it, DW, 08/31/2018
       tmp.err.info[abs(tmp.err.info$wd.err) > 180, 'wd.err'] <-
@@ -113,7 +114,7 @@ cal.met.wind.asos <- function(filename, met, met.path, met.format, met.files = N
       colTF <- F; if (i == 1) colTF <- T
       appTF <- T; if (i == 1) appTF <- F
       write.table(tmp.err.info, file = filename, append = appTF, sep = ',',
-        quote = F, row.names = F, col.names = colTF)
+                  quote = F, row.names = F, col.names = colTF)
       err.info <- rbind(err.info, tmp.err.info)
     } # end for i
 
