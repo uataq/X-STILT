@@ -7,9 +7,10 @@
 ggmap.xfoot.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path, facet.nrow, 
                             nhrs, dpar, foot.sf, zisf, met, stilt.ver, timestr, 
                             font.size = rel(0.9), recp.lon, recp.lat, foot, 
-                            foot.sig, titleTF = T, sumTF = T, qfTF = T, 
-                            picname, storeTF = T, width = 12, height = 8, 
-                            anthromesTF = F, anthro.path = NULL){
+                            min.foot.sig = 1E-6, max.foot.sig = 1E-2, 
+                            titleTF = T, sumTF = T, qfTF = T, picname, 
+                            storeTF = T, width = 12, height = 8, anthromesTF = F, 
+                            anthro.path = NULL, leg.pos = c('bottom', 'right')[1]){
 
   col <- def.col()
   m1 <- mm[[1]] + theme_bw() + coord_equal(1.1)
@@ -21,19 +22,20 @@ ggmap.xfoot.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path, facet.nrow,
                         maxlat = max(mm[[1]]$data$lat))
 
   cat('Reading OCO-2 data according to the spatial domain of ggmap...\n')
-  obs <- grab.oco2(ocopath = oco2.path, timestr = timestr, lon.lat = map.ext)
+  obs <- grab.oco2(ocopath = oco2.path, timestr = timestr, lon.lat = map.ext, 
+                   oco2.ver = oco2.ver)
   qf.obs <- obs %>% filter(qf == 0)
 
   # select footprints using map.ext
   sel.foot <- foot %>% filter(lon >= map.ext$minlon & lon <= map.ext$maxlon &
                               lat >= map.ext$minlat & lat <= map.ext$maxlat &
-                              foot >= foot.sig)
+                              foot >= min.foot.sig)
 
   title <- paste0('Spatial time-integrated weighted column footprint (', nhrs, 
                   ' hours; ', dpar, ' dpar; ', foot.sf, '; ziscale = ', zisf,
                   '; met = ', met, ')\nusing STILT version', stilt.ver, 
                   ' for overpass on ', timestr, ' over ', site,
-                  '\nOnly large footprints > ', foot.sig, ' are displayed')
+                  '\nOnly large footprints > ', min.foot.sig, ' are displayed')
   if (titleTF == F) title <- NULL
 
   p1 <- m1 + labs(title = title, x = 'LONGITUDE [E]', y = 'LATITUDE [N]')
@@ -83,13 +85,13 @@ ggmap.xfoot.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path, facet.nrow,
     p2 <- p1 + geom_point(data = obs, aes(lon, lat, colour = xco2), size = 0.4)
     min.y <- floor(min(obs$xco2, na.rm = T))
     max.y <- ceiling(max(obs$xco2, na.rm = T))
-  }  # end if qfTF
+  }  # end if qfTF 
 
-  lab <- sort(unique(c(foot.sig, 1E-6, 1E-5, 1E-4, 1E-3, 1E-2, 0.1, 1.0)))
+  lab <- 10 ^ seq(-10, 2, 1)
   p2 <- p2 + 
     geom_raster(data = sel.foot, aes(lon + mm[[3]], lat + mm[[2]], fill = foot),
                 alpha = 0.8) +
-    scale_fill_gradientn(limits = c(foot.sig, 1E-2), 
+    scale_fill_gradientn(limits = c(min.foot.sig, max.foot.sig), 
                          name = 'FOOTPRINT\nppm/(umol/m2/s)', trans = 'log10', 
                          colours = col, breaks = lab, labels = lab) +
     scale_alpha_manual(values = c('all' = 0.5, 'screened' = 1.0))
@@ -100,7 +102,7 @@ ggmap.xfoot.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path, facet.nrow,
                  theme(strip.text = element_text(size = font.size))
   }
 
-  p3 <- p2 + theme(legend.position = 'right',
+  p3 <- p2 + theme(legend.position = leg.pos,
                    legend.text = element_text(size = font.size),
                    legend.key = element_blank(), 
                    legend.key.width = unit(width/10, 'cm'),
@@ -115,9 +117,12 @@ ggmap.xfoot.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path, facet.nrow,
   p4 <- p3 + scale_colour_gradientn(name = 'OBS XCO2\n(ppm):', colours = col,
                                     limits = c(min.y, max.y), breaks = breaks, 
                                     labels = breaks) + 
-             guides(colour = guide_colourbar(order = 2),
-                    fill = guide_legend(order = 1, ncol = 1))
-                    #fill = guide_legend(order = 1, nrow = 2, byrow = T))
+             guides(colour = guide_colourbar(order = 2))
+
+  if (leg.pos == 'bottom') 
+    p4 <- p4 + guides(fill = guide_legend(order = 1, nrow = 2, byrow = T))
+  if (leg.pos == 'right') 
+    p4 <- p4 + guides(fill = guide_legend(order = 1, ncol = 1))
 
   if (anthromesTF) {
     atm <- ggmap.anthromes(lon.lat, anthro.path, mm = NULL, site = site)

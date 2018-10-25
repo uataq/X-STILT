@@ -1,5 +1,23 @@
 #' create a namelist for running X-STILT trajectories
 #' @author Dien Wu, 04/18/2018
+#' -----------------------------------------------------------------------------
+
+#' @flags: 
+#' 1. run_trajec, run_foot: run trajectory or footprint
+#' 1) if run_hor_err == T or run_ver_err == T
+#'    X-STILT generates trajectory with perturbations from wind or PBL errors
+#'    see details in STEP 4. 
+#' 2) if run_emiss_err is turned on
+#'    X-STILT generates footprint with horizontal resolution of 0.1deg, 
+#'    rather than 1km, because the absolute emission error has res of 0.1deg. 
+#'    see details in STEP 8. 
+
+#' 2. run_sim: run simulations (requires at least trajec done)
+#' 1) if no other flags is turned on, 
+#'    X-STILT models the XCO2 enhancements based on FFCO2 emission from 1km ODIAC
+#' 2) if run_hor_err is turned on, 
+#'    X-STILT models XCO2 error due to hortizontal transport error, See STEP 8. 
+#' -----------------------------------------------------------------------------
 
 #' @updates:
 #' now build upon Ben's STILT-R version 2 codes, DW, 05/23/2018
@@ -24,7 +42,7 @@
 #' update code according to v9 changes, DW, 10/19/2018
 #
 #' Optimize horizontal trans error as parallel computing to save time, DW, 10/21/2018
-# -----------------------------------------------------------------------------
+#' -----------------------------------------------------------------------------
 
 #### source all functions and load all libraries
 # CHANGE working directory ***
@@ -234,7 +252,28 @@ hor.err <- get.uverr(run_hor_err, site, timestr, workdir, overwrite = F,
 # set zisf = 1 if run_ver_err = F
 zisf <- c(0.6, 0.8, 1.0, 1.2, 1.4)[3]; if (!run_ver_err) zisf <- 1.0
 pbl.err <- get.zierr(run_ver_err, nhrs.zisf = 24, const.zisf = zisf)
-cat('Done with choosing met & inputting wind errors...\n')
+
+# if calculating XCO2 error due to emiss error, need files for EDGAR and FFDAS
+# rearrange by DW, 10/21/2018
+if (run_emiss_err) { 
+  edgar.file <- file.path(homedir,
+    'lin-group2/group_data/EDGAR/CO2_2000-2008/v42_CO2_2008_TOT.0.1x0.1.nc')
+  ffdas.path <- file.path(input.path, 'anthro_inventories/FFDAS/')
+  ffdas.file <- list.files(path = ffdas.path, pattern = 'totals')
+  ffdas.file <- file.path(ffdas.path, ffdas.file[grep('2008', ffdas.file)])
+} else {edgar.file = NULL; ffdas.file = NULL} 
+# end if run_emiss_err
+
+# if calculating XCO2 error due to horizontal wind error, need biospheric input
+# add CT paths and files, DW, 07/28/2018
+if (run_hor_err) {
+  ct.ver  <- ifelse(substr(timestr, 1, 4) >= '2016', 'v2017', 'v2016-1')
+  ct.path <- file.path(input.path, 'CT-NRT', ct.ver)
+  ctflux.path <- file.path(ct.path, 'fluxes/optimized')
+  ctmole.path <- file.path(ct.path, 'molefractions/co2_total')
+} # end of run_hor_err
+
+cat('Done with choosing met & inputting parameters for error estimates...\n')
 
 
 #------------------------------ STEP 5 --------------------------------------- #
@@ -329,25 +368,17 @@ if (run_trajec * run_foot == F) {
 
       # add latitudinally integrated horizontal trans error, DW, 10/22/2018
       # need to run rolling mean on XCO2 hor trans error (** operate on variance)
-      w <- abs(diff(receptor$lat))                     # diff in lat as weights
-      x <- as.data.frame(rollmean(receptor, 2))        # rollmean on all results
-      x$sd <- sqrt(rollmean(receptor$xco2.trans^2, 2))   # replace SD
+      if (!is.null(receptor)) {
+        w <- abs(diff(receptor$lat))                     # diff in lat as weights
+        x <- as.data.frame(rollmean(receptor, 2))        # rollmean on all results
+        x$sd <- sqrt(rollmean(receptor$xco2.trans^2, 2)) # replace SD
 
-      # error variance covariance matrix and final integrated SD in ppm
-      err.var.cov <- cal.var.cov(sd = x$sd, L = 40000, w, x, type = 'hor')
-      tot.hor.err <- sqrt(sum(err.var.cov, na.rm = T)) 
+        # error variance covariance matrix and final integrated SD in ppm
+        err.var.cov <- cal.var.cov(sd = x$sd, L = 40000, w, x, type = 'hor')
+        tot.hor.err <- sqrt(sum(err.var.cov, na.rm = T)) 
+      }  # end if
 
-    } else {
-
-      # add CT paths and files, DW, 07/28/2018
-      ct.ver  <- ifelse(substr(timestr, 1, 4) >= '2016', 'v2017', 'v2016-1')
-      ct.path <- file.path(input.path, 'CT-NRT', ct.ver)
-      ctflux.path <- file.path(ct.path, 'fluxes/optimized')
-      ctmole.path <- file.path(ct.path, 'molefractions/co2_total')
-
-      # need ODIAC emissions to calculate trans error
-      emiss.file <- tif2nc.odiacv3(site, timestr, vname, workdir, foot.extent,
-                                   tiff.path, gzTF = F)
+    } else {  # run horizontal trans error statistics ------------------------ #
 
       ## use SLURM for parallel simulation settings
       # time (in sec) allowed for running hymodelc before forced terminations
@@ -356,6 +387,10 @@ if (run_trajec * run_foot == F) {
       slurm    <- n_nodes > 1
       job.time <- '01:00:00'    # total job time
       slurm_options <- list(time = job.time, account = 'lin-kp', partition = 'lin-kp')
+
+      # need ODIAC emissions to calculate trans error
+      emiss.file <- tif2nc.odiacv3(site, timestr, vname, workdir, foot.extent,
+                                   tiff.path, gzTF = F)
 
       # get error statistics via calling 'cal.trajfoot.stat()'
       stilt_apply(X = 1:nrecp, FUN = cal.trajfoot.stat, slurm = slurm, 
@@ -372,21 +407,7 @@ if (run_trajec * run_foot == F) {
   } else {
   
     #--------------------- XCO2 or emiss error simulations ---------------------- #
-    # requires trajec and footprints ready for running this sections:
-    # Simulate XCO2.ff using ODIAC emissions, DW, 06/04/2018  
-
-    # if calculating XCO2 error due to emiss error, need files for EDGAR and FFDAS
-    # rearrange by DW, 10/21/2018
-    if (run_emiss_err) { 
-      edgar.file <- file.path(homedir,
-        'lin-group2/group_data/EDGAR/CO2_2000-2008/v42_CO2_2008_TOT.0.1x0.1.nc')
-      ffdas.path <- file.path(input.path, 'anthro_inventories/FFDAS/')
-      ffdas.file <- list.files(path = ffdas.path, pattern = 'totals')
-      ffdas.file <- file.path(ffdas.path, ffdas.file[grep('2008', ffdas.file)])
-    } else {edgar.file = NULL; ffdas.file = NULL} 
-    # end if run_emiss_err
-
-    # reformatted ODIAC emissions file name should include 'YYYYMM'
+    # requires trajec and footprints ready for running things below, DW, 06/04/2018  
     # call func to match ODIAC emissions with xfoot & sum up to get 'dxco2.ff'
     cat('Start simulations of XCO2.ff or its error due to emiss err...\n')
     receptor <- run.xco2.sim(site, timestr, vname, tiff.path, outdir, foot.res, 
@@ -396,22 +417,26 @@ if (run_trajec * run_foot == F) {
     
     # add latitudinally integrated emiss error, DW, 10/22/2018
     # need to run rolling mean on XCO2 emiss err (** operate on variance)
-    if (run_emiss_err) {
-      w <- abs(diff(receptor$lat))                      # diff in lat as weights
-      x <- as.data.frame(rollmean(receptor, 2))         # rollmean all results
-      x$sd <- sqrt(rollmean(receptor$xco2.ff.err^2, 2)) # replace with correct SD
+    if (!is.null(receptor)) {
+      if (run_emiss_err) {
+        w <- abs(diff(receptor$lat))                      # diff in lat as weights
+        x <- as.data.frame(rollmean(receptor, 2))         # rollmean all results
+        x$sd <- sqrt(rollmean(receptor$xco2.ff.err^2, 2)) # replace with correct SD
 
-      err.var.cov <- cal.var.cov(sd = x$sd, L = 40000, w, x, type = 'hor')
-      tot.hor.err <- sqrt(sum(err.var.cov, na.rm = T))  # final integrated SD in ppm
+        # L for error covariance of horizontal transport error (ppm) in meters, 
+        # not error covariance of wind error (m/s)
+        err.var.cov <- cal.var.cov(sd = x$sd, L = 40000, w, x, type = 'hor')
+        tot.hor.err <- sqrt(sum(err.var.cov, na.rm = T))  # final integrated SD in ppm
 
-    } else {
-      # add lat-int XCO2 signals
-      w <- abs(diff(receptor$lat))                    # diff in lat as weights
-      x <- as.data.frame(rollmean(receptor, 2))  
-      tot.sig <- sum(w * x$xco2.ff)
-    } # end if run_emiss_err
+      } else {
+        # add lat-int XCO2 signals
+        w <- abs(diff(receptor$lat))                    # diff in lat as weights
+        x <- as.data.frame(rollmean(receptor, 2))  
+        tot.sig <- sum(w * x$xco2.ff)
+      } # end if run_emiss_err
+    } # end if is.null
 
-  } # end if hor_err
+  } # end if run_hor_err
 } # end if run_sim
 
 ##### end of script

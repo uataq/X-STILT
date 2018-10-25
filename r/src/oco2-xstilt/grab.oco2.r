@@ -22,9 +22,8 @@ grab.oco2 <- function(ocopath, timestr, lon.lat, oco2.ver = 'b9r'){
 
   # Warn level being removed for lite v9 data, DW, 10/15/2018 
   if (oco2.ver != 'b9r') wl <- ncvar_get(ocodat, 'warn_level')
-
-  qf <- ncvar_get(ocodat, 'xco2_quality_flag')
-  foot <- ncvar_get(ocodat, 'Sounding/footprint')
+  qf    <- ncvar_get(ocodat, 'xco2_quality_flag')
+  foot  <- ncvar_get(ocodat, 'Sounding/footprint')
   psurf <- ncvar_get(ocodat, 'Retrieval/psurf')  # hpa
   #ws.surf <- ncvar_get(ocodat, 'Retrieval/windspeed')  # m/s
 
