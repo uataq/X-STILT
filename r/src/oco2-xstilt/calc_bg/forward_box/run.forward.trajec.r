@@ -20,7 +20,7 @@ run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
                                nhrs, workdir, outpath = NULL, hor.err = NULL, 
                                pbl.err = NULL, met, met.format, met.path, 
                                met.num = 1, plotTF = F, oco2.path, oco2.ver, 
-                               zoom = 8, td = 0.05, bg.dlat = 0.5, perc = 0.2,
+                               zoom = 7, td = 0.05, bg.dlat = 0.5, perc = 0.2,
                                clean.side = c('north', 'south', 'both')[3], 
                                data.filter = c('QF', 0)){
 

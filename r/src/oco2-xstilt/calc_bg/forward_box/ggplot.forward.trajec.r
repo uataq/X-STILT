@@ -24,7 +24,7 @@
 #   DW, 10/30/2018 
 
 ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path, 
-                                  oco2.ver, met, zoom = 8, lon.lat, 
+                                  oco2.ver, met, zoom = 7, lon.lat, 
                                   font.size = rel(1.2), td = 0.05, 
                                   bg.dlat = 0.5, perc = 0.2, 
                                   clean.side = c('north', 'south', 'both')[3]){
@@ -36,6 +36,11 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
   mod.lon.lat[, c('maxlon', 'maxlat')] <- mod.lon.lat[, c('maxlon', 'maxlat')] + 2
 
   obs <- grab.oco2(oco2.path, timestr, mod.lon.lat, oco2.ver) %>% filter(qf == 0)
+  if (nrow(obs) == 0) {
+    cat('*** NO observed data with QF = 0 for this event...returning NA ***\n')
+    return()
+  }
+  
   obs.datestr <- as.POSIXlt(as.character(obs$time),
                             format = '%Y-%m-%d %H:%M:%S', tz = 'UTC')
 
@@ -93,13 +98,12 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
 
   # plot kernel density on map
   lab.norm <- c(td, seq(0, 1, 0.1)[-1])
-  p1 <- m1 + 
-    geom_contour(data = densf, aes(x = lon, y = lat, z = norm.prob,
-                 colour = ..level..), breaks = lab.norm, size = 1.3) +
-    scale_colour_gradient(name = 'Normalized\nKernel\nDensity',
-                          low = 'lightblue', high = 'purple', 
-                          breaks = lab.norm, labels = lab.norm,
-                          limits = c(0, max(lab.norm)))
+  p1 <- m1 + geom_contour(data = densf, aes(x = lon, y = lat, z = norm.prob,
+                          colour = ..level..), breaks = lab.norm, size = 1.3) +
+             scale_colour_gradient(name = 'Normalized\nKernel\nDensity',
+                                   low = 'lightblue', high = 'purple', 
+                                   breaks = lab.norm, labels = lab.norm,
+                                   limits = c(0, max(lab.norm)))
 
   ### get plotting info, i.e., different kernel density levels
   kd.info <- ggplot_build(p1)$data[[5]]
@@ -121,13 +125,12 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
   max.y <- ceiling(max(obs$xco2)); min.y <- floor(min(obs$xco2))
 
   # only plot SCREENED data, QF == 0
-  p2 <- p1 + 
-    geom_point(data = obs, aes(lon, lat, fill = xco2), shape = 21, 
-               colour = 'gray90') +
-    scale_fill_gradientn(colours = def.col(), name = 'XCO2',
-                         limits = c(min.y, max.y), 
-                         breaks = seq(min.y, max.y, 2),
-                         labels = seq(min.y, max.y, 2))
+  p2 <- p1 + geom_point(data = obs, aes(lon, lat, fill = xco2), shape = 21, 
+                        colour = 'gray90') +
+             scale_fill_gradientn(colours = def.col(), name = 'XCO2',
+                                  limits = c(min.y, max.y), 
+                                  breaks = seq(min.y, max.y, 2),
+                                  labels = seq(min.y, max.y, 2))
 
   # compute outmost boundary
   wide.bound <- kd.info %>% filter(level == td)
@@ -198,16 +201,16 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
     if (nrow(pol.obs) > 0) {
 
       # plot overlap polygon and polluted obs (only screened data), DW, 08/20/2018
-      p3 <- p3 + 
-        geom_polygon(data = pol.bound, aes(X, Y), colour = 'gray50',
-                     fill = 'gray40', alpha = 0.5) +
-        geom_point(data = pol.obs, aes(lon, lat, fill = xco2), shape = 21, 
-                   colour = 'gray50') + 
-        annotate('text', x = unique(info$recp.lon) + mm[[3]],
-                         y = unique(info$recp.lat) + mm[[2]] - 0.05, 
-                         label = site, size = 6) +
-        annotate('point', x = info$recp.lon + mm[[3]],
-                          y = info$recp.lat + mm[[2]], size = 2, shape = 17)
+      p3 <- p3 + geom_polygon(data = pol.bound, aes(X, Y), colour = 'gray50',
+                              fill = 'gray40', alpha = 0.5) +
+                 geom_point(data = pol.obs, aes(lon, lat, fill = xco2), 
+                           shape = 21, colour = 'gray50') + 
+                 annotate('text', x = unique(info$recp.lon) + mm[[3]],
+                                  y = unique(info$recp.lat) + mm[[2]] - 0.05, 
+                                  label = site, size = 6) +
+                 annotate('point', x = info$recp.lon + mm[[3]],
+                                   y = info$recp.lat + mm[[2]], 
+                                   size = 2, shape = 17)
 
       p4 <- p3 + theme(legend.position = 'right',
                        legend.key.width = unit(0.5, 'cm'),
@@ -304,16 +307,18 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
                   aes(x, y, colour = as.factor(6), linetype = as.factor(6)), 
                   size = 1.1)
 
-      if (clean.side != 'both') l2 <- l1 + 
-          geom_smooth(data = clean.obs, 
+      # add smooth spline, make sure clean.obs has data, DW, 10/30/2018
+      # if clean.obs or north.obs/south.obs is missing, do not plot smooth spline
+      if (clean.side != 'both' & nrow(clean.obs) > 0) 
+      l1 <- l1 + geom_smooth(data = clean.obs, 
                       aes(lat, xco2, colour = as.factor(5), linetype = as.factor(5)), 
                       size = 1, se = F)
 
-      if (clean.side == 'both') l2 <- l1 + 
-          geom_smooth(data = north.obs, 
+      if (clean.side == 'both' & nrow(north.obs) * nrow(south.obs) > 0) 
+      l1 <- l1 + geom_smooth(data = north.obs, 
                       aes(lat, xco2, colour = as.factor(5), linetype = as.factor(5)), 
                       size = 1.3, se = F) + 
-          geom_smooth(data = south.obs, 
+                 geom_smooth(data = south.obs, 
                       aes(lat, xco2, colour = as.factor(5), linetype = as.factor(5)), 
                       size = 1.3, se = F)
 
@@ -331,7 +336,7 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
       title.l <- paste('Demostration of overpass-specific background [ppm] for',
                        site, 'on', timestr)
 
-      l3 <- l2 + scale_fill_manual(name = NULL, values = fill.val, labels = lab) + 
+      l2 <- l1 + scale_fill_manual(name = NULL, values = fill.val, labels = lab) + 
                  scale_colour_manual(name = NULL, values = col.val, labels = lab) + 
                  scale_linetype_manual(name = NULL, values = lt.val, labels = lab) +
                  labs(x = 'LATITUDE [deg]', y = 'OBS with QF = 0 [ppm]', title = title.l) + 
@@ -342,7 +347,7 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
                                     labels = seq(min.y, max.y, 2), 
                                     limits = c(min.y, max.y))
 
-      l4 <- l3 + theme(legend.position = 'bottom', 
+      l3 <- l2 + theme(legend.position = 'bottom', 
                        legend.key.width = unit(2, 'cm'),
                        legend.key.height = unit(0.5, 'cm'), 
                        legend.text = element_text(size = font.size),
@@ -357,9 +362,9 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
                        colour = guide_legend(nrow = 2, byrow = TRUE))
 
       # merge map of forward plume and latitude series, DW, 10/30/2018
-      p5 <- ggarrange(plotlist = list(p4, l4), heights = c(3, 2), nrow = 2, 
+      p5 <- ggarrange(plotlist = list(p4, l3), heights = c(3, 2), nrow = 2, 
                       labels = c('a)', 'b)'))
-      width  <- 10; height <- 13
+      width <- 10; height <- 13
     } else {  # if no intersection
 
       cat('ggplot.forward.trajec(): No intersection with OCO-2 track...return NA\n')
@@ -369,7 +374,7 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
       north.max.lat <- NA; south.min.lat <- NA; south.max.lat <- NA
 
       p5 <- p3  # pass the last fig to p5 and plot it later
-      width  <- 10; height <- 10
+      width <- 10; height <- 10
     }  # end if nrow(pol.obs)
 
     picname <- file.path(trajpath, paste0('forward_plume_', site, '_', timestr, 
