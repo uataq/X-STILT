@@ -108,7 +108,7 @@ run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
     bg.info <- ggplot.forward.trajec(ident, trajpath = outpath, site, timestr,
                                      oco2.path, oco2.ver, met, zoom, lon.lat,
                                      font.size = rel(1.2), td, bg.dlat, perc,
-                                     clean.side, data.filter)
+                                     clean.side)
     return(bg.info)
   } else {
     return()

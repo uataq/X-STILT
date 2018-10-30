@@ -18,14 +18,16 @@
 # add numbers of soundings used for background, DW, 09/05/2018
 # add background uncertainty (including spread sd + retrieval err), DW, 09/07/2018
 # bug fixed if there's no intersection between overpass and forward plume, DW, 10/03/2018
-
+# updates for b9r, ALWAYS use obs with QF = 0 for plotting and bg estimates, 
+#   get rid of data.filter, DW, 10/30/2018
+# merge two plots together if there's an intersection between overpass and plume,
+#   DW, 10/30/2018 
 
 ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path, 
                                   oco2.ver, met, zoom = 8, lon.lat, 
                                   font.size = rel(1.2), td = 0.05, 
                                   bg.dlat = 0.5, perc = 0.2, 
-                                  clean.side = c('north','south', 'both')[3],
-                                  data.filter = c('QF', 0)){
+                                  clean.side = c('north', 'south', 'both')[3]){
 
   # call grab.oco2() to read in observations and compute overpass time
   # lon.lat used for grabbing OCO2 should be wider, e.g., by 2 deg +
@@ -33,7 +35,7 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
   mod.lon.lat[, c('minlon', 'minlat')] <- mod.lon.lat[, c('minlon', 'minlat')] - 2
   mod.lon.lat[, c('maxlon', 'maxlat')] <- mod.lon.lat[, c('maxlon', 'maxlat')] + 2
 
-  obs <- grab.oco2(oco2.path, timestr, mod.lon.lat, oco2.ver)
+  obs <- grab.oco2(oco2.path, timestr, mod.lon.lat, oco2.ver) %>% filter(qf == 0)
   obs.datestr <- as.POSIXlt(as.character(obs$time),
                             format = '%Y-%m-%d %H:%M:%S', tz = 'UTC')
 
@@ -116,13 +118,12 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
                         size = 0.2, alpha = 0.5)
 
   # add observed soundings
-  max.y <- ceiling(max(obs[obs$qf == 0, 'xco2']))
-  min.y <- floor(min(obs[obs$qf == 0, 'xco2']))
+  max.y <- ceiling(max(obs$xco2)); min.y <- floor(min(obs$xco2))
 
   # only plot SCREENED data, QF == 0
   p2 <- p1 + 
-    geom_point(data = obs[obs$qf == 0, ], aes(lon, lat, fill = xco2),
-               shape = 21, colour = 'gray90') +
+    geom_point(data = obs, aes(lon, lat, fill = xco2), shape = 21, 
+               colour = 'gray90') +
     scale_fill_gradientn(colours = def.col(), name = 'XCO2',
                          limits = c(min.y, max.y), 
                          breaks = seq(min.y, max.y, 2),
@@ -159,21 +160,22 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
   p3 <- p2 + geom_polygon(data = bound.traj, aes(X, Y), colour = 'gray10',
                           linetype = 1, fill = NA, size = 0.9, alpha = 0.5)
 
+  title.p <- paste('Forward-time urban plume for overpass on', timestr)
+  p3 <- p3 + labs(x = 'LONGITUDE', y = 'LATITUDE', title = title.p)
+
   # further select OCO2 soundings over OCO-2 track
-  sel.obs <- obs %>%
-    filter(lat <= max(bound.traj$Y) & lat >= min(bound.traj$Y) &
-           lon <= max(bound.traj$X) & lon >= min(bound.traj$X))
+  sel.obs <- obs %>% filter(lat <= max(bound.traj$Y) & lat >= min(bound.traj$Y) &
+                            lon <= max(bound.traj$X) & lon >= min(bound.traj$X))
 
   if (nrow(sel.obs) == 0) {
 
-    cat('ggplot.forward.trajec(): no intersection with obs..return ggplot\n')
+    cat('ggplot.forward.trajec(): no intersection with screened obs..return NA\n')
+    
     # store plot even if there is no intersection
-    title <- paste('Forward-time urban plume for overpass on', timestr)
-    p3 <- p3 + labs(x = 'LONGITUDE', y = 'LATITUDE', title = title)
-    picname <- file.path(trajpath, paste0('urban_plume_forward_', site, '_', 
-                                          timestr, '_', met, '_', oco2.ver, '.png'))
-    ggsave(p3, filename = picname, width = 12, height = 12)
-    return(p3)
+    picname <- file.path(trajpath, paste0('forward_plume_', site, '_', timestr, 
+                                          '_', met, '_', oco2.ver, '.png'))
+    ggsave(p3, filename = picname, width = 10, height = 10)
+    return()
 
   } else {
 
@@ -199,17 +201,15 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
       p3 <- p3 + 
         geom_polygon(data = pol.bound, aes(X, Y), colour = 'gray50',
                      fill = 'gray40', alpha = 0.5) +
-        geom_point(data = pol.obs[pol.obs$qf == 0, ], aes(lon, lat, fill = xco2),
-                   shape = 21, colour = 'gray50')
-
-      p4 <- p3 + 
+        geom_point(data = pol.obs, aes(lon, lat, fill = xco2), shape = 21, 
+                   colour = 'gray50') + 
         annotate('text', x = unique(info$recp.lon) + mm[[3]],
                          y = unique(info$recp.lat) + mm[[2]] - 0.05, 
                          label = site, size = 6) +
         annotate('point', x = info$recp.lon + mm[[3]],
                           y = info$recp.lat + mm[[2]], size = 2, shape = 17)
 
-      p5 <- p4 + theme(legend.position = 'right',
+      p4 <- p3 + theme(legend.position = 'right',
                        legend.key.width = unit(0.5, 'cm'),
                        legend.key.height = unit(1.5, 'cm'),
                        legend.text = element_text(size = font.size),
@@ -219,16 +219,6 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
                        axis.text = element_text(size = font.size),
                        axis.ticks = element_line(size = font.size),
                        title = element_text(size = font.size))
-
-      # screen obs data
-      if (data.filter[1] == 'QF') {
-        scn.obs <- obs %>% filter(qf <= data.filter[2])
-        pol.scn.obs <- pol.obs %>% filter(qf <= data.filter[2])
-      }
-      if (data.filter[1] == 'WL') {
-        scn.obs <- obs %>% filter(wl <= data.filter[2])
-        pol.scn.obs <- pol.obs %>% filter(wl <= data.filter[2])
-      }
 
       # get Enhanced latitude range
       pol.min.lat <- min(pol.obs$lat)
@@ -245,17 +235,13 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
       north.min.lat <- pol.max.lat
       north.max.lat <- min(lon.lat$maxlat, pol.max.lat + bg.dlat)
       north.obs <- obs %>% filter(lat > north.min.lat & lat < north.max.lat)
-      north.bg  <- scn.obs %>% 
-         filter(lat > north.min.lat & lat < north.max.lat) %>% 
-         dplyr::summarize(mean = mean(xco2)) %>% as.numeric()
+      north.bg <- north.obs %>% dplyr::summarize(mean = mean(xco2)) %>% as.numeric()
 
       # south part
       south.min.lat <- max(lon.lat$minlat, pol.min.lat - bg.dlat)
       south.max.lat <- pol.min.lat
       south.obs <- obs %>% filter(lat > south.min.lat & lat < south.max.lat)
-      south.bg  <- scn.obs %>% 
-         filter(lat > south.min.lat & lat < south.max.lat) %>% 
-         dplyr::summarize(mean = mean(xco2)) %>% as.numeric()
+      south.bg <- south.obs %>% dplyr::summarize(mean = mean(xco2)) %>% as.numeric()
 
       # calculate background:
       if (clean.side == 'both') {
@@ -263,48 +249,42 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
         clean.obs <- rbind(north.obs, south.obs)
         clean.min.lat <- south.min.lat 
         clean.max.lat <- north.max.lat
-
         cat(paste('Background lat range:',  signif(north.min.lat, 4), '-',
-          signif(north.max.lat, 4), 'N + ', signif(south.min.lat, 4), '-',
-          signif(south.max.lat, 4), 'N\n'))
+                                            signif(north.max.lat, 4), 'N + ', 
+                                            signif(south.min.lat, 4), '-',
+                                            signif(south.max.lat, 4), 'N\n'))
 
       } else if (clean.side == 'north') {
 
         clean.obs <- north.obs 
         clean.min.lat <- north.min.lat 
         clean.max.lat <- north.max.lat 
-
         cat(paste('Background lat range:', signif(clean.min.lat, 4), '-',
-          signif(clean.max.lat, 4), '\n'))
+                                           signif(clean.max.lat, 4), '\n'))
 
       } else if (clean.side == 'south') {
         
         clean.obs <- south.obs 
         clean.min.lat <- south.min.lat 
         clean.max.lat <- south.max.lat 
-
         cat(paste('Background lat range:', signif(clean.min.lat, 4), '-',
-          signif(clean.max.lat, 4), '\n'))
+                                           signif(clean.max.lat, 4), '\n'))
 
       } else {
-        cat('Incorrect input of clean.side\n')
+        cat('Incorrect input of clean.side\n');return()
       } # end if clean.side
 
-      # filter by QF = 0 and then calculate numbers 
-      if (data.filter[1] == 'QF') 
-          clean.scn.obs <- clean.obs %>% filter(qf <= data.filter[2])
-      if (data.filter[1] == 'WL') 
-          clean.scn.obs <- clean.obs %>% filter(wl <= data.filter[2])
-      mean.bg   <- mean(clean.scn.obs$xco2, na.rm = T)
-      sd.spread <- sd(clean.scn.obs$xco2, na.rm = T)
+      mean.bg   <- mean(clean.obs$xco2, na.rm = T)
+      sd.spread <- sd(clean.obs$xco2, na.rm = T)
 
       # include retrieval error in background uncert, DW, 09/06/2018
-      sd.retriv <- sqrt(mean(clean.scn.obs$xco2.uncert^2))
-      bg.sd     <- sqrt(sd.spread^2 + sd.retriv^2)
-      num.bg    <- nrow(clean.scn.obs)
+      sd.retriv <- sqrt(mean(clean.obs$xco2.uncert ^ 2))
+      bg.sd  <- sqrt(sd.spread ^ 2 + sd.retriv ^ 2)
+      num.bg <- nrow(clean.obs)
 
       cat(paste('North:', signif(north.bg, 5),'ppm; South:',
-          signif(south.bg, 5),'ppm; Final:', signif(mean.bg, 5),'ppm..\n\n'))
+                          signif(south.bg, 5),'ppm; Final:', 
+                          signif(mean.bg, 5),'ppm..\n\n'))
 
       # ---------------------------------------------------------------------- #
       # plot latitude series as well 
@@ -316,13 +296,9 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
       l1 <- ggplot() + theme_bw() +
         geom_ribbon(data = bg.dat, aes(x, ymin = ymin, ymax = ymax),
                     colour = 'limegreen', fill = 'limegreen', alpha = 0.3) + 
-        geom_point(data = obs, aes(lat, xco2, fill = as.factor(1)),
+        geom_point(data = obs, aes(lat, xco2, fill = as.factor(2)),
                    colour = 'white', shape = 24, size = 3) + 
-        geom_point(data = scn.obs, aes(lat, xco2, fill = as.factor(2)),
-                   colour = 'white', shape = 24, size = 3) + 
-        geom_point(data = pol.obs, aes(lat, xco2, fill = as.factor(3)),
-                   colour = 'white', shape = 24,size = 3) + 
-        geom_point(data = pol.scn.obs, aes(lat, xco2, fill = as.factor(4)),
+        geom_point(data = pol.obs, aes(lat, xco2, fill = as.factor(4)),
                    colour = 'white', shape = 24, size = 3) + 
         geom_line(data = bg.dat, 
                   aes(x, y, colour = as.factor(6), linetype = as.factor(6)), 
@@ -352,17 +328,19 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
       col.val <- c('1' = 'gray80', '2' = 'black', '3' = 'pink', 
                    '4' = 'brown', '5' = 'deepskyblue', '6' = 'darkgreen')
       lt.val <- c('6' = 4, '5' = 1)
+      title.l <- paste('Demostration of overpass-specific background [ppm] for',
+                       site, 'on', timestr)
 
-      l3 <- l2 + 
-        scale_fill_manual(name = NULL, values = fill.val, labels = lab) + 
-        scale_colour_manual(name = NULL, values = col.val, labels = lab) + 
-        scale_linetype_manual(name = NULL, values = lt.val, labels = lab) +
-        #scale_shape_manual(name=NULL,values=c('1'=17,'2'=17,'3'=17,'4'=17,'5'=NA,'6'=NA),labels=lab)
-        labs(x = 'LATITUDE [deg N]', y = 'OBS [ppm]',
-             title = paste('Demostration of overpass-specific background [ppm] for',
-                          site, 'on', timestr)) + 
-        scale_x_continuous(breaks = seq(20, 30, 1), labels = seq(20, 30, 1), 
-                           limits = c(lon.lat$minlat, lon.lat$maxlat))
+      l3 <- l2 + scale_fill_manual(name = NULL, values = fill.val, labels = lab) + 
+                 scale_colour_manual(name = NULL, values = col.val, labels = lab) + 
+                 scale_linetype_manual(name = NULL, values = lt.val, labels = lab) +
+                 labs(x = 'LATITUDE [deg N]', y = 'OBS [ppm]', title = title.l) + 
+                 scale_x_continuous(breaks = seq(20, 30, 1), 
+                                    labels = seq(20, 30, 1), 
+                                    limits = c(lon.lat$minlat, lon.lat$maxlat)) + 
+                 scale_y_continuous(breaks = seq(min.y, max.y, 2), 
+                                    labels = seq(min.y, max.y, 2), 
+                                    limits = c(min.y, max.y))
 
       l4 <- l3 + theme(legend.position = 'bottom', 
                        legend.key.width = unit(2, 'cm'),
@@ -378,9 +356,10 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
                 guides(fill = guide_legend(nrow = 2, byrow = F),
                        colour = guide_legend(nrow = 2, byrow = TRUE))
 
-      picname <- file.path(trajpath, paste0('LS_forward_bg_', site, '_', timestr, '_', met, '.png'))
-      ggsave(l4, filename = picname, width = 13, height = 7)
-
+      # merge map of forward plume and latitude series, DW, 10/30/2018
+      p5 <- ggarrange(plotlist = list(p4, l4), heights = c(3, 2), nrow = 2)
+      width  <- 8
+      height <- 13
     } else {  # if no intersection
 
       cat('ggplot.forward.trajec(): No intersection with OCO-2 track...return NA\n')
@@ -390,14 +369,13 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
       north.max.lat <- NA; south.min.lat <- NA; south.max.lat <- NA
 
       p5 <- p3  # pass the last fig to p5 and plot it later
+      width  <- 10
+      height <- 10
     }  # end if nrow(pol.obs)
 
-    title <- paste('Forward-time urban plume for overpass on', timestr)
-    p5 <- p5 + labs(x = 'LONGITUDE', y = 'LATITUDE', title = title)
-
-    picname <- file.path(trajpath, paste0('urban_plume_forward_', site, '_', 
-                                          timestr, '_', met, '_', oco2.ver, '.png'))
-    ggsave(p5, filename = picname, width = 12, height = 12)
+    picname <- file.path(trajpath, paste0('forward_plume_', site, '_', timestr, 
+                                          '_', met, '_', oco2.ver, '.png'))
+    ggsave(p5, filename = picname, width = width, height = height)
 
     # also, return the max min latitude ranges for polluted range
     bg.info <- data.frame(timestr, north.bg, south.bg, final.bg = mean.bg,

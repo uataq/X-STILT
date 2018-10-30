@@ -161,7 +161,8 @@ if (method == 'M3') {
   for (t in 1 : length(all.timestr)) {
 
     timestr <- all.timestr[t]
-    cat(paste('\n\n## ----- working on overpass on', timestr, '----- ##\n'))
+      cat(paste('\n\n## ----- working on city', site, 
+                     'for the overpass on', timestr, '----- ##\n'))
 
    #------------------------------ STEP 3 --------------------------------- #
     ## get horizontal transport error component if run_hor_err = T
@@ -187,11 +188,11 @@ if (method == 'M3') {
                                    outpath, hor.err, pbl.err, met, met.format, 
                                    met.path, met.num = 1, plotTF, oco2.path, 
                                    oco2.ver, zoom = 7, td = 0.05, bg.dlat = 1, 
-                                   perc = 0.1, clean.side = clean.side[t],
-                                   data.filter)
-    if (is.null(tmp.info) | 'ggplot' %in% class(tmp.info)) next
+                                   perc = 0.1, clean.side = clean.side[t])
+    if (is.null(tmp.info)) next
     bg.info <- rbind(bg.info, tmp.info)
   } # end for t
 
-  write.table(bg.info, quote = F, row.names = F, sep = ',', file = txtfile)
+  if (plotTF) 
+    write.table(bg.info, quote = F, row.names = F, sep = ',', file = txtfile)
 } # end if method == 'M3'
