@@ -7,10 +7,12 @@
 # use variables instead of namelist, DW, 07/25/2018
 # for generating trajec with horizontal error compoennt,
 # use the same lat.lon from original trajec, DW, 07/31/2018
+# add run_trajec, if run_trajec == T, always recalculate 'recp.info', 
+#   rather than grab from exising trajec, DW, 10/30/2018
 
 get.recp.info <- function(timestr, oco2.ver, oco2.path, lon.lat, selTF, recp.indx,
                           recp.num, find.lat, agl, plotTF = F, trajpath = NULL, 
-                          stilt.ver = 2, data.filter = c('QF', 0)){
+                          run_trajec, stilt.ver = 2, data.filter = c('QF', 0)){
 
   # ------------------- Step 1. READ IN OCO-2 LITE FILES ------------------- #
   oco2 <- grab.oco2(oco2.path, timestr, lon.lat, oco2.ver)
@@ -59,8 +61,9 @@ get.recp.info <- function(timestr, oco2.ver, oco2.path, lon.lat, selTF, recp.ind
   trajfile  <- list.files(path = trajpath, pattern = 'X_traj.rds',
                           recursive = T, full.names = T)
 
-  if (length(trajfile) > 0) {
+  if (length(trajfile) > 0 & !run_trajec) {
 
+    # if trajec data exists
     trajname  <- basename(trajfile)
     recp.info <- ident.to.info(ident = trajname, stilt.ver = stilt.ver)
 

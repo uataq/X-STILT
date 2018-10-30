@@ -223,7 +223,7 @@ find.lat <- NULL     # for debug or test, model one sounding
 # data.filter: use WL or QF to filter data, default is QF = 0
 recp.info <- get.recp.info(timestr, oco2.ver, oco2.path, lon.lat, selTF, 
                            recp.indx, recp.num, find.lat, agl, plotTF = F, 
-                           trajpath = file.path(outdir, 'by-id'), 
+                           trajpath = file.path(outdir, 'by-id'), run_trajec,
                            stilt.ver, data.filter = c('QF', 0))
 nrecp <- nrow(recp.info)
 cat(paste('Done with receptor setup...total', nrecp, 'receptors..\n'))
