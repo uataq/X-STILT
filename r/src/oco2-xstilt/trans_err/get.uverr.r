@@ -8,13 +8,14 @@
 # on e can also customize them as an input
 #
 # 'overwrite': T for re-interpolating raob and met winds (using get.ground.hgt.r)
+# 'err.path': path that store NOAA RAOB data
 
 get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
                       raob.path = NULL, raob.format = c('fsl', 'ncdf'), 
-                      nhrs = -120, met = c('gdas1', 'gdas0p5', 'hrrr'), 
-                      met.path, met.format, met.files = NULL, lon.lat, agl, 
-                      TLuverr = NULL, zcoruverr = NULL, horcoruverr = NULL, 
-                      nfTF = F, forwardTF = F, err.path) {
+                      nhrs = -120, met = c('gdas1', 'gdas0p5', 'hrrr')[2], 
+                      met.path, met.format, met.files = NULL, lon.lat, agl,  
+                      nfTF = F, forwardTF = F, err.path, siguverr = 2, 
+                      TLuverr = NULL, zcoruverr = NULL, horcoruverr = NULL) {
 
   if (run_hor_err) {
 
@@ -27,16 +28,20 @@ get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
     if (met == 'edas40') {TLuverr <- 1*60; zcoruverr <- 600; horcoruverr <- 40}
 
     # grab modeled winds, *** if no file found, this takes a long time to run
-    raob.file <- file.path(err.path, paste0(site, '_', met, '_rad_', timestr, '.txt'))
+    raob.file <- file.path(err.path, 
+                           paste0(site, '_', met, '_rad_', timestr, '.txt'))
 
-    if (!file.exists(raob.file)) {
+    if (!file.exists(raob.file) & overwrite == F) {
+
+      # if one does not want to run wind error analysis and no RAOB file found
       cat('no wind error comparisons found; 
-           make a consevative assumption of siguverr of 2 m/s...\n')
+           make a consevative assumption for siguverr;
+           use prescribed RMSE wind error or a default error of 2 m/s for the Middle East...\n')
       err.stat <- NULL
 
-      # make a conservative assumption about the wind error, for the Middle East
-      siguverr <- 2  # < 2 m/s for GDAS 1deg, based on Wu et al., GMDD
-      err.stat$siguverr  <- siguverr
+      # make a conservative assumption about the wind error, or use prescribed #
+      # < 2 m/s for GDAS 0.5deg for the Middle East, based on Wu et al., GMDD
+      err.stat$siguverr <- siguverr
 
     } else {
       met.raob <- cal.met.wind(filename = raob.file, met, met.path, met.format, 

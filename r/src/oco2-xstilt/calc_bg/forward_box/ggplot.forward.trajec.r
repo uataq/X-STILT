@@ -21,7 +21,7 @@
 
 
 ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path, 
-                                  oco2.ver, zoom = 8, lon.lat, 
+                                  oco2.ver, met, zoom = 8, lon.lat, 
                                   font.size = rel(1.2), td = 0.05, 
                                   bg.dlat = 0.5, perc = 0.2, 
                                   clean.side = c('north','south', 'both')[3],
@@ -33,7 +33,7 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
   mod.lon.lat[, c('minlon', 'minlat')] <- mod.lon.lat[, c('minlon', 'minlat')] - 2
   mod.lon.lat[, c('maxlon', 'maxlat')] <- mod.lon.lat[, c('maxlon', 'maxlat')] + 2
 
-  obs <- grab.oco2(oco2.path, timestr, mod.lon.lat)
+  obs <- grab.oco2(oco2.path, timestr, mod.lon.lat, oco2.ver)
   obs.datestr <- as.POSIXlt(as.character(obs$time),
                             format = '%Y-%m-%d %H:%M:%S', tz = 'UTC')
 
@@ -71,9 +71,8 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
   min.datestr <- min(info$rel.date)
 
   # compute POSIXct time each particle and crop traj based on overpass duration
-  sel.trajdat <- trajdat %>% 
-    mutate(datestr = min.datestr + time * 60) %>%
-    filter(datestr >= min.xtime & datestr <= max.xtime)
+  sel.trajdat <- trajdat %>% mutate(datestr = min.datestr + time * 60) %>%
+                             filter(datestr >= min.xtime & datestr <= max.xtime)
 
   # load map
   mm <- ggplot.map(map = 'ggmap', center.lon = unique(info$recp.lon),
@@ -114,7 +113,7 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
   } # end for u
 
   p1 <- p1 + geom_point(data = sel.trajdat, aes(lon, lat, colour = dens.level),
-    size = 0.2, alpha = 0.5)
+                        size = 0.2, alpha = 0.5)
 
   # add observed soundings
   max.y <- ceiling(max(obs[obs$qf == 0, 'xco2']))
@@ -168,6 +167,12 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
   if (nrow(sel.obs) == 0) {
 
     cat('ggplot.forward.trajec(): no intersection with obs..return ggplot\n')
+    # store plot even if there is no intersection
+    title <- paste('Forward-time urban plume for overpass on', timestr)
+    p3 <- p3 + labs(x = 'LONGITUDE', y = 'LATITUDE', title = title)
+    picname <- file.path(trajpath, paste0('urban_plume_forward_', site, '_', 
+                                          timestr, '_', met, '_', oco2.ver, '.png'))
+    ggsave(p3, filename = picname, width = 12, height = 12)
     return(p3)
 
   } else {
@@ -234,7 +239,7 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
       pol.min.lat <- pol.min.lat - dlat * perc
       pol.max.lat <- pol.max.lat + dlat * perc
       cat(paste('Enhanced lat range:', signif(pol.min.lat, 4), '-',
-        signif(pol.max.lat, 4),'N\n'))
+                signif(pol.max.lat, 4),'N\n'))
 
       # north part
       north.min.lat <- pol.max.lat
@@ -354,7 +359,7 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
         scale_linetype_manual(name = NULL, values = lt.val, labels = lab) +
         #scale_shape_manual(name=NULL,values=c('1'=17,'2'=17,'3'=17,'4'=17,'5'=NA,'6'=NA),labels=lab)
         labs(x = 'LATITUDE [deg N]', y = 'OBS [ppm]',
-            title = paste('Demostration of overpass-specific background [ppm] for',
+             title = paste('Demostration of overpass-specific background [ppm] for',
                           site, 'on', timestr)) + 
         scale_x_continuous(breaks = seq(20, 30, 1), labels = seq(20, 30, 1), 
                            limits = c(lon.lat$minlat, lon.lat$maxlat))
@@ -373,7 +378,7 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
                 guides(fill = guide_legend(nrow = 2, byrow = F),
                        colour = guide_legend(nrow = 2, byrow = TRUE))
 
-      picname <- file.path(trajpath, paste0('LS_forward_bg_', site, '_', timestr, '.png'))
+      picname <- file.path(trajpath, paste0('LS_forward_bg_', site, '_', timestr, '_', met, '.png'))
       ggsave(l4, filename = picname, width = 13, height = 7)
 
     } else {  # if no intersection
@@ -390,8 +395,8 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
     title <- paste('Forward-time urban plume for overpass on', timestr)
     p5 <- p5 + labs(x = 'LONGITUDE', y = 'LATITUDE', title = title)
 
-    picname <- file.path(trajpath, 
-      paste0('urban_plume_forward_', site, '_', timestr, '_', oco2.ver, '.png'))
+    picname <- file.path(trajpath, paste0('urban_plume_forward_', site, '_', 
+                                          timestr, '_', met, '_', oco2.ver, '.png'))
     ggsave(p5, filename = picname, width = 12, height = 12)
 
     # also, return the max min latitude ranges for polluted range

@@ -18,9 +18,9 @@
 run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
                                lon.lat, delt, dxyp, dzp, dtime, agl, numpar, 
                                nhrs, workdir, outpath = NULL, hor.err = NULL, 
-                               pbl.err = NULL, met.format, met.path, met.num = 1, 
-                               plotTF = F, oco2.path, oco2.ver, zoom = 8, 
-                               td = 0.05, bg.dlat = 0.5, perc = 0.2,
+                               pbl.err = NULL, met, met.format, met.path, 
+                               met.num = 1, plotTF = F, oco2.path, oco2.ver, 
+                               zoom = 8, td = 0.05, bg.dlat = 0.5, perc = 0.2,
                                clean.side = c('north', 'south', 'both')[3], 
                                data.filter = c('QF', 0)){
 
@@ -59,7 +59,7 @@ run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
 
     # delete previous directories and then create new one
     system(paste0('rm -rf ', outpath), ignore.stderr = T)
-    dir.create(outpath, showWarnings = FALSE)
+    dir.create(outpath, showWarnings = FALSE, recursive = T)
 
     # linking AER_NOAA_branch's hymodelc and other executables to outpath
     exes <- list.files(file.path(workdir, 'exe/AER_NOAA_branch'))
@@ -75,10 +75,10 @@ run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
     for (r in 1:length(rel.date))
       metfiles <- c(metfiles, find_met_files(t_start = rel.date[r],
                                              met_file_format = met.format,
-                                             n_hours = nhrs,
-                                             met_loc = met.path))
+                                             n_hours = nhrs, met_loc = met.path))
     metfiles <- basename(unique(metfiles))
-
+    if (length(metfiles) == 0) {cat('No meteo fields found...please check'); return()}
+    
     #### try box receptors/sources, DW, 11/08/2017
     # the updated Trajecmulti() and fortran codes will randomly place receptors
     # according to dxyp
@@ -105,14 +105,16 @@ run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
 
   # if plotting...
   if (plotTF) {
-    bg.info <- ggplot.forward.trajec(ident = ident, trajpath = outpath,
-                                     site = site, timestr = timestr,
-                                     oco2.path = oco2.path,
-                                     oco2.ver = oco2.ver, zoom = zoom,
-                                     lon.lat = lon.lat, td = td,
-                                     perc = perc, bg.dlat = bg.dlat,
-                                     clean.side = clean.side,
-                                     data.filter = data.filter)
+                                  oco2.ver, met, zoom = 8, lon.lat, 
+                                  font.size = rel(1.2), td = 0.05, 
+                                  bg.dlat = 0.5, perc = 0.2, 
+                                  clean.side = c('north','south', 'both')[3],
+                                  data.filter = c('QF', 0)
+
+    bg.info <- ggplot.forward.trajec(ident, trajpath = outpath, site, timestr,
+                                     oco2.path, oco2.ver, met, zoom, lon.lat,
+                                     font.size = rel(1.2), td, bg.dlat, perc,
+                                     clean.side, data.filter)
     return(bg.info)
   } else {
     return()

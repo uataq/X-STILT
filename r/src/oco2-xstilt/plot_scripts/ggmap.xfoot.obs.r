@@ -3,14 +3,16 @@
 
 # add the sum of foot in plotted region, DW, 07/18/2018
 # last update, DW, 08/22/2018
+# if no OCO-2 path, do not plot observed XCO2, DW, 10/29/2018
 
-ggmap.xfoot.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path, facet.nrow, 
-                            nhrs, dpar, foot.sf, zisf, met, stilt.ver, timestr, 
-                            font.size = rel(0.9), recp.lon, recp.lat, foot, 
-                            min.foot.sig = 1E-6, max.foot.sig = 1E-2, 
-                            titleTF = T, sumTF = T, qfTF = T, picname, 
-                            storeTF = T, width = 12, height = 8, anthromesTF = F, 
-                            anthro.path = NULL, leg.pos = c('bottom', 'right')[1]){
+ggmap.xfoot.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path = NULL, 
+                            facet.nrow, nhrs, dpar, foot.sf, zisf, met, 
+                            stilt.ver, timestr, font.size = rel(0.9), recp.lon, 
+                            recp.lat, foot, min.foot.sig = 1E-6, 
+                            max.foot.sig = 1E-2, titleTF = T, sumTF = T, 
+                            qfTF = T, picname, storeTF = T, width = 12, 
+                            height = 8, anthromesTF = F, anthro.path = NULL, 
+                            leg.pos = c('bottom', 'right')[1]){
 
   col <- def.col()
   m1 <- mm[[1]] + theme_bw() + coord_equal(1.1)
@@ -21,10 +23,11 @@ ggmap.xfoot.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path, facet.nrow,
                         minlat = min(mm[[1]]$data$lat),
                         maxlat = max(mm[[1]]$data$lat))
 
-  cat('Reading OCO-2 data according to the spatial domain of ggmap...\n')
-  obs <- grab.oco2(ocopath = oco2.path, timestr = timestr, lon.lat = map.ext, 
-                   oco2.ver = oco2.ver)
-  qf.obs <- obs %>% filter(qf == 0)
+  if (!is.null(oco2.path)) {
+    cat('Reading OCO-2 data according to the spatial domain of ggmap...\n')
+    obs <- grab.oco2(ocopath = oco2.path, timestr, lon.lat = map.ext, oco2.ver)
+    qf.obs <- obs %>% filter(qf == 0)
+  }
 
   # select footprints using map.ext
   sel.foot <- foot %>% filter(lon >= map.ext$minlon & lon <= map.ext$maxlon &
@@ -76,19 +79,21 @@ ggmap.xfoot.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path, facet.nrow,
   } # end if
 
   # plot observed XCO2, add footprint raster layer
-  if (qfTF) {
-    p2 <- p1 + geom_point(data = qf.obs, aes(lon, lat, colour = xco2), size = 0.4)
-    min.y <- floor(min(qf.obs$xco2, na.rm = T))
-    max.y <- ceiling(max(qf.obs$xco2, na.rm = T))
+  if (!is.null(oco2.path)) {
+    if (qfTF) {
+      p1 <- p1 + geom_point(data = qf.obs, aes(lon, lat, colour = xco2), size = 0.4)
+      min.y <- floor(min(qf.obs$xco2, na.rm = T))
+      max.y <- ceiling(max(qf.obs$xco2, na.rm = T))
 
-  } else {
-    p2 <- p1 + geom_point(data = obs, aes(lon, lat, colour = xco2), size = 0.4)
-    min.y <- floor(min(obs$xco2, na.rm = T))
-    max.y <- ceiling(max(obs$xco2, na.rm = T))
-  }  # end if qfTF 
+    } else {
+      p1 <- p1 + geom_point(data = obs, aes(lon, lat, colour = xco2), size = 0.4)
+      min.y <- floor(min(obs$xco2, na.rm = T))
+      max.y <- ceiling(max(obs$xco2, na.rm = T))
+    }  # end if qfTF 
+  }
 
   lab <- 10 ^ seq(-10, 2, 1)
-  p2 <- p2 + 
+  p2 <- p1 + 
     geom_raster(data = sel.foot, aes(lon + mm[[3]], lat + mm[[2]], fill = foot),
                 alpha = 0.8) +
     scale_fill_gradientn(limits = c(min.foot.sig, max.foot.sig), 
@@ -113,16 +118,18 @@ ggmap.xfoot.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path, facet.nrow,
                    axis.ticks = element_line(size = font.size),
                    title = element_text(size = font.size))
 
-  breaks <- seq(min.y, max.y, 2)
-  p4 <- p3 + scale_colour_gradientn(name = 'OBS XCO2\n(ppm):', colours = col,
-                                    limits = c(min.y, max.y), breaks = breaks, 
-                                    labels = breaks) + 
-             guides(colour = guide_colourbar(order = 2))
+  if (!is.null(oco2.path)) {
+    breaks <- seq(min.y, max.y, 2)
+    p3 <- p3 + scale_colour_gradientn(name = 'OBS XCO2\n(ppm):', colours = col,
+                                      limits = c(min.y, max.y), breaks = breaks, 
+                                      labels = breaks) + 
+              guides(colour = guide_colourbar(order = 2))
+  }
 
   if (leg.pos == 'bottom') 
-    p4 <- p4 + guides(fill = guide_legend(order = 1, nrow = 2, byrow = T))
+    p4 <- p3 + guides(fill = guide_legend(order = 1, nrow = 2, byrow = T))
   if (leg.pos == 'right') 
-    p4 <- p4 + guides(fill = guide_legend(order = 1, ncol = 1))
+    p4 <- p3 + guides(fill = guide_legend(order = 1, ncol = 1))
 
   if (anthromesTF) {
     atm <- ggmap.anthromes(lon.lat, anthro.path, mm = NULL, site = site)
@@ -144,7 +151,8 @@ ggmap.xfoot.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path, facet.nrow,
   } # end if anthromes
 
   print(picname)
-  if (storeTF) ggsave(p4, file = picname, width = width, height = height)
+  if (storeTF) 
+    ggsave(p4, file = picname, width = width, height = height, dpi = 300)
 
   return(p4)
 }

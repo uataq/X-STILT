@@ -34,8 +34,8 @@ calc.M2H.bg <- function(lon.lat, all.timestr, output.path, oco2.ver, oco2.path,
             maxlat = reg.lon.lat$maxlat, maxlon = reg.lon.lat$maxlon)
 
         # grab observations, default is to filter QF = 0
-        obs <- grab.oco2(oco2.path, timestr, reg.lon.lat) %>% 
-            filter(qf == 0)
+        obs <- grab.oco2(oco2.path, timestr, reg.lon.lat, oco2.ver) %>% 
+               filter(qf == 0)
 
         if (plotTF) {
             title <- paste('Observed XCO2 (QF = 0) for overpass on', timestr, 

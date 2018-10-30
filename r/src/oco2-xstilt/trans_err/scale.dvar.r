@@ -1,5 +1,6 @@
 ## subroutine to fit linear regression and get ggplots for linear regression plots
 # outputs are linear regression line, CO2 statiatics, and ggplot
+# see Appendix of Wu et al., 2018, GMD for details
 # written by DW, 03/15/2018
 
 # generalize and clear up codes, DW, 07/23/2018

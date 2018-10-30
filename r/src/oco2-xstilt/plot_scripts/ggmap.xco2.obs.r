@@ -19,8 +19,7 @@ ggmap.xco2.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path, facet.nrow,
                         minlat = min(mm[[1]]$data$lat),
                         maxlat = max(mm[[1]]$data$lat))
   cat('Reading OCO-2 data according to the spatial domain of ggmap...\n')
-  obs <- grab.oco2(ocopath = oco2.path, timestr = timestr, lon.lat = map.ext, 
-                   oco2.ver = oco2.ver)
+  obs <- grab.oco2(ocopath = oco2.path, timestr, lon.lat = map.ext, oco2.ver)
   qf.obs <- obs %>% filter(qf == 0)
 
   # select xco2 using map.ext

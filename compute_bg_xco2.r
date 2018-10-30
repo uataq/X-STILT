@@ -92,7 +92,8 @@ if (method == 'M2S') {
   for (t in 1:length(all.timestr)) {
 
     # grab observations and calculate the mean and SD
-    obs    <- grab.oco2(oco2.path, all.timestr[t], lon.lat) %>% filter(qf == 0)
+    obs    <- grab.oco2(oco2.path, all.timestr[t], lon.lat, oco2.ver) %>% 
+              filter(qf == 0)
     tmp.bg <- as.numeric(fitdistr(obs$xco2, 'normal')$estimate[1]) -
               as.numeric(fitdistr(obs$xco2, 'normal')$estimate[2])
     silva.bg <- c(silva.bg, tmp.bg)

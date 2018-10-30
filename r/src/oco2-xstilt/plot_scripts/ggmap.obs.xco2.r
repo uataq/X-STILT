@@ -8,7 +8,7 @@ ggmap.obs.xco2 <- function(site, timestr, oco2.ver, oco2.path, lon.lat, workdir,
                            qfTF = F, box.dlat = 0.5, box.dlon = 0.5){
 
   library(ggmap); library(ggplot2)
-  obs.all <- grab.oco2(ocopath = oco2.path, timestr, lon.lat)
+  obs.all <- grab.oco2(ocopath = oco2.path, timestr, lon.lat, oco2.ver)
 
   # plot google map
   alpha <- 1; font.size <- rel(0.9); col <- def.col()

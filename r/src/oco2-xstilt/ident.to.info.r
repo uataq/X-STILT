@@ -21,6 +21,7 @@ ident.to.info <- function(ident, stilt.ver, aglTF = T){
     # each ident could have different format, thus, do a loop -->
     all.recp <- NULL; all.agl  <- NULL
     for (i in 1 : length(ident)){
+
       tmp.ncol  <- ncol[i]
       tmp.ident <- ident[i]
       tmp.info  <- unlist(strsplit(tmp.ident, 'x'))
@@ -53,8 +54,8 @@ ident.to.info <- function(ident, stilt.ver, aglTF = T){
       recp.lon <- as.numeric(substr(tmp.info$lon, 1, nchar(tmp.info$lon) - 1))
 
       # if for western or southern hemisphere
-      if (grepl('W',tmp.info$lon)) recp.lon <- recp.lon * (-1)
-      if (grepl('S',tmp.info$lon)) recp.lat <- recp.lat * (-1)
+      if (grepl('W', tmp.info$lon)) recp.lon <- recp.lon * (-1)
+      if (grepl('S', tmp.info$lat)) recp.lat <- recp.lat * (-1)
 
       npar <- as.numeric(gsub('P', '', tmp.info$numpar))
       agl.info <- as.character(tmp.info$agl)  # get AGL info, 'agl.info'

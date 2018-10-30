@@ -8,12 +8,12 @@
 # for generating trajec with horizontal error compoennt,
 # use the same lat.lon from original trajec, DW, 07/31/2018
 
-get.recp.info <- function(timestr, oco2.path, lon.lat, selTF, recp.indx,
+get.recp.info <- function(timestr, oco2.ver, oco2.path, lon.lat, selTF, recp.indx,
                           recp.num, find.lat, agl, plotTF = F, trajpath = NULL, 
                           stilt.ver = 2, data.filter = c('QF', 0)){
 
   # ------------------- Step 1. READ IN OCO-2 LITE FILES ------------------- #
-  oco2 <- grab.oco2(oco2.path, timestr, lon.lat)
+  oco2 <- grab.oco2(oco2.path, timestr, lon.lat, oco2.ver)
 
   # filter by quality flag too, more receptors when XCO2 is high
   if (data.filter[1] == 'QF') sel.oco2 <- oco2 %>% filter(qf <= data.filter[2])
