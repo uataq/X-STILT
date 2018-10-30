@@ -334,9 +334,9 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
       l3 <- l2 + scale_fill_manual(name = NULL, values = fill.val, labels = lab) + 
                  scale_colour_manual(name = NULL, values = col.val, labels = lab) + 
                  scale_linetype_manual(name = NULL, values = lt.val, labels = lab) +
-                 labs(x = 'LATITUDE [deg N]', y = 'OBS [ppm]', title = title.l) + 
-                 scale_x_continuous(breaks = seq(20, 30, 1), 
-                                    labels = seq(20, 30, 1), 
+                 labs(x = 'LATITUDE [deg]', y = 'OBS with QF = 0 [ppm]', title = title.l) + 
+                 scale_x_continuous(breaks = seq(-90, 90, 0.4), 
+                                    labels = seq(-90, 90, 0.4), 
                                     limits = c(lon.lat$minlat, lon.lat$maxlat)) + 
                  scale_y_continuous(breaks = seq(min.y, max.y, 2), 
                                     labels = seq(min.y, max.y, 2), 
@@ -357,9 +357,9 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
                        colour = guide_legend(nrow = 2, byrow = TRUE))
 
       # merge map of forward plume and latitude series, DW, 10/30/2018
-      p5 <- ggarrange(plotlist = list(p4, l4), heights = c(3, 2), nrow = 2)
-      width  <- 8
-      height <- 13
+      p5 <- ggarrange(plotlist = list(p4, l4), heights = c(3, 2), nrow = 2, 
+                      labels = c('a)', 'b)'))
+      width  <- 10; height <- 13
     } else {  # if no intersection
 
       cat('ggplot.forward.trajec(): No intersection with OCO-2 track...return NA\n')
@@ -369,8 +369,7 @@ ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
       north.max.lat <- NA; south.min.lat <- NA; south.max.lat <- NA
 
       p5 <- p3  # pass the last fig to p5 and plot it later
-      width  <- 10
-      height <- 10
+      width  <- 10; height <- 10
     }  # end if nrow(pol.obs)
 
     picname <- file.path(trajpath, paste0('forward_plume_', site, '_', timestr, 
