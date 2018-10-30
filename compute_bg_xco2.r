@@ -135,13 +135,13 @@ if (method == 'M3') {
   #------------------------------ STEP 2 --------------------------------- #
   # path for the ARL format of WRF and GDAS
   # simulation_step() will find corresponding met files
-  met.indx   <- 3
-  met        <- c('hrrr', '1km', 'gdas0p5', 'edas40')[met.indx]
+  met.indx   <- 2
+  met        <- c('hrrr', 'gdas0p5', 'edas40')[met.indx]
   met.path   <- file.path(homedir, 'u0947337', met)
   met.num    <- 1     # min number of met files needed
 
   # met file name convention
-  met.format <- c('%Y%m%d.%Hz.hrrra', 'wrfout_', '%Y%m%d_gdas0p5', 'edas.%Y%m')[met.indx]
+  met.format <- c('%Y%m%d.%Hz.hrrra', '%Y%m%d_gdas0p5', 'edas.%Y%m')[met.indx]
   
   # plot will be stored in 'outpath' as well
   if (run_trajec == T) outpath <- NULL  # will be generated in copies
@@ -181,20 +181,15 @@ if (method == 'M3') {
     #------------------------------ STEP 4 -------------------------------- #
     # !!! need to add makefile for AER_NOAA_branch in fortran ;
     # link two hymodelcs in exe directory
-    tmp.info <- run.forward.trajec(site = site, timestr = timestr,
-                                   overwrite = run_trajec, nummodel = t,
-                                   lon.lat = lon.lat, delt = delt, dxyp = dxyp,
-                                   dzp = 0, dtime = dtime, agl = agl,
-                                   numpar = numpar, nhrs = nhrs,
-                                   workdir = workdir, outpath = outpath,
-                                   hor.err = hor.err, pbl.err = pbl.err,
-                                   met.format = met.format, met.path = met.path,
-                                   met.num = 1, plotTF = plotTF,
-                                   oco2.path = oco2.path, oco2.ver = oco2.ver,
-                                   zoom = 7, td = 0.05, bg.dlat = 1,
+    tmp.info <- run.forward.trajec(site, timestr, overwrite = run_trajec, 
+                                   nummodel, lon.lat, delt, dxyp, dzp = 0, 
+                                   dtime, agl, numpar, nhrs, workdir, 
+                                   outpath, hor.err, pbl.err, met, met.format, 
+                                   met.path, met.num = 1, plotTF, oco2.path, 
+                                   oco2.ver, zoom = 7, td = 0.05, bg.dlat = 1, 
                                    perc = 0.1, clean.side = clean.side[t],
-                                   data.filter = data.filter)
-    if (is.null(tmp.info)) next
+                                   data.filter)
+    if (is.null(tmp.info) | 'ggplot' %in% class(tmp.info)) next
     bg.info <- rbind(bg.info, tmp.info)
   } # end for t
 

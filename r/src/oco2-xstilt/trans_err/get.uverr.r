@@ -51,7 +51,7 @@ get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
       # call get.SIGUVERR() to interpolate most near-field wind errors
       err.stat <- get.siguverr(met.raob, nfTF, forwardTF, lon.lat, nhrs, agl, 
                                recp.time = timestr)
-      siguverr <- err.stat$siguverr
+      if (!is.null(err.stat)) siguverr <- err.stat$siguverr
     }  # end if file.exists
   
     cat(paste('SIGUVERR:', signif(siguverr, 3), 'm/s..\n'))
