@@ -14,6 +14,7 @@
 # in different Copies; make sure different nummodels are used for different
 # overpass events, DW, 07/31/2018
 # add customized data filtering, DW, 08/20/2018
+# remove data filtering, always use QF = 0 for background estimates, DW, 10/31/2018
 
 run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
                                lon.lat, delt, dxyp, dzp, dtime, agl, numpar, 
@@ -21,8 +22,7 @@ run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
                                pbl.err = NULL, met, met.format, met.path, 
                                met.num = 1, plotTF = F, oco2.path, oco2.ver, 
                                zoom = 7, td = 0.05, bg.dlat = 0.5, perc = 0.2,
-                               clean.side = c('north', 'south', 'both')[3], 
-                               data.filter = c('QF', 0)){
+                               clean.side = c('north', 'south', 'both')[3]){
 
   # get lat/lon for city center
   clon <- signif(lon.lat$citylon, 6)

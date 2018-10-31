@@ -12,18 +12,19 @@
 #' add background uncertainty (including spread sd + retrieval err), DW, 09/07/2018
 #' add CT-derived background M1, DW, 09/14/2018
 #' update code according to v9 changes, DW, 10/19/2018
+#' remove data filtering, always use QF = 0 for background estimates, DW, 10/31/2018
 
 ## source all functions and load all libraries
 # CHANGE working directory ***
 homedir <- '/uufs/chpc.utah.edu/common/home'
-workdir <- file.path(homedir, 'lin-group5/wde/github/XSTILT') #current dir
+workdir <- file.path(homedir, 'lin-group7/wde/github/XSTILT') #current dir
 setwd(workdir)   # move to working directory
 source('r/dependencies.r') # source all functions
 
 
 # insert your API for the use of ggplot and ggmap
 api.key <- ''
-register_google(api.key)
+register_google(key = api.key)
 
 
 #------------------------------ STEP 1 --------------------------------------- #
@@ -39,7 +40,7 @@ oco2.ver <- c('b7rb', 'b8r', 'b9r')[1]  # OCO-2 version
 method <- c('M1', 'M2H', 'M2S', 'M3')[4]
 
 ## output and input paths, txtfile name for storing background values
-input.path  <- file.path(homedir, 'lin-group5/wde/input_data')
+input.path  <- file.path(homedir, 'lin-group7/wde/input_data')
 output.path <- file.path(workdir, gsub(' ', '', lon.lat$regid), site)
 txtfile     <- file.path(output.path, 
                          paste0(method, '_bg_', site, '_', oco2.ver, '.txt'))
@@ -49,7 +50,7 @@ oco2.path   <- file.path(input.path, 'OCO-2/L2', paste0('OCO2_lite_', oco2.ver))
 txt.path   <- file.path(input.path, 'OCO-2/overpass_city') 
 oco2.track <- get.site.track(site, oco2.ver, oco2.path, searchTF = F,
                              date.range = c('20140901', '20181231'), 
-                             thred.count.per.deg = 200, lon.lat = lon.lat, 
+                             thred.count.per.deg = 100, lon.lat = lon.lat, 
                              urbanTF = T, dlon.urban = 0.5, dlat.urban = 0.5,
                              thred.count.per.deg.urban = 100, txt.path) %>% 
               filter(qf.urban.count > 80)
@@ -146,7 +147,6 @@ if (method == 'M3') {
   # plot will be stored in 'outpath' as well
   if (run_trajec == T) outpath <- NULL  # will be generated in copies
   if (run_trajec == F) outpath <- file.path(output.path, 'out_forward/') 
-  data.filter <- c('QF', 0)      # data filtering on observations
 
   # **** NEED CHANGES: which side for background, north, south, or both
   # can be interpolated from forward-plume, after being generated
