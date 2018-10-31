@@ -47,7 +47,7 @@
 #### source all functions and load all libraries
 # CHANGE working directory ***
 homedir <- '/uufs/chpc.utah.edu/common/home'
-workdir <- file.path(homedir, 'lin-group5/wde/github/XSTILT') # current dir
+workdir <- file.path(homedir, 'lin-group7/wde/github/XSTILT') # current dir
 setwd(workdir)   # move to working directory
 source('r/dependencies.r') # source all functions
 
@@ -62,8 +62,8 @@ site <- 'Riyadh'   # choose a city
 lon.lat <- get.lon.lat(site = site, dlon = 1, dlat = 1.5)
 
 # required paths
-oco2.ver   <- c('b7rb', 'b8r', 'b9r')[3]  # OCO-2 version
-input.path <- file.path(homedir, 'lin-group5/wde/input_data')
+oco2.ver   <- c('b7rb', 'b8r', 'b9r')[1]  # OCO-2 version
+input.path <- file.path(homedir, 'lin-group7/wde/input_data')
 oco2.path  <- file.path(input.path, paste0('OCO-2/L2/OCO2_lite_', oco2.ver))
 sif.path   <- file.path(input.path, paste0('OCO-2/L2/OCO2_lite_SIF_', oco2.ver))
 raob.path  <- file.path(input.path, 'RAOB/middle.east/riyadh')  # radiosonde
@@ -95,14 +95,16 @@ oco2.track <- get.site.track(site, oco2.ver, oco2.path, searchTF = F,
 # see columns 'qf.count' or 'wl.count' in 'oco2.track'
 oco2.track <- oco2.track %>% filter(qf.urban.count > 50)
 
-rmTF <- F  # whether to remove summtertime tracks, valid for NH
+rmTF <- F  # whether to remove summtertime tracks
 if (rmTF) {
-   if (lon.lat$citylat > 0) { # northern Hemi
-    oco2.track <- oco2.track %>%
-      filter(substr(timestr, 5, 6) < '05' | substr(timestr, 5, 6) > '08')
-  } else {  # southern Hemi
-    oco2.track <- oco2.track %>%
-      filter(substr(timestr, 5, 6) < '12' & substr(timestr, 5, 6) > '03')
+   if (lon.lat$citylat > 0) {   
+    # northern Hemi
+    oco2.track <- oco2.track %>% filter(substr(timestr, 5, 6) < '05' | 
+                                        substr(timestr, 5, 6) > '08')
+  } else {  
+    # southern Hemi
+    oco2.track <- oco2.track %>% filter(substr(timestr, 5, 6) < '12' & 
+                                        substr(timestr, 5, 6) > '03')
   } # end if Hemisphere
 }  # end if rmTF
 
@@ -232,21 +234,17 @@ cat(paste('Done with receptor setup...total', nrecp, 'receptors..\n'))
 #------------------------------ STEP 4 --------------------------------------- #
 ## path for the ARL format of WRF and GDAS
 # simulation_step() will find corresponding met files
-met.indx   <- 3
-met        <- c('hrrr', 'wrf', 'gdas0p5', 'edas40')[met.indx] # choose met fields
-met.path   <- file.path(homedir, 'u0947337', met)
-
-# met file name convention
-met.format <- c('%Y%m%d.%Hz.hrrra', 'wrfout_', '%Y%m%d_gdas0p5', 'edas.%Y%m')[met.indx]
-met.num    <- 1     # min number of met files needed
-met.files  <- NULL
+met        <- 'gdas0p5' # choose met fields
+met.path   <- file.path(homedir, 'u0947337', met)  # path of met fields
+met.format <- paste0('%Y%m%d_', met)           # met file name convention
+met.num    <- 1                                # min number of met files needed
 
 ## get horizontal transport error component if run_hor_err = T
-#err.path <- file.path(store.path, 'wind_err')
-err.path <- file.path(homedir, 'lin-group5/wde/github/stilt/Eurasia/Riyadh/wind_err')
-hor.err <- get.uverr(run_hor_err, site, timestr, workdir, overwrite = F,
-                     raob.path, raob.format = 'fsl', nhrs, met, met.path, 
-                     met.format, met.files, lon.lat, agl, err.path = err.path)
+# path for outputting wind error stats
+err.path <- file.path(store.path, 'wind_err')  
+hor.err  <- get.uverr(run_hor_err, site, timestr, workdir, overwrite = F,
+                      raob.path, raob.format = 'fsl', nhrs, met, met.path, 
+                      met.format, lon.lat, agl, err.path)
 
 ## get vertical transport error component if run_ver_err = T
 # set zisf = 1 if run_ver_err = F
@@ -261,7 +259,7 @@ if (run_emiss_err) {
   ffdas.path <- file.path(input.path, 'anthro_inventories/FFDAS/')
   ffdas.file <- list.files(path = ffdas.path, pattern = 'totals')
   ffdas.file <- file.path(ffdas.path, ffdas.file[grep('2008', ffdas.file)])
-} else {edgar.file = NULL; ffdas.file = NULL} 
+} else { edgar.file = NULL; ffdas.file = NULL } 
 # end if run_emiss_err
 
 # if calculating XCO2 error due to horizontal wind error, need biospheric input
