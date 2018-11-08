@@ -6,8 +6,8 @@ ggmap.obs.sif <- function(site, timestr, sif.path, lon.lat, workdir,
                           box.dlon = 0.5, box.dlat = 0.5){
 
   sel.sif <- grab.sif(sif.path, timestr, lon.lat)
-  if (length(sel.sif) == 0) {cat('NO SIF file matched, returning NA...'); return()}
-  if (nrow(sel.sif) == 0) {cat('NO SIF retrieved within lon.lat, returning NA...'); return()}
+  if (length(sel.sif) == 0) {cat('NO SIF file matched, returning NA...\n'); return()}
+  if (nrow(sel.sif) == 0) {cat('NO SIF retrieved within lon.lat, returning NA...\n'); return()}
 
   # plot center
   alpha <- 1; font.size <- rel(0.9); col <- def.col()

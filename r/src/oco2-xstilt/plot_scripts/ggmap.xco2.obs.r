@@ -4,11 +4,12 @@
 # last update for lite b9 data, DW, 10/19/2018
 
 ggmap.xco2.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path, facet.nrow, 
-                           nhrs, dpar, foot.sf, zisf, met, stilt.ver, timestr, 
+                           nhrs = NULL, dpar = NULL, foot.sf = NULL, zisf = NULL, 
+                           met = NULL, stilt.ver = 2, timestr, 
                            font.size = rel(0.9), recp.lon, recp.lat, xco2, 
-                           min.xco2.sig = 1E-6, max.xco2.sig = 2, titleTF = T, 
-                           sumTF = T, qfTF = T, storeTF = T, picname, width = 12, 
-                           height = 8, leg.pos = c('bottom', 'right')[1]){
+                           min.xco2.sig = 1E-6, max.xco2.sig = 2, titleTF = F, 
+                           sumTF = T, qfTF = T, storeTF = T, picname = NULL, 
+                           width = 12, height = 8, leg.pos = 'bottom'){
 
   col <- def.col()
   m1 <- mm[[1]] + theme_bw() + coord_equal(1.1)
@@ -26,14 +27,14 @@ ggmap.xco2.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path, facet.nrow,
   sel.xco2 <- xco2 %>% filter(lon >= map.ext$minlon & lon <= map.ext$maxlon &
                               lat >= map.ext$minlat & lat <= map.ext$maxlat &
                               xco2 >= min.xco2.sig)
-
+  title <- NULL
+  if (titleTF) 
   title <- paste0('Spatial contribution of XCO2 [ppm] (', nhrs, ' hours; dpar = ',
                   dpar, '; smooth factor = ', foot.sf, '; ziscale = ', zisf, 
                   '; met = ', met, ')\nusing STILT version', stilt.ver, 
                   ' for overpass on ', timestr,  ' over ', site, 
                   '\nOnly large XCO2 enhancements > ', min.xco2.sig, 
                   ' ppm are displayed')
-  if (titleTF == F) title <- NULL
 
   # plot and label receptors and add title/xy axis
   p1 <- m1 + labs(title = title, x = 'LONGITUDE [E]', y = 'LATITUDE [N]')

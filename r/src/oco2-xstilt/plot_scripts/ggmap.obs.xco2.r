@@ -16,6 +16,7 @@ ggmap.obs.xco2 <- function(site, timestr, oco2.ver, oco2.path, lon.lat, workdir,
                    center.lon = lon.lat$citylon)[[1]]
 
   if (qfTF) {
+    qf.obs <- obs.all %>% filter(qf == 0)
     c1 <- m1 + geom_point(data = qf.obs, aes(lon, lat, colour = xco2), size = 0.6)
     min.y <- min(qf.obs$xco2, na.rm = T)
     max.y <- max(qf.obs$xco2, na.rm = T)

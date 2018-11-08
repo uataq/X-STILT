@@ -6,13 +6,14 @@
 # if no OCO-2 path, do not plot observed XCO2, DW, 10/29/2018
 
 ggmap.xfoot.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path = NULL, 
-                            facet.nrow, nhrs, dpar, foot.sf, zisf, met, 
-                            stilt.ver, timestr, font.size = rel(0.9), recp.lon, 
-                            recp.lat, foot, min.foot.sig = 1E-6, 
-                            max.foot.sig = 1E-2, titleTF = T, sumTF = T, 
-                            qfTF = T, picname, storeTF = T, width = 12, 
-                            height = 8, anthromesTF = F, anthro.path = NULL, 
-                            leg.pos = c('bottom', 'right')[1]){
+                            facet.nrow, nhrs = NULL, dpar = NULL, foot.sf = NULL, 
+                            zisf = NULL, met = NULL, stilt.ver = 2, timestr, 
+                            font.size = rel(0.9), recp.lon, recp.lat, foot, 
+                            min.foot.sig = 1E-6, max.foot.sig = 1E-2, 
+                            titleTF = F, sumTF = T, qfTF = T, picname, 
+                            storeTF = T, width = 12, height = 8, 
+                            anthromesTF = F, anthro.path = NULL, 
+                            leg.pos = 'bottom', foot.unit = 'ppm/(umol/m2/s)'){
 
   col <- def.col()
   m1 <- mm[[1]] + theme_bw() + coord_equal(1.1)
@@ -34,12 +35,13 @@ ggmap.xfoot.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path = NULL,
                               lat >= map.ext$minlat & lat <= map.ext$maxlat &
                               foot >= min.foot.sig)
 
+  title <- NULL
+  if (titleTF) 
   title <- paste0('Spatial time-integrated weighted column footprint (', nhrs, 
                   ' hours; ', dpar, ' dpar; ', foot.sf, '; ziscale = ', zisf,
                   '; met = ', met, ')\nusing STILT version', stilt.ver, 
                   ' for overpass on ', timestr, ' over ', site,
                   '\nOnly large footprints > ', min.foot.sig, ' are displayed')
-  if (titleTF == F) title <- NULL
 
   p1 <- m1 + labs(title = title, x = 'LONGITUDE [E]', y = 'LATITUDE [N]')
 
@@ -92,12 +94,12 @@ ggmap.xfoot.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path = NULL,
     }  # end if qfTF 
   }
 
-  lab <- 10 ^ seq(-10, 2, 1)
+  lab <- 10 ^ seq(-20, 3, 1)
   p2 <- p1 + 
     geom_raster(data = sel.foot, aes(lon + mm[[3]], lat + mm[[2]], fill = foot),
                 alpha = 0.8) +
     scale_fill_gradientn(limits = c(min.foot.sig, max.foot.sig), 
-                         name = 'FOOTPRINT\nppm/(umol/m2/s)', trans = 'log10', 
+                         name = paste0('FOOTPRINT\n', foot.unit), trans = 'log10', 
                          colours = col, breaks = lab, labels = lab) +
     scale_alpha_manual(values = c('all' = 0.5, 'screened' = 1.0))
 

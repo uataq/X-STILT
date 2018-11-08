@@ -16,7 +16,8 @@ get.recp.info <- function(timestr, oco2.ver, oco2.path, lon.lat, selTF, recp.ind
 
   # ------------------- Step 1. READ IN OCO-2 LITE FILES ------------------- #
   oco2 <- grab.oco2(oco2.path, timestr, lon.lat, oco2.ver)
-
+  if (nrow(oco2) == 0) cat('No sounding found over this overpass for this region\n')
+  
   # filter by quality flag too, more receptors when XCO2 is high
   if (data.filter[1] == 'QF') sel.oco2 <- oco2 %>% filter(qf <= data.filter[2])
   if (data.filter[1] == 'WL') sel.oco2 <- oco2 %>% filter(wl <= data.filter[2])
