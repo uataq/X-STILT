@@ -126,7 +126,7 @@ if (plotTF) {
                    plotdir, zoom = 8, qfTF = F, box.dlat = dlat.urban, 
                    box.dlon = dlon.urban)
     ggmap.obs.sif(site, all.timestr[t], sif.path, lon.lat, workdir, plotdir, 
-                   zoom = 8, box.dlon = dlon, box.dlat = dlat.urban)
+                   zoom = 8, box.dlon = dlon.urban, box.dlat = dlat.urban)
   } # end for t
 }  # end if plotTF
 
