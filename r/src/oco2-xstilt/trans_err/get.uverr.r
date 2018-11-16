@@ -57,6 +57,7 @@ get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
       err.stat$siguverr <- siguverr
 
     } else {
+      # run the entire wind interpolation and get error statistics
       met.raob <- cal.met.wind(filename = raob.file, met, met.path, met.format, 
                                met.files, workdir, site, timestr, overwrite, 
                                raob.path, nhrs = -120, raob.format)

@@ -5,7 +5,7 @@
 
 ggmap.obs.xco2 <- function(site, timestr, oco2.ver, oco2.path, lon.lat, workdir,
                            plotdir = file.path(workdir, 'plot'), zoom = 8, 
-                           qfTF = F, box.dlat = 0.5, box.dlon = 0.5){
+                           qfTF = F, box.dlat = 0.5, box.dlon = 0.5, size = 0.8){
 
   library(ggmap); library(ggplot2)
   obs.all <- grab.oco2(ocopath = oco2.path, timestr, lon.lat, oco2.ver)
@@ -17,12 +17,12 @@ ggmap.obs.xco2 <- function(site, timestr, oco2.ver, oco2.path, lon.lat, workdir,
 
   if (qfTF) {
     qf.obs <- obs.all %>% filter(qf == 0)
-    c1 <- m1 + geom_point(data = qf.obs, aes(lon, lat, colour = xco2), size = 0.6)
+    c1 <- m1 + geom_point(data = qf.obs, aes(lon, lat, colour = xco2), size = size)
     min.y <- min(qf.obs$xco2, na.rm = T)
     max.y <- max(qf.obs$xco2, na.rm = T)
 
   } else {
-    c1 <- m1 + geom_point(data = obs.all, aes(lon, lat, colour = xco2), size = 0.6)
+    c1 <- m1 + geom_point(data = obs.all, aes(lon, lat, colour = xco2), size = size)
     min.y <- min(obs.all$xco2, na.rm = T)
     max.y <- max(obs.all$xco2, na.rm = T)
   }  # end if qfTF

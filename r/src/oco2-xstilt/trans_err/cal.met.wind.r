@@ -9,7 +9,7 @@
 # switch to Ben's calc_trajectory, via get.ground.hgt(), DW
 #
 # fix wd err, if wd.err is closed to -360 or 360, cycle it, DW, 08/31/2018
-# add surface wind from ASOS, DW, 09/19/2018 
+# add surface wind from ASOS, DW, see cal.met.wind.asos(), 09/19/2018 
 
 cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
                          workdir, site, timestr, overwrite = F, 
@@ -54,7 +54,7 @@ cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
     cat(paste(nrow(receptor), 'unique raob station + raob time\n'))
     err.info <- NULL
 
-    for (i in 1:nrow(receptor)){
+    for (i in 1:nrow(receptor)) {
       cat(paste('working on', i, 'unique raob\n'))
 
       # obtain ground hgts, if no rds found, will start to generate trajec
@@ -63,6 +63,9 @@ cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
                                  receptor = receptor[i,], rundir = rundir, 
                                  timeout = 10 * 60, met_files = met.files, 
                                  run_trajec = T)
+      
+      # add error message, DW, 11/16/2018
+      if (is.null(tmp.info)) {cat('NO ground hgt interpolation performed...\n'); next}
       grdhgt <- tmp.info$zsfc
 
       # METHOD 2 to int winds --
@@ -82,12 +85,17 @@ cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
                                  met_file_format = met.format, n_hours = 1, 
                                  receptor = receptor[i,], rundir = rundir, 
                                  timeout = 20 * 60, r_zagl = pos.agl, 
-                                 run_trajec = T) %>%
-                  mutate(zagl = pos.agl)
+                                 run_trajec = T) 
+
+      # add error message, DW, 11/16/2018
+      if (is.null(int.info)) {cat('NO interpolation performed...\n'); next}
+      int.info <- int.info %>% mutate(zagl = pos.agl)
 
       # merge obs and sim
-      merge.info <- cbind(pos.raob, int.info) %>%
-        rename(u.met = ubar, v.met = vbar, w.met = wbar, temp.met = temp)
+      merge.info <- cbind(pos.raob, int.info) %>% rename(u.met = ubar, 
+                                                         v.met = vbar, 
+                                                         w.met = wbar, 
+                                                         temp.met = temp)
 
       # calculate ws and wd (FROM which dir, degree from true North)
       merge.info <- merge.info %>% 
@@ -98,10 +106,11 @@ cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
       merge.info[is.na(merge.info$wd.met), 'wd.met'] <- 0
 
       # calculate wind errors
-      tmp.err.info <- merge.info %>% 
-        mutate(temp.err = temp.met - temp.raob, u.err  = u.met  - u.raob,  
-               v.err  = v.met  - v.raob, ws.err = ws.met - ws.raob, 
-               wd.err = wd.met - wd.raob)
+      tmp.err.info <- merge.info %>% mutate(temp.err = temp.met - temp.raob, 
+                                            u.err = u.met  - u.raob,  
+                                            v.err = v.met  - v.raob, 
+                                            ws.err = ws.met - ws.raob, 
+                                            wd.err = wd.met - wd.raob)
 
       # if wd.err is closed to -360 or 360, cycle it, DW, 08/31/2018
       tmp.err.info[abs(tmp.err.info$wd.err) > 180, 'wd.err'] <-
