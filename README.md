@@ -11,13 +11,13 @@ We're been merging column features with the new STILT-R version 2 [*Fasoli et al
 - X-STILT features:
 1. Select OCO-2 overpasses and make spatial plots of retrieved XCO2 given a city
 2. Select OCO-2 soundings based on latitude binwidths for each overpass
-3. Create namelist with model parameters
-4. Model runs and analysis included:
+3. Model runs and analysis included:
    * Backward trajectories + weighted column footprints        -> *run_trajec/run_foot*
-   * Forward trajectories + 2D kernel density maps             -> *forwardTF*
+   * Forward trajectories + 2D kernel density maps             -> *compute_bg_xco2.r*
    * Horizontal transport error (wind error statistics needed) -> *run_hor_err*
    * Vertical transport error via scaling mixed layer height   -> *run_ver_err*
    * Simulate FFCO2 XCO2 enhancements (footprint needed)       -> *run_sim*
+   * Prior emission error (footprint needed)                   -> *run_emiss_err*
 
 ## Example plots:
 ![](wgt_sum_xfoot_Riyadh_2015121610_gdas0p5_STILTv2_zoom8_-72hrs_100dpar.png)
