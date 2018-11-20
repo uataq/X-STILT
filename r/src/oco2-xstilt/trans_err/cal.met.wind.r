@@ -54,7 +54,7 @@ cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
     cat(paste(nrow(receptor), 'unique raob station + raob time\n'))
     err.info <- NULL
 
-    for (i in 1:nrow(receptor)) {
+    for (i in 1 : nrow(receptor)) {
       cat(paste('working on', i, 'unique raob\n'))
 
       # obtain ground hgts, if no rds found, will start to generate trajec

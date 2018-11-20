@@ -46,7 +46,7 @@ tif2nc.odiacv3 <- function(site, timestr, vname, workdir, foot.extent,
   # after reading using readGDAL, the default dimension is (y,x)
   # 21600 rows and 43200 columns
   emiss <- raster(tiff.file) # convert to raster
-  print(emiss)
+  #print(emiss)
   cat('Done reading tiff file as raster.\n')
 
   # subset spatial domain
@@ -77,10 +77,10 @@ tif2nc.odiacv3 <- function(site, timestr, vname, workdir, foot.extent,
   sel.emiss <- sel.emiss / mod / 24 / 60 / 60	# convert per month to per second
   sel.emiss <- sel.emiss / area.raster		# convert per cell to per m2
   # NOW sel.co2 has unit of umole-CO2/m2/s, can be used directly with footprint
-  print(sel.emiss)
+  #print(sel.emiss)
 
   # store as nc
-  cat('Storing contribution map as nc format...\n')
+  cat('Storing cropped gridded emissions in nc files...\n')
   outname <- paste0('odiac', vname, '_1kmx1km_', YYYYMM, '_', site, '.nc')
   outfile <- file.path(emiss.path, outname)
   crs(sel.emiss) <- '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0'

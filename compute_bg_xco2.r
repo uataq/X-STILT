@@ -112,8 +112,8 @@ if (method == 'M3') {
 
   #------------------------------ STEP 1 --------------------------------- #
   #### Whether forward/backward, release from a column or a box
-  run_trajec <- F  # whether to run forward traj, if T, will overwrite existing
-  plotTF     <- T  # whether to calculate background and plot 2D density
+  run_trajec <- T  # whether to run forward traj, if T, will overwrite existing
+  plotTF     <- F  # whether to calculate background and plot 2D density
   delt       <- 2  # fixed timestep [min]; set = 0 for dynamic timestep
   
   ### MUST-HAVE parameters about errors
@@ -166,16 +166,19 @@ if (method == 'M3') {
 
    #------------------------------ STEP 3 --------------------------------- #
     ## get horizontal transport error component if run_hor_err = T
-    # calculate from model-data wind comparisons, if available
+    # if overwrite = T, prepare RAOB data and compute model-data wind comparisons
+    # if you do not want to run wind error analysis, set overwrite to FALSE and 
+    # prescribe a horizontal wind error, e.g., siguverr = 3 (with unit of m/s)
+    # for more info, please see get.uverr.r
     hor.err <- get.uverr(run_hor_err, site, timestr, workdir, overwrite = F,
                          raob.path, raob.format = 'fsl', nhrs, met, met.path, 
                          met.format, met.files, lon.lat, agl = c(0, 100), 
-                         nfTF = T, forwardTF = T, 
+                         nfTF = T, forwardTF = T, siguverr = 3, 
                          err.path = file.path(output.path, 'wind_err'))
 
     ## get vertical transport error component if run_ver_err = T
-    # set zisf = 1 if run_ver_err = F
-    zisf    <- c(0.6, 0.8, 1.0, 1.2, 1.4)[3]; if (!run_ver_err) zisf <- 1.0
+    zisf <- c(0.6, 0.8, 1.0, 1.2, 1.4)[3]
+    if (!run_ver_err) zisf <- 1.0       # set zisf = 1 if run_ver_err = F
     pbl.err <- get.zierr(run_ver_err, nhrs.zisf = 24, const.zisf = zisf)
     cat('Done with choosing met & inputting wind errors...\n')
 
@@ -183,12 +186,13 @@ if (method == 'M3') {
     # !!! need to add makefile for AER_NOAA_branch in fortran ;
     # link two hymodelcs in exe directory
     tmp.info <- run.forward.trajec(site, timestr, overwrite = run_trajec, 
-                                   nummodel, lon.lat, delt, dxyp, dzp = 0, 
-                                   dtime, agl, numpar, nhrs, workdir, 
+                                   nummodel = timestr, lon.lat, delt, dxyp, 
+                                   dzp = 0, dtime, agl, numpar, nhrs, workdir, 
                                    outpath, hor.err, pbl.err, met, met.format, 
                                    met.path, met.num = 1, plotTF, oco2.path, 
                                    oco2.ver, zoom = 7, td = 0.05, bg.dlat = 1, 
                                    perc = 0.1, clean.side = clean.side[t])
+
     if (is.null(tmp.info)) next
     bg.info <- rbind(bg.info, tmp.info)
   } # end for t
