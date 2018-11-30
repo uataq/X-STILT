@@ -1,14 +1,18 @@
 
 Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172,
-                        agl=30, nhrs=-48, dxyp=0., dzp=0.,
-                        numpar=100, metlib="/deas/group/stilt/Metdata/",
-                        metd="edas", doublefiles=F, metfile=NULL, conv=F, ziscale=NULL,
-                        siguverr=NULL,TLuverr=NULL,zcoruverr=NULL,horcoruverr=NULL,
-                        varsout=c("time","index","lat","lon","agl","grdht","foot","temp0","swrad","zi","dens","dmass"),
-                        rundir=NULL,nummodel=NULL,outname=NULL,outpath="",overwrite=T,emisshrs=1/100,
-                        sourcepath="./",debugTF=TRUE,max.counter=NULL,
-                        sigzierr=NULL,TLzierr=NULL,horcorzierr=NULL,zsg.name=NULL,create.X0=FALSE,setup.list=list(),
-                        hymodelc.exe=NULL,write.r=TRUE,write.nc=FALSE){
+                        agl=30, nhrs=-48, dxyp=0., dzp=0., numpar=100, 
+                        metlib="/deas/group/stilt/Metdata/",
+                        metd="edas", doublefiles=F, metfile=NULL, conv=F, 
+                        ziscale=NULL, siguverr=NA,TLuverr=NA,zcoruverr=NA,
+                        horcoruverr=NA,
+                        varsout=c("time", "index", "lat", "lon", "agl", "grdht",
+                                  "foot","temp0","swrad","zi","dens","dmass"),
+                        rundir=NULL, nummodel=NULL, outname=NULL, outpath="", 
+                        overwrite=T, emisshrs=1/100, sourcepath="./", 
+                        debugTF=TRUE, max.counter=NULL, sigzierr=NA, 
+                        TLzierr=NA, horcorzierr=NA, zsg.name=NULL, 
+                        create.X0=FALSE, setup.list=list(), hymodelc.exe=NULL, 
+                        write.r=TRUE, write.nc=FALSE){
 #Function to run HYSPLIT particle dispersion model and to check distribution of particles
 
 #INPUT:
@@ -66,6 +70,7 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
 #
 # use saveRDS() instead of assignr to output trajectory
 # and use data frame instead of matrix to work better with other subroutines, DW, 07/29/2018
+# changed is.null to is.na for transport error statistic, to fit the XSTILT code, DW, 11/30/2018
 #---------------------------------------------------------------------------------------------------
 
   if(!write.r && !write.nc) stop('Need to have at least one of write.r/write.nc TRUE')
@@ -113,13 +118,15 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
   i<-0;if(!is.null(ziscale))i<-1 #'ziscale' is vector of scaling factors used to prescribe mixed-layer height during model run
   setup.list$ZICONTROLTF <- i #flag used to switch on reading of ziscale from file
   i <- 0
-  if((is.null(siguverr)|is.null(TLuverr))&(is.null(sigzierr)|is.null(TLzierr))){
+
+  # changed is.null to is.na to fit the XSTILT code, DW, 11/30/2018
+  if((is.na(siguverr)|is.na(TLuverr))&(is.na(sigzierr)|is.na(TLzierr))){
     i <- 0
-  } else if(!(is.null(siguverr)|is.null(TLuverr))&(is.null(sigzierr)|is.null(TLzierr))){
+  } else if(!(is.na(siguverr)|is.na(TLuverr))&(is.na(sigzierr)|is.na(TLzierr))){
     i <- 1
-  } else if((is.null(siguverr)|is.null(TLuverr))&!(is.null(sigzierr)|is.null(TLzierr))){
+  } else if((is.na(siguverr)|is.na(TLuverr))&!(is.na(sigzierr)|is.na(TLzierr))){
     i <- 2
-  } else if(!(is.null(siguverr)|is.null(TLuverr))&!(is.null(sigzierr)|is.null(TLzierr))){
+  } else if(!(is.na(siguverr)|is.na(TLuverr))&!(is.na(sigzierr)|is.na(TLzierr))){
     i <- 3
   }
   setup.list$WINDERRTF <- i #flag used for wind/pblh error modeling
@@ -199,13 +206,16 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
   if(!is.null(metfile))names.returninfo<-c(names.returninfo,paste("metfile",1:length(metfile),sep=""))
   names.returninfo<-c(names.returninfo,"conv")
   if(!is.null(ziscale))names.returninfo<-c(names.returninfo,paste("ziscale",1:length(ziscale),sep=""))
-  if(!is.null(siguverr))names.returninfo<-c(names.returninfo,"siguverr")
-  if(!is.null(TLuverr))names.returninfo<-c(names.returninfo,"TLuverr")
-  if(!is.null(zcoruverr))names.returninfo<-c(names.returninfo,"zcoruverr")
-  if(!is.null(horcoruverr))names.returninfo<-c(names.returninfo,"horcoruverr")
-  if(!is.null(sigzierr))names.returninfo<-c(names.returninfo,"sigzierr")
-  if(!is.null(TLzierr))names.returninfo<-c(names.returninfo,"TLzierr")
-  if(!is.null(horcorzierr))names.returninfo<-c(names.returninfo,"horcorzierr")
+
+  # changed is.null to is.na to fit the XSTILT code, DW, 11/30/2018
+  if(!is.na(siguverr))names.returninfo<-c(names.returninfo,"siguverr")
+  if(!is.na(TLuverr))names.returninfo<-c(names.returninfo,"TLuverr")
+  if(!is.na(zcoruverr))names.returninfo<-c(names.returninfo,"zcoruverr")
+  if(!is.na(horcoruverr))names.returninfo<-c(names.returninfo,"horcoruverr")
+  if(!is.na(sigzierr))names.returninfo<-c(names.returninfo,"sigzierr")
+  if(!is.na(TLzierr))names.returninfo<-c(names.returninfo,"TLzierr")
+  if(!is.na(horcorzierr))names.returninfo<-c(names.returninfo,"horcorzierr")
+
   names.returninfo<-c(names.returninfo,paste("varsout",1:length(varsout.r),sep=""),
                       "nummodel","outpath","overwrite","status","metoutname")
 
@@ -304,7 +314,9 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
   }  #if(!is.null(ziscale)){
 
   #Write the stddev of magnitude in horizontal wind errors [m/s] and their correlation timescale [min] & length scales to 'WINDERR'
-  if(!is.null(siguverr)&!is.null(TLuverr)&!is.null(zcoruverr)&!is.null(horcoruverr)){
+#  if(!is.null(siguverr)&!is.null(TLuverr)&!is.null(zcoruverr)&!is.null(horcoruverr)){
+    # changed is.null to is.na to fit the XSTILT code, DW, 11/30/2018
+   if(!is.na(siguverr)&!is.na(TLuverr)&!is.na(zcoruverr)&!is.na(horcoruverr)){
     cat(paste(siguverr,"\n",sep=""),file=input4)
     cat(paste(TLuverr,"\n",sep=""),file=input4,append=T)
     cat(paste(zcoruverr,"\n",sep=""),file=input4,append=T)    #vertical correlation lengthscale [m]
@@ -312,7 +324,8 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
   }  #if(!is.null(siguverr)&!is.null(TLuverr)&!is.null(zcoruverr)&!is.null(horcoruverr)){
 
   #Write the stddev of magnitude in mixed layer height errors [%] and their correlation timescale [min] & length scale to 'ZIERR'
-  if(!is.null(sigzierr)&!is.null(TLzierr)&!is.null(horcorzierr)){
+#  if(!is.null(sigzierr)&!is.null(TLzierr)&!is.null(horcorzierr)){
+    if(!is.na(sigzierr)&!is.na(TLzierr)&!is.na(horcorzierr)){
     cat(paste(sigzierr,"\n",sep=""),file=input6)
     cat(paste(TLzierr,"\n",sep=""),file=input6,append=T)
     cat(paste(horcorzierr,"\n",sep=""),file=input6,append=T)  #horizontal correlation lengthscale [km]

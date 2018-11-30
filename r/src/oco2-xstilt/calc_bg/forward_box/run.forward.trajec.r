@@ -99,6 +99,7 @@ run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
                 varsout = varstrajec, siguverr = hor.err$siguverr, 
                 TLuverr = hor.err$TLuverr, zcoruverr = hor.err$zcoruverr, 
                 horcoruverr = hor.err$horcoruverr,
+                hymodelc.exe = './hymodelc', 
                 setup.list = list(DELT = delt, VEGHT = 0.5)) %>%
     invisible()
   } # end if overwrite
