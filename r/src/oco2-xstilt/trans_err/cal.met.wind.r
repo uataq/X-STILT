@@ -10,6 +10,7 @@
 #
 # fix wd err, if wd.err is closed to -360 or 360, cycle it, DW, 08/31/2018
 # add surface wind from ASOS, DW, see cal.met.wind.asos(), 09/19/2018 
+# minor bug occur when writing table into a txt file, DW, 12/04/2018
 
 cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
                          workdir, site, timestr, overwrite = F, 
@@ -31,10 +32,9 @@ cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
     colnames(uni.recp) <- list('time', 'lat', 'lon')
 
     # compute 'receptor'
-    receptor <- data.frame(
-      lati = as.numeric(uni.recp[, 'lat']),
-      long = as.numeric(uni.recp[, 'lon'])) %>% mutate(
-      run_time = as.POSIXct(uni.recp[, 'time'], '%Y%m%d%H', tz = 'UTC'))
+    receptor <- data.frame(lati = as.numeric(uni.recp[, 'lat']),
+                           long = as.numeric(uni.recp[, 'lon'])) %>% 
+                mutate(run_time = as.POSIXct(uni.recp[, 'time'], '%Y%m%d%H', tz = 'UTC'))
 
     rundir <- file.path(workdir, paste0('out_wind_', timestr, '_', met))
     #var1 <- c('time', 'index', 'lon', 'lat', 'agl', 'grdht', 'zi', 'temp', 'pres')
@@ -48,14 +48,20 @@ cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
     # since we added another version of hymodelc (AER_NOAA_branch) under exe
     link_files <- dir(file.path(workdir, 'exe', 'master'))
     if (!file.exists(file.path(rundir, link_files))[1])
-      file.symlink(file.path(workdir, 'exe', 'master', link_files), rundir)
+        file.symlink(file.path(workdir, 'exe', 'master', link_files), rundir)
 
     # loop over each unique location + time
     cat(paste(nrow(receptor), 'unique raob station + raob time\n'))
     err.info <- NULL
 
+    header <- c('timestr', 'lat', 'lon', 'elev', 'pres', 'hgt', 'temp.raob', 
+                'ws.raob', 'wd.raob', 'u.raob', 'v.raob', 'u.met', 'v.met', 
+                'w.met', 'zsfc', 'temp.met', 'zagl', 'ws.met', 'wd.met', 
+                'temp.err', 'u.err', 'v.err', 'ws.err', 'wd.err')
+    write(header, file = filename, append = F, sep = ',', ncolumns = length(header))
+
     for (i in 1 : nrow(receptor)) {
-      cat(paste('working on', i, 'unique raob\n'))
+      cat(paste('working on #', i, 'unique raob\n'))
 
       # obtain ground hgts, if no rds found, will start to generate trajec
       tmp.info <- get.ground.hgt(varsiwant = var2, met_loc = met.path,
@@ -116,11 +122,9 @@ cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
       tmp.err.info[abs(tmp.err.info$wd.err) > 180, 'wd.err'] <-
         abs(tmp.err.info[abs(tmp.err.info$wd.err) > 180, 'wd.err']) - 360
 
-      colTF <- F; if (i == 1) colTF <- T
-      appTF <- T; if (i == 1) appTF <- F
-      write.table(tmp.err.info, file = filename, append = appTF, sep = ',',
-                  quote = F, row.names = F, col.names = colTF)
-
+      # minor bug occur when writing table, DW, 12/04/2018
+      write.table(tmp.err.info, file = filename, append = T, sep = ',',
+                  quote = F, row.names = F, col.names = F)
       err.info <- rbind(err.info, tmp.err.info)
     } # end for i
 

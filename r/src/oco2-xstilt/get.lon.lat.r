@@ -4,8 +4,8 @@
 #' @update:
 #' use geocode and SpatialPoints to find lat/lon coordinates,
 #' country and reg name, DW, DR, 08/15/2018
-
 #' site can be a vector
+
 get.lon.lat <- function(site, dlon, dlat, city.loc = NULL) {
 
   # spatial domains placing receptors and city center, help select OCO-2 data
@@ -14,7 +14,7 @@ get.lon.lat <- function(site, dlon, dlat, city.loc = NULL) {
   # location name to lon, lat coordinates
   if (is.null(city.loc)) 
     city.loc <- geocode(location = site, output = 'latlon', source = 'google',
-      override_limit = T)
+                        override_limit = T)
 
   # from https://stackoverflow.com/questions/21708488/
   # get-country-and-continent-from-longitude-and-latitude-point-in-r
@@ -27,11 +27,11 @@ get.lon.lat <- function(site, dlon, dlat, city.loc = NULL) {
 
   # use 'over' to get indices of the Polygons object containing each point
   indices <- over(pointsSP, countriesSP)
-  lon.lat <- data.frame(
-    minlon = city.loc$lon - dlon, maxlon = city.loc$lon + dlon,
-    minlat = city.loc$lat - dlat, maxlat = city.loc$lat + dlat,
-    citylon = city.loc$lon, citylat = city.loc$lat, cityid = site,
-    countryid = indices$ADMIN, regid = indices$continent, iso3 = indices$ISO3)
+  lon.lat <- data.frame(cityid = site, citylon = city.loc$lon, 
+                        citylat = city.loc$lat, countryid = indices$ADMIN, 
+                        regid = indices$continent, iso3 = indices$ISO3,
+                        minlon = city.loc$lon - dlon, maxlon = city.loc$lon + dlon,
+                        minlat = city.loc$lat - dlat, maxlat = city.loc$lat + dlat)
 
   return(lon.lat)
 }

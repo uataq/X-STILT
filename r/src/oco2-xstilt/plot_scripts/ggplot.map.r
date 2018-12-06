@@ -18,12 +18,13 @@
 #
 ####### ####### ####### ####### ####### ####### ####### ####### ####### #######
 
-ggplot.map <- function(map = c("black","ggmap"), maptype = 'roadmap',
+ggplot.map <- function(map = c("black","ggmap"), maptype = 'roadmap', 
                        shape.file = "TM_WORLD_BORDERS-0.3.shp",
                        shape.path = "/uufs/chpc.utah.edu/common/home/lin-group5/wde/world_shapefile",
                        minlat, maxlat, minlon, maxlon, land.col = "black",
                        land.outline = "gray30", ocean.col = "lightsteelblue2",
-                       ocean.outline = 'grey', center.lat, center.lon, zoom = 8){
+                       ocean.outline = 'grey', center.lat, center.lon, zoom = 8, 
+                       color = c('color', 'bw')[1]){
 
   ## if load map with black background for land and blue for ocean (default col)
   if (map == "black") {
@@ -81,7 +82,8 @@ ggplot.map <- function(map = c("black","ggmap"), maptype = 'roadmap',
     # load google map
     font.size = rel(1.3)
     sitemap <- get_map(location = c(lon = center.lon, lat = center.lat),
-                       zoom = zoom, maptype = maptype, crop = FALSE)
+                       zoom = zoom, maptype = maptype, color = color, 
+                       crop = FALSE)
 
     ### important to deal with the shift, grab center lat lon from ggmap
     box <- attr(sitemap, "bb")
