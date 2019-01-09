@@ -9,6 +9,9 @@ grab.oco2 <- function(ocopath, timestr, lon.lat, oco2.ver = 'b9r'){
 
   library(ncdf4)
   ocofile <- list.files(pattern = substr(timestr, 3, 8), path = ocopath)
+  if (length(ocofile) == 0) {
+    cat('NO OCO2 files found...please check..\n'); return()
+  }
   ocodat <- nc_open(file.path(ocopath, ocofile))
 
   ## grabbing OCO-2 levels, lat, lon

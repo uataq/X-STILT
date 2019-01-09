@@ -7,7 +7,8 @@
 #' paths and data for CarbonTracker fluxes and mole fractions
 
 calc.M1.bg <- function(all.timestr, foot.path, traj.path, ct.ver, flux.path, 
-  mf.path, output.path, oco2.ver, txtfile, writeTF = F, nhrs = -72) {
+                       mf.path, output.path, oco2.ver, txtfile, writeTF = F, 
+                       nhrs = -72) {
 
   bg <- NULL 
   for (tt in 1:length(all.timestr)) {
@@ -28,12 +29,12 @@ calc.M1.bg <- function(all.timestr, foot.path, traj.path, ct.ver, flux.path,
       # grab weighted trajec info and 1x1 deg footprint info
       # if no foot, use 'create_namelist_oco2-xstilt.r' to generate
       foot.file <- list.files(path = foot.path[tt], pattern = '_1x1_foot.nc', 
-        recursive = T, full.names = T)
+                              recursive = T, full.names = T)
       foot.ext <- extent(raster(foot.file[1]))
       
       # paths for weighted trajec
       traj.file <- list.files(path = traj.path[tt], pattern = 'X_wgttraj.rds', 
-        recursive = T, full.names = T)    
+                              recursive = T, full.names = T)    
 
       # call function to get XCO2.bio and XCO2.ocean, traj-edpt and aprior
       cat('Couple footprint with CT fluxes...\n')

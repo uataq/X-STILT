@@ -92,7 +92,7 @@ ggplot.map <- function(map = c("black","ggmap"), maptype = 'roadmap',
     shift.lat <- ggmap.lat - center.lat
     shift.lon <- ggmap.lon - center.lon
 
-    m1 <- ggmap(sitemap)
+    m1 <- ggmap(sitemap) 
     return(list(m1, shift.lat, shift.lon))
   } # end if ggmap
 

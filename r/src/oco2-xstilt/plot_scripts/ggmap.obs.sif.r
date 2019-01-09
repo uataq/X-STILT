@@ -39,16 +39,17 @@ ggmap.obs.sif <- function(site, timestr, sif.path, lon.lat, workdir,
   d <- rbind(d, d[1,])
   c2 <- c1 + geom_path(data = d, aes(x, y), linetype = 2, size = 0.9,
                        colour = 'gray50') +
-    theme(legend.position = 'bottom',
-          legend.text = element_text(size = font.size),
-          legend.key = element_blank(), legend.key.height = unit(0.5, 'cm'),
-          legend.key.width = unit(2, 'cm'),
-          axis.title.y = element_text(size = font.size, angle = 90),
-          axis.title.x = element_text(size = font.size, angle = 0),
-          axis.text = element_text(size = font.size),
-          axis.ticks = element_line(size = font.size),
-          title = element_text(size = font.size),
-          strip.text = element_text(size = font.size))
+             theme(legend.position = 'bottom',
+                   legend.text = element_text(size = font.size),
+                   legend.key = element_blank(), 
+                   legend.key.height = unit(0.5, 'cm'),
+                   legend.key.width = unit(2, 'cm'),
+                   axis.title.y = element_text(size = font.size, angle = 90),
+                   axis.title.x = element_text(size = font.size, angle = 0),
+                   axis.text = element_text(size = font.size),
+                   axis.ticks = element_line(size = font.size),
+                   title = element_text(size = font.size),
+                   strip.text = element_text(size = font.size))
 
   picname <- paste0('ggmap_sif_', site, '_', timestr, '.png')
   picfile <- file.path(plotdir, picname)

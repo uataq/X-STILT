@@ -69,7 +69,7 @@ sif.path   <- file.path(input.path, paste0('OCO-2/L2/OCO2_lite_SIF_', oco2.ver))
 raob.path  <- file.path(input.path, 'RAOB/middle.east/riyadh')  # radiosonde
 
 # emission prior, ODIAC version and paths, original from ODIAC website in tiff
-vname <- c('2016', '2017')[2]  # ODIAC version
+vname <- c('2016', '2017', '2018')[2]  # ODIAC version
 tiff.path <- file.path(input.path, 'ODIAC', paste0('ODIAC', vname))  
 
 # path for storing plot or CO2 statistics
@@ -283,16 +283,15 @@ if (run_emiss_err) foot.res <- 1/10  # for emiss error, generate 0.1deg foot
 
 # these variables will determine resoluation and spatial domain of footprint
 # 20x20 degree domain around the city center
-foot.info <- data.frame(xmn = round(lon.lat$minlon) - 10, 
-                        xmx = round(lon.lat$minlon) + 10,
-                        ymn = round(lon.lat$minlat) - 10, 
-                        ymx = round(lon.lat$minlat) + 10,
+foot.info <- data.frame(xmn = round(lon.lat$citylon) - 10, 
+                        xmx = round(lon.lat$citylon) + 10,
+                        ymn = round(lon.lat$citylat) - 10, 
+                        ymx = round(lon.lat$citylat) + 10,
                         xres = foot.res, yres = foot.res)
 
 ### OR customize foot domain, in deg E and deg N
 #foot.info <- data.frame(xmn = 30, xmx = 50, ymn = 15, ymx = 35, 
-#  xres = foot.res, yres = foot.res)
-foot.extent <- extent(foot.info$xmn, foot.info$xmx, foot.info$ymn, foot.info$ymx)
+#                        xres = foot.res, yres = foot.res)
 print(foot.info)
 
 ## whether weighted footprint by AK and PW for column simulations
@@ -387,6 +386,8 @@ if (run_trajec * run_foot == F) {
       slurm_options <- list(time = job.time, account = 'lin-kp', partition = 'lin-kp')
 
       # need ODIAC emissions to calculate trans error
+      foot.extent <- extent(foot.info$xmn, foot.info$xmx, 
+                            foot.info$ymn, foot.info$ymx)
       emiss.file <- tif2nc.odiacv3(site, timestr, vname, workdir, foot.extent,
                                    tiff.path, gzTF = F)
 
@@ -408,10 +409,10 @@ if (run_trajec * run_foot == F) {
     # requires trajec and footprints ready for running things below, DW, 06/04/2018  
     # call func to match ODIAC emissions with xfoot & sum up to get 'dxco2.ff'
     cat('Start simulations of XCO2.ff or its error due to emiss err...\n')
-    receptor <- run.xco2.sim(site, timestr, vname, tiff.path, outdir, foot.res, 
-                             workdir, store.path, nhrs, dpar, smooth_factor, 
-                             zisf, oco2.ver, met, lon.lat, run_emiss_err, 
-                             edgar.file, ffdas.file, plotTF = F, writeTF = T)
+    receptor <- run.xco2ff.sim(site, timestr, vname, tiff.path, outdir, foot.res, 
+                               workdir, store.path, nhrs, dpar, smooth_factor, 
+                               zisf, oco2.ver, met, lon.lat, run_emiss_err, 
+                               edgar.file, ffdas.file, plotTF = F, writeTF = T)
     
     # add latitudinally integrated emiss error, DW, 10/22/2018
     # need to run rolling mean on XCO2 emiss err (** operate on variance)

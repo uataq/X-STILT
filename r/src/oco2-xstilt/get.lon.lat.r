@@ -27,11 +27,18 @@ get.lon.lat <- function(site, dlon, dlat, city.loc = NULL) {
 
   # use 'over' to get indices of the Polygons object containing each point
   indices <- over(pointsSP, countriesSP)
+
+  # convert indices from factors to characters
   lon.lat <- data.frame(cityid = site, citylon = city.loc$lon, 
-                        citylat = city.loc$lat, countryid = indices$ADMIN, 
-                        regid = indices$continent, iso3 = indices$ISO3,
-                        minlon = city.loc$lon - dlon, maxlon = city.loc$lon + dlon,
-                        minlat = city.loc$lat - dlat, maxlat = city.loc$lat + dlat)
+                        citylat = city.loc$lat, 
+                        countryid = as.character(indices$ADMIN), 
+                        regid = as.character(indices$continent), 
+                        iso3 = as.character(indices$ISO3),
+                        minlon = city.loc$lon - dlon, 
+                        maxlon = city.loc$lon + dlon,
+                        minlat = city.loc$lat - dlat, 
+                        maxlat = city.loc$lat + dlat, 
+                        stringsAsFactors = F)
 
   return(lon.lat)
 }

@@ -1,10 +1,8 @@
 # subroutine to read anthromes data, DW, 07/05/2018
 
-ggmap.anthromes <- function(lon.lat, anthro.path, mm = NULL, site = NULL,
-                            picpath = NULL, font.size = rel(1.0), 
-                            width = 10, height = 11){
-
-  anthro.file <- file.path(anthro.path, 'anthro2_a2000.nc')
+ggmap.anthromes <- function(lon.lat, anthro.path, anthro.file = 'anthro2_a2000.nc', 
+                            mm = NULL, site = NULL, picpath = NULL, 
+                            font.size = rel(1.0), width = 10, height = 11){
 
   ### nc open ----
   #anthro.dat <- nc_open(anthro.file)
@@ -17,7 +15,7 @@ ggmap.anthromes <- function(lon.lat, anthro.path, mm = NULL, site = NULL,
   #melt.atm <- melt(atm)
 
   ### raster open ---
-  atm <- raster(anthro.file)
+  atm <- raster(file.path(anthro.path, anthro.file))
   melt.atm <- raster::as.data.frame(atm, xy = T)
   colnames(melt.atm) <- c('lon', 'lat', 'class')
 

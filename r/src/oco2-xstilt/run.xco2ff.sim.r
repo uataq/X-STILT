@@ -21,10 +21,11 @@
 # remove foot.path, use full path as foot.file, DW, 07/26/2018
 # fix a minor bug in interpreting footprint filename, DW, 10/11/2018 
 
-run.xco2.sim <- function(site, timestr, vname, tiff.path, outdir, foot.res, 
-                         workdir, store.path, nhrs, dpar, smooth_factor, zisf, 
-                         oco2.ver, met, lon.lat, run_emiss_err, edgar.file = NULL, 
-                         ffdas.file = NULL, plotTF = F, writeTF = T){
+run.xco2ff.sim <- function(site = 'Riyadh', timestr = '2014100920', vname = '2018', 
+                           tiff.path, outdir, foot.res, workdir, store.path, 
+                           nhrs, dpar, smooth_factor, zisf, oco2.ver, met, 
+                           lon.lat, run_emiss_err, edgar.file = NULL, 
+                           ffdas.file = NULL, plotTF = F, writeTF = T){
 
   # grab footprint files and get footprint domain
   foot.path <- file.path(outdir, 'by-id')
@@ -43,7 +44,8 @@ run.xco2.sim <- function(site, timestr, vname, tiff.path, outdir, foot.res,
   txtfile <- file.path(store.path, paste0(timestr, '_', site, '_XCO2ff_', 
                                           abs(nhrs), 'hrs_', dpar, 'dpar_sf', 
                                           smooth_factor, '_zisf', zisf, '_', 
-                                          oco2.ver, '_', met, '.txt'))
+                                          oco2.ver, '_', met, '_odiac', vname, 
+                                          '.txt'))
   
   # add emission error file with absolute emission uncertainty and txtfile
   if (run_emiss_err) {
@@ -62,7 +64,8 @@ run.xco2.sim <- function(site, timestr, vname, tiff.path, outdir, foot.res,
     txtfile <- file.path(store.path, paste0(timestr, '_', site, '_XCO2ff_emiss_err_', 
                                             abs(nhrs), 'hrs_', dpar, 'dpar_sf', 
                                             smooth_factor, '_zisf', zisf, '_', 
-                                            oco2.ver, '_', met, '.txt'))
+                                            oco2.ver, '_', met, '_odiac', vname, 
+                                            '.txt'))
   }  # end if run_emiss_err
                                         
   # plot emissions
