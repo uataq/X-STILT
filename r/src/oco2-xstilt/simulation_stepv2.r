@@ -53,8 +53,10 @@ simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
     print(r_run_time)
     if (length(r_run_time) > 1) {
       r_run_time <- r_run_time[X]
-      r_lati  <- format(r_lati[X], digits = 4, nsmall = 4)
-      r_long  <- format(r_long[X], digits = 4, nsmall = 4)
+
+      # bug fixed, add 'as.numeric', DR, 01/10/2019
+      r_lati  <- as.numeric(format(r_lati[X], digits = 4, nsmall = 4))
+      r_long  <- as.numeric(format(r_long[X], digits = 4, nsmall = 4))
       r_zagl  <- r_zagl[X]
       ziscale <- ziscale[X]
     }

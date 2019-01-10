@@ -48,7 +48,8 @@ get.ground.hgt <- function(varsiwant, conage = 48, cpack = 1, dxf = 1, dyf = 1,
   # replace 'receptor$zagl' with 'r_zagl'
   output$receptor <- list(run_time = receptor$run_time, 
                           lati = receptor$lati,
-                          long = receptor$long, zagl = r_zagl)
+                          long = receptor$long, 
+                          zagl = r_zagl)
 
   # get met files for + or - 1 hour
   if (is.null(met_files))
@@ -79,10 +80,13 @@ get.ground.hgt <- function(varsiwant, conage = 48, cpack = 1, dxf = 1, dyf = 1,
                                 z_top, rundir)
     saveRDS(particle, output$file)   # store traj
     cat(paste(basename(output$file), 'created...\n'))
-  } else {cat('get.ground.hgt(): trajec found...\n')}
+  } else {
+    particle <- readRDS(output$file)
+    cat('get.ground.hgt(): trajec found...\n')
+  }
 
   # select the min timestep, which is the most closed to the receptor
-  if (length(particle) > 0 ) {
+  if (length(particle) > 0) {
     sel <- abs(particle$time) == min(unique(abs(particle$time)))
     sel.part <- particle[sel, ]
     nsec <- abs(sel.part$time) * 60  # in second
@@ -90,12 +94,10 @@ get.ground.hgt <- function(varsiwant, conage = 48, cpack = 1, dxf = 1, dyf = 1,
     # grab instantaneous variables
     # in p1 or p2 in distCosine(), first one is longitude, second is latitude
     # distance in x- y- and z- directions [m]
-    ubar <- NULL; vbar <- NULL; wbar <- NULL
-    zsfc <- NULL; temp <- NULL
-
+    ubar <- NULL; vbar <- NULL; wbar <- NULL; zsfc <- NULL; temp <- NULL
     for (s in 1:length(r_zagl)) {
       tmp.part <- sel.part[s, ]
-      delx <- distCosine(p1 = c(tmp.part$long,    receptor$lati),
+      delx <- distCosine(p1 = c(tmp.part$long, receptor$lati),
                          p2 = c(receptor$long, receptor$lati)) # in meter
       dely <- distCosine(p1 = c(receptor$long, tmp.part$lati),
                          p2 = c(receptor$long, receptor$lati))
