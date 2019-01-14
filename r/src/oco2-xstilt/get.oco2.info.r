@@ -95,7 +95,7 @@ get.oco2.info <- function(oco2.path, receptor, diff.td = 1E-4){
                      pres = pres, ap = ap, oco2.grdhgt = grdhgt,
                      oco2.psfc = psfc, oco2.foot = footprint,
                      oco2.xco2 = xco2, oco2.xco2.uncert = xco2.uncert)
-
+    nc_close()
     all.info      # return both profiles and other retrivals
   }
   

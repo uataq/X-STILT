@@ -233,7 +233,7 @@ simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
       wgt.file <- file.path(rundir, paste0(basename(rundir), '_wgttraj.rds'))
       cat(paste0('wgttraj file:', wgt.file, '\n'))
 
-      if (file.exists(wgt.file) > 0) {
+      if (file.exists(wgt.file)) {
         wgt.output <- readRDS(wgt.file)
 
       } else {
