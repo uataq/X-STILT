@@ -42,12 +42,13 @@
 #' update code according to v9 changes, DW, 10/19/2018
 #
 #' Optimize horizontal trans error as parallel computing to save time, DW, 10/21/2018
+#' reconstruct X-STILT, DW, BF, 01/20/2019
 #' -----------------------------------------------------------------------------
 
 #### source all functions and load all libraries
 # CHANGE working directory ***
 homedir <- '/uufs/chpc.utah.edu/common/home'
-workdir <- file.path(homedir, 'lin-group7/wde/github/XSTILT') # current dir
+workdir <- file.path(homedir, 'lin-group5/wde/x-stilt') # current dir
 setwd(workdir)   # move to working directory
 source('r/dependencies.r') # source all functions
 
@@ -144,6 +145,7 @@ cat('Done with choosing cities & overpasses...\n')
 run_trajec <- T      # whether to generate trajec
 run_foot   <- T      # whether to generate footprint
 columnTF   <- T      # whether a column receptor or fixed receptor
+if (columnTF == F) before_trajec = NULL; before_footprint = NULL
 if (run_trajec) cat('Need to generate trajec...\n')
 if (run_foot)   cat('Need to generate footprint...\n\n')
 
@@ -152,8 +154,6 @@ run_sim       <- F    # whether to run analysis, see details in STEP 8
 run_hor_err   <- F    # T: set parameters in STEP 4
 run_ver_err   <- F    # T: set parameters in STEP 4
 run_emiss_err <- F    # T: get XCO2 error due to prior emiss err, see STEP 8
-
-stilt.ver <- 2    # STILT versions (call different footprint algorithms)
 delt      <- 2    # fixed timestep [min]; set = 0 for dynamic timestep
 nhrs      <- -72  # number of hours backward (-) or forward (+)
 
@@ -226,7 +226,7 @@ find.lat <- NULL     # for debug or test, model one sounding
 recp.info <- get.recp.info(timestr, oco2.ver, oco2.path, lon.lat, selTF, 
                            recp.indx, recp.num, find.lat, agl, plotTF = F, 
                            trajpath = file.path(outdir, 'by-id'), run_trajec,
-                           stilt.ver, data.filter = c('QF', 0))
+                           stilt.ver = 2, data.filter = c('QF', 0))
 nrecp <- nrow(recp.info)
 cat(paste('Done with receptor setup...total', nrecp, 'receptors..\n'))
 
@@ -337,13 +337,13 @@ if (run_trajec | run_foot) {
                    recp.info = recp.info, run_foot = run_foot, 
                    run_hor_err = run_hor_err, run_trajec = run_trajec, site = site, 
                    slurm = slurm, slurm_options = slurm_options, 
-                   smooth_factor = smooth_factor, stilt.ver = stilt.ver, 
-                   time_integrate = time_integrate, timeout = timeout, 
-                   timestr = timestr, varstrajec = varstrajec, workdir = workdir)         
+                   smooth_factor = smooth_factor, time_integrate = time_integrate, 
+                   timeout = timeout, timestr = timestr, varstrajec = varstrajec, 
+                   workdir = workdir)         
   cat('Done with creating namelist...\n')
 
   # call run_stiltv2() to start running trajec and foot
-  run.stiltv2(namelist)
+  run.xstilt(namelist, before_trajec, before_footprint)
 } # end if run trajec or foot
 
 

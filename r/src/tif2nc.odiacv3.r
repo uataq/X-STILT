@@ -11,7 +11,7 @@
 # use raster to read tif file, instead of rgdal
 # no need to store as RDS, directly read from tif file, DW, 06/19/2018
 # gzTF, whether to unzip tiff file in the end
-# last update, DW, 10/19/2018 
+# use area() in raster package to calculate grid area, DW, 01/20/2019
 
 tif2nc.odiacv3 <- function(site, timestr, vname, workdir, foot.extent, 
                            tiff.path, gzTF = T){
@@ -39,45 +39,25 @@ tif2nc.odiacv3 <- function(site, timestr, vname, workdir, foot.extent,
     # always unzip to odiac directory, do not unzip to group_data
     cat('Unzipping up...\n'); system(paste0('gunzip ', gzfile))
     tiff.file <- substr(gzfile, 1, nchar(gzfile) - 3)
-
   } else { tiff.file <- gzfile } # end if gz
   gc()
 
   # after reading using readGDAL, the default dimension is (y,x)
   # 21600 rows and 43200 columns
   emiss <- raster(tiff.file) # convert to raster
-  #print(emiss)
-  cat('Done reading tiff file as raster.\n')
+  cat('Done reading tiff file as raster..\n')
 
   # subset spatial domain
   sel.emiss <- crop(emiss, foot.extent)
-  cat('Done subsetting emissions according to footprint domain.\n')
 
-  # return the area map as [LON, LAT]
-  cat('tif2nc.odiac(): calculating the area for each grid...\n')
-  res <- res(sel.emiss)[1]
-  ext <- sel.emiss@extent
-  area.co2 <- area(res = res, start.lon = ext@xmin,
-                   start.lat = ext@ymin, end.lon = ext@xmax - res, 
-                   end.lat = ext@ymax - res, third.dim = NULL) 
-                   # need lower left lat/lon, return dim [lon, lat]
-
-  # fix bug to reformat area --> prepare for raster, DW, 06/22/2018
-  area.co2 <- t(area.co2) # convert to [lat, lon]
-  area.lat <- rownames(area.co2)
-  area.co2 <- area.co2[length(area.lat):1, ] # flip lat, decreasing trend
-
-  # convert area.co2 to raster form
-  area.raster <- raster(area.co2, xmn = ext@xmin, xmx = ext@xmax,
-                                  ymn = ext@ymin, ymx = ext@ymax, 
-                                  crs = crs(sel.emiss))
+  # Method 2 -- compute area using area() function in raster package
+  area.raster <- raster::area(sel.emiss) * 1E6    # convert km2 to m2
 
   # convert the unit of CO2 emiss from Tonne Carbon/cell/month to umol/m2/s
   sel.emiss <- sel.emiss * 1E6 / 12 * 1E6 # convert tonne-C to uomol-C (= umole-CO2)
   sel.emiss <- sel.emiss / mod / 24 / 60 / 60	# convert per month to per second
   sel.emiss <- sel.emiss / area.raster		# convert per cell to per m2
   # NOW sel.co2 has unit of umole-CO2/m2/s, can be used directly with footprint
-  #print(sel.emiss)
 
   # store as nc
   cat('Storing cropped gridded emissions in nc files...\n')

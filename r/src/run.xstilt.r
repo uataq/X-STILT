@@ -6,13 +6,18 @@
 # add ziscale, DW, 07/25/2018
 
 
-run.stiltv2 <- function(namelist){
+run.xstilt <- function(namelist, before_trajec, before_footprint){
 
   # User inputs ----------------------------------------------------------------
   stilt_wd  <- namelist$workdir
   output_wd <- namelist$outdir
   lib.loc   <- .libPaths()[1]
   receptors <- namelist$recp.info
+
+  # met fields 
+  met_directory   <- namelist$met.path
+  met_file_format <- namelist$met.format
+  n_met_min <- namelist$met.num
 
   # modification for OCO-2 column simulations, DW, 05/24/2018
   # if NA, meaning no weighting nor OCO2 files for regular simualtions
@@ -125,13 +130,6 @@ run.stiltv2 <- function(namelist){
   message('Number of receptors: ', nrow(receptors))
   message('Number of parallel threads: ', n_nodes * n_cores)
 
-  if (F) {
-    grd <- array(dim = c((xmx - xmn) / xres, (ymx - ymn) / yres,
-                         abs(n_hours) * 60))
-    ram <- format(object.size(grd) * 2.0, units = 'MB', standard = 'SI')
-    message('Estimated footprint grid RAM allocation: ', ram)
-    gc()
-  }
 
   # Source dependencies --------------------------------------------------------
   setwd(stilt_wd)
@@ -153,10 +151,6 @@ run.stiltv2 <- function(namelist){
   }
 
   # Met path symlink -----------------------------------------------------------
-  met_directory   <- namelist$met.path
-  met_file_format <- namelist$met.format
-  n_met_min <- namelist$met.num
-
   # Auto symlink the meteorological data path to the working directory to
   # eliminate issues with long (>80 char) paths in fortran. Note that this
   # assumes that all meteorological data is found in the same directory.
@@ -165,50 +159,99 @@ run.stiltv2 <- function(namelist){
     if (!file.exists(met_loc)) invisible(file.symlink(met_directory, met_loc))
   } else met_loc <- met_directory
 
-
-  # Run trajectory simulations -------------------------------------------------
-  # Gather varsiwant into a single character string and fork the process to
-  # apply simulation_step() to each receptor across n_cores and n_nodes
-  validate_varsiwant(varsiwant)
-  if (!is.null(varsiwant[1]))
-    varsiwant <- paste(varsiwant, collapse = '/')
-
-  # add variables for OCO-2/XSTILT, 'ak.wgt', 'pwf.wgt', 'oco2.path', 'run_foot'
-  output <- stilt_apply(X = 1:nrow(receptors), FUN = simulation_stepv2,
-                        slurm = slurm, slurm_options = slurm_options,
-                        n_cores = n_cores, n_nodes = n_nodes, rm_dat = rm_dat,
-                        ak.wgt = ak.wgt, conage = conage, cpack = cpack,
-                        delt = delt, dmassTF = dmassTF, emisshrs = emisshrs,
-                        frhmax = frhmax, frhs = frhs, frme = frme, frmr = frmr,
-                        frts = frts, frvs = frvs, hnf_plume = hnf_plume,
-                        horcoruverr = horcoruverr, horcorzierr = horcorzierr,
-                        ichem = ichem, iconvect = iconvect, initd = initd,
-                        isot = isot, kbls = kbls, kblt = kblt, kdef = kdef,
-                        khmax = khmax, kmix0 = kmix0, kmixd = kmixd,
-                        kmsl = kmsl, kpuff = kpuff, krnd = krnd, kspl = kspl,
-                        kzmix = kzmix, maxdim = maxdim, maxpar = maxpar,
-                        lib.loc = lib.loc, met_file_format = met_file_format,
-                        met_loc = met_loc, mgmin = mgmin, n_hours = n_hours,
-                        n_met_min = n_met_min, ncycl = ncycl,
-                        ndump = ndump, ninit = ninit, nturb = nturb,
-                        numpar = numpar, oco2.path = oco2.path, outdt = outdt,
-                        outfrac = outfrac, output_wd = output_wd, p10f = p10f,
-                        projection = projection, pwf.wgt = pwf.wgt,
-                        qcycle = qcycle, r_run_time = receptors$run_time,
-                        r_lati = receptors$lati, r_long = receptors$long,
-                        r_zagl = receptors$zagl, random = random,
-                        run_foot = run_foot, run_trajec = run_trajec, 
-                        siguverr = siguverr, sigzierr = sigzierr, 
-                        smooth_factor = smooth_factor, splitf = splitf,
-                        stilt_wd = stilt_wd, stilt.ver = stilt.ver,
-                        time_integrate = time_integrate, timeout = timeout,
-                        tkerd = tkerd, tkern = tkern, tlfrac = tlfrac,
-                        tluverr = tluverr, tlzierr = tlzierr, tratio = tratio,
-                        tvmix = tvmix, varsiwant = varsiwant, veght = veght,
-                        vscale = vscale, w_option = w_option,
-                        xmn = xmn, xmx = xmx, xres = xres, ymn = ymn, ymx = ymx,
-                        yres = yres, zicontroltf = zicontroltf,
-                        ziscale = ziscale, z_top = z_top, zcoruverr = zcoruverr)
-  q('no')
+  # add variables for XSTILT, 'ak.wgt', 'pwf.wgt', 'oco2.path' and two functions
+  output <- stilt_apply(FUN = simulation_stepv2,
+                        slurm = slurm, 
+                        slurm_options = slurm_options,
+                        n_cores = n_cores, 
+                        n_nodes = n_nodes, 
+                        before_trajec = before_trajec, 
+                        before_footprint = before_footprint,
+                        ak.wgt = ak.wgt, 
+                        oco2.path = oco2.path, 
+                        pwf.wgt = pwf.wgt,
+                        conage = conage,
+                        cpack = cpack,
+                        delt = delt, 
+                        emisshrs = emisshrs,
+                        frhmax = frhmax, 
+                        frhs = frhs, 
+                        frme = frme, 
+                        frmr = frmr,
+                        frts = frts, 
+                        frvs = frvs, 
+                        hnf_plume = hnf_plume,
+                        horcoruverr = horcoruverr, 
+                        horcorzierr = horcorzierr,
+                        ichem = ichem, 
+                        iconvect = iconvect, 
+                        initd = initd,
+                        isot = isot, 
+                        kbls = kbls, 
+                        kblt = kblt, 
+                        kdef = kdef,
+                        khmax = khmax, 
+                        kmix0 = kmix0, 
+                        kmixd = kmixd,
+                        kmsl = kmsl, 
+                        kpuff = kpuff, 
+                        krnd = krnd, 
+                        kspl = kspl,
+                        kzmix = kzmix, 
+                        maxdim = maxdim, 
+                        maxpar = maxpar,
+                        lib.loc = lib.loc,
+                        met_file_format = met_file_format,
+                        met_loc = met_loc,
+                        mgmin = mgmin,
+                        n_hours = n_hours,
+                        n_met_min = n_met_min,
+                        ncycl = ncycl,
+                        ndump = ndump,
+                        ninit = ninit,
+                        nturb = nturb,
+                        numpar = numpar, 
+                        outdt = outdt,
+                        outfrac = outfrac,
+                        output_wd = output_wd,
+                        p10f = p10f,
+                        projection = projection,
+                        qcycle = qcycle,
+                        r_run_time = receptors$run_time,
+                        r_lati = receptors$lati,
+                        r_long = receptors$long,
+                        r_zagl = receptors$zagl,
+                        random = random,
+                        rm_dat = rm_dat,
+                        run_foot = run_foot,
+                        run_trajec = run_trajec, 
+                        siguverr = siguverr,
+                        sigzierr = sigzierr, 
+                        smooth_factor = smooth_factor,
+                        splitf = splitf,
+                        stilt_wd = stilt_wd,
+                        time_integrate = time_integrate,
+                        timeout = timeout,
+                        tkerd = tkerd,
+                        tkern = tkern,
+                        tlfrac = tlfrac,
+                        tluverr = tluverr,
+                        tlzierr = tlzierr,
+                        tratio = tratio,
+                        tvmix = tvmix,
+                        varsiwant = list(varsiwant),
+                        veght = veght,
+                        vscale = vscale,
+                        w_option = w_option,
+                        xmn = xmn,
+                        xmx = xmx,
+                        xres = xres,
+                        ymn = ymn,
+                        ymx = ymx,
+                        yres = yres,
+                        zicontroltf = zicontroltf,
+                        ziscale = ziscale,
+                        z_top = z_top,
+                        zcoruverr = zcoruverr)
 
 }
