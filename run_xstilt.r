@@ -145,7 +145,7 @@ cat('Done with choosing cities & overpasses...\n')
 run_trajec <- T      # whether to generate trajec
 run_foot   <- T      # whether to generate footprint
 columnTF   <- T      # whether a column receptor or fixed receptor
-if (columnTF == F) before_trajec = NULL; before_footprint = NULL
+if (columnTF == F) before_trajec = NA; before_footprint = NA
 if (run_trajec) cat('Need to generate trajec...\n')
 if (run_foot)   cat('Need to generate footprint...\n\n')
 
@@ -335,8 +335,8 @@ if (run_trajec | run_foot) {
                    oco2.path = oco2.path, pbl.err = pbl.err, 
                    projection = projection, pwf.wgt = pwf.wgt, 
                    recp.info = recp.info, run_foot = run_foot, 
-                   run_hor_err = run_hor_err, run_trajec = run_trajec, site = site, 
-                   slurm = slurm, slurm_options = slurm_options, 
+                   run_hor_err = run_hor_err, run_trajec = run_trajec, 
+                   site = site, slurm = slurm, slurm_options = slurm_options, 
                    smooth_factor = smooth_factor, time_integrate = time_integrate, 
                    timeout = timeout, timestr = timestr, varstrajec = varstrajec, 
                    workdir = workdir)         

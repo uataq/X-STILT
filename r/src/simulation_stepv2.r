@@ -27,9 +27,8 @@ if (F) {
   r_long = receptors$long[X]
   r_zagl = receptors$zagl[X]
 }
-simulation_stepv2 <- function(before_traj = NULL, # can be a function for X-STILT
-                              before_foot = NULL, # or can be a function for 
-                                                  # weighting foot column for trajec
+simulation_stepv2 <- function(before_traj = NA, 
+                              before_foot = NA, 
                               ak.wgt = NA, 
                               oco2.path = NULL, 
                               pwf.wgt = NA,
