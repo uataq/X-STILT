@@ -27,8 +27,8 @@ if (F) {
   r_long = receptors$long[X]
   r_zagl = receptors$zagl[X]
 }
-simulation_stepv2 <- function(before_traj = NA, 
-                              before_foot = NA, 
+simulation_stepv2 <- function(before_trajec = NA, 
+                              before_footprint = NA, 
                               ak.wgt = NA, 
                               oco2.path = NULL, 
                               pwf.wgt = NA,
@@ -136,10 +136,10 @@ simulation_stepv2 <- function(before_traj = NA,
     # Validate arguments
     if (!run_trajec && !run_foot)
       stop('simulation_step(): Nothing to do, set run_trajec or run_foot to T')
-    
+
     # Ensure dependencies are loaded for current node/process
     source(file.path(stilt_wd, 'r/dependencies.r'), local = T)
-     
+    
     # Creates subdirectories in out for each model run time. Each of these
     # subdirectories is populated with symbolic links to the shared datasets
     # below and a run-specific SETUP.CFG and CONTROL
@@ -190,7 +190,7 @@ simulation_stepv2 <- function(before_traj = NA,
       # check whether before_trajec() exist, if yes, call before_trajec
       # X-STILT needs to interpolate ground height before calc_trajectory
       # DW, 01/18/2019
-      if (!is.null(before_trajec)) 
+      if (!is.na(before_trajec)) 
         output <- before_trajec(output, r_zagl = 5, run_trajec, varsiwant, conage, 
                                 cpack, dxf, dyf, dzf, emisshrs, frhmax, frhs, 
                                 frme, frmr, frts, frvs, hnf_plume = F, hscale, 
@@ -275,7 +275,7 @@ simulation_stepv2 <- function(before_traj = NA,
     }
 
     # if before_footprint exists, call it to weight footprint column for X-STILT 
-    if (!is.null(before_footprint))
+    if (!is.na(before_footprint))
       particle <- before_footprint(output, rundir, oco2.path, ak.wgt, pwf.wgt)
 
     # Produce footprint --------------------------------------------------------

@@ -4,7 +4,7 @@
 
 # preserve original 'run_stilt.r' and modify 'run_stilt.r' as a subroutine
 # add ziscale, DW, 07/25/2018
-
+# add two before_* functions for getting ground height and AK PW weighting, DW, 01/24/2019
 
 run.xstilt <- function(namelist, before_trajec, before_footprint){
 

@@ -144,10 +144,14 @@ cat('Done with choosing cities & overpasses...\n')
 # F:re-use previously calculated particle location object
 run_trajec <- T      # whether to generate trajec
 run_foot   <- T      # whether to generate footprint
-columnTF   <- T      # whether a column receptor or fixed receptor
-if (columnTF == F) before_trajec = NA; before_footprint = NA
 if (run_trajec) cat('Need to generate trajec...\n')
 if (run_foot)   cat('Need to generate footprint...\n\n')
+
+columnTF   <- T      # whether a column receptor or fixed receptor
+# before_*_xstilt() are two customized functions for OCO-2/XSTILT
+# they are loaded after sourcing the dependency, 
+# if columnTF is turned off, assign NA to these two functions, DW, 01/23/2019
+if (columnTF == F) before_trajec_xstilt = NA; before_footprint_xstilt = NA
 
 # whether to perform XCO2 and its error simulations
 run_sim       <- F    # whether to run analysis, see details in STEP 8
@@ -218,7 +222,7 @@ if (selTF) {
 } else { recp.indx <- NULL }
 
 # whether to subset receptors when debugging; if no subset, insert NULL
-recp.num <- NULL     # can be a number for max num of receptors
+recp.num <- 1:16     # can be a number for max num of receptors or a vector
 find.lat <- NULL     # for debug or test, model one sounding
 
 # select satellite soundings, plotTF for whether plotting OCO-2 observed XCO2
@@ -315,7 +319,7 @@ cat('Done with footprint setup...\n\n')
 if (run_trajec | run_foot) {
 
   ## use SLURM for parallel simulation settings
-  n_nodes  <- 8
+  n_nodes  <- 2
   n_cores  <- ceiling(nrecp/n_nodes)
 
   # time allowed for running hymodelc before forced terminations
@@ -343,7 +347,8 @@ if (run_trajec | run_foot) {
   cat('Done with creating namelist...\n')
 
   # call run_stiltv2() to start running trajec and foot
-  run.xstilt(namelist, before_trajec, before_footprint)
+  run.xstilt(namelist, before_trajec = before_trajec_xstilt, 
+                       before_footprint = before_footprint_xstilt)
 } # end if run trajec or foot
 
 
