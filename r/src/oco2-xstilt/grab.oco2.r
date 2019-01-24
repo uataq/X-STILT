@@ -85,10 +85,9 @@ grab.oco2 <- function(ocopath, timestr, lon.lat, oco2.ver = 'b9r'){
   if (oco2.ver != 'b9r') obs.all <- cbind(obs.all, wl = as.numeric(wl))
 
   # select regions, lon.lat: c(minlon, maxlon, minlat, maxlat)
-  obs <- obs.all %>% 
-    filter(lat >= lon.lat$minlat & lat <= lon.lat$maxlat &
-           lon >= lon.lat$minlon & lon <= lon.lat$maxlon) %>% 
-    mutate(timestr = substr(id, 1, 10))
+  obs <- obs.all %>% filter(lat >= lon.lat$minlat & lat <= lon.lat$maxlat &
+                            lon >= lon.lat$minlon & lon <= lon.lat$maxlon) %>% 
+                     mutate(timestr = substr(id, 1, 10))
 
   sel.mode <- unique(obs$mode)
   #cat('Operational Modes:', unique(sel.mode), '\n\n')

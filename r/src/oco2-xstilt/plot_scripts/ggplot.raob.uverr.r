@@ -2,6 +2,7 @@
 # by Dien Wu, 12/03/2018
 
 # selTF for selecting certain raob stations, DW
+# add the calculation of mean u, v winds, DW, 01/17/2019 
 
 ggplot.raob.uverr <- function(timestr, site, lon.lat, map = NULL, raob.path, 
                               err.path = NULL, err.file = NULL, nhrs = -72, 
@@ -12,7 +13,7 @@ ggplot.raob.uverr <- function(timestr, site, lon.lat, map = NULL, raob.path,
 
         # grab RAOB
         raob <- grab.raob(raob.path, timestr, workdir = err.path, nhrs = nhrs, 
-                        format = 'fsl', overwrite = F) %>% 
+                          format = 'fsl', overwrite = F) %>% 
                 mutate(loc = paste0(lon,' ', lat))
 
         if (selTF) raob <- raob %>% filter(lat >= lon.lat$minlat, 
@@ -26,8 +27,8 @@ ggplot.raob.uverr <- function(timestr, site, lon.lat, map = NULL, raob.path,
 
         norm.count <- 6 * 16 # 3 days, 16 vertical levels
         loc.df <- data.frame(lon = as.numeric(loc.str[,1]), 
-                            lat = as.numeric(loc.str[,2]), 
-                            count = as.numeric(loc.count$count)) %>% 
+                             lat = as.numeric(loc.str[,2]), 
+                             count = as.numeric(loc.count$count)) %>% 
                   mutate(frac = count/norm.count)
 
         if (is.null(map)) 
@@ -35,30 +36,36 @@ ggplot.raob.uverr <- function(timestr, site, lon.lat, map = NULL, raob.path,
                               center.lon = lon.lat$citylon, zoom = 5)[[1]]
                          
         r1 <- map + #geom_path(data = cir, aes(x, y), linetype = 2, colour = 'gray50') +
-                geom_point(data = lon.lat, aes(citylon, citylat), size = 5,
-                        fill = NA, colour = 'red', shape = 21) +
-                geom_point(data = loc.df, aes(lon, lat, colour = frac * 100), 
-                        size = 2, shape = 17) + 
-                scale_colour_gradient(low = 'yellow', high = 'red',
-                                    name = 'RAOB Available\nData Fraction [%]') + 
-                labs(x = 'LONGITUDE', y = 'LATITUDE', 
-                    title = paste('Map of RAOB stations for', site, 'on', timestr)) + 
-                theme(legend.position = 'bottom', 
-                    legend.key.width = unit(1, 'cm'),
-                    legend.key.height = unit(0.5, 'cm'),
-                    legend.text = element_text(size = font.size),
-                    legend.key = element_blank(), panel.grid.minor = element_blank(),
-                    axis.title.y = element_text(size = font.size, angle = 90),
-                    axis.title.x = element_text(size = font.size, angle = 0),
-                    axis.text = element_text(size = font.size),
-                    axis.ticks = element_line(size = font.size),
-                    title = element_text(size = font.size))
+            geom_point(data = lon.lat, aes(citylon, citylat), size = 5,
+                       fill = NA, colour = 'red', shape = 21) +
+            geom_point(data = loc.df, aes(lon, lat, colour = frac * 100), 
+                       size = 2, shape = 17) + 
+            scale_colour_gradient(low = 'yellow', high = 'red',
+                                  name = 'RAOB Available\nData Fraction [%]') + 
+            labs(x = 'LONGITUDE', y = 'LATITUDE', 
+                 title = paste('Map of RAOB stations for', site, 'on', timestr)) + 
+            theme(legend.position = 'bottom', legend.key.width = unit(1, 'cm'),
+                  legend.key.height = unit(0.5, 'cm'),
+                  legend.text = element_text(size = font.size),
+                  legend.key = element_blank(), 
+                  panel.grid.minor = element_blank(),
+                  axis.title.y = element_text(size = font.size, angle = 90),
+                  axis.title.x = element_text(size = font.size, angle = 0),
+                  axis.text = element_text(size = font.size),
+                  axis.ticks = element_line(size = font.size),
+                  title = element_text(size = font.size))
+
         png <- file.path(err.path, paste0('map_', site, '_', timestr, '.png'))
         ggsave(r1, filename = png, width = 6, height = 6)
     } # end of plotTF
 
     # 2. plot time series of uverr
     if (!is.null(err.file)) {
+
+        date1 <- as.POSIXct(as.character(timestr), format = '%Y%m%d%H', tz = 'UTC')
+        date2 <- date1 + nhrs * 60 * 60
+        min.date <- min(date1, date2)
+        max.date <- max(date1, date2)
 
         err.dat <- read.table(file.path(err.path, err.file), header = T, sep = ',') 
         err.dat <- err.dat %>% 
@@ -76,7 +83,7 @@ ggplot.raob.uverr <- function(timestr, site, lon.lat, map = NULL, raob.path,
                    filter(abs(u.err) <= 40, abs(v.err) <= 40, dist <= 2000) %>% 
 
                    # select wind errors based on 3-day-time
-                   filter(date >= min.date) %>% na.omit()
+                   filter(date >= min.date, date <= max.date) %>% na.omit()
 
         if (selTF) err.dat <- err.dat %>% filter(lat >= lon.lat$minlat, 
                                                  lat <= lon.lat$maxlat, 
@@ -85,12 +92,22 @@ ggplot.raob.uverr <- function(timestr, site, lon.lat, map = NULL, raob.path,
                                   
         # calculate a distance weighted RMSE
         err.stat <- err.dat %>% group_by(agl.str) %>% 
-                    dplyr::summarize(siguverr = sqrt(mean(c(u.err^2, v.err^2))), 
+                    dplyr::summarize(mean.uv.met = mean(abs(c(u.met, v.met))), 
+                                     mean.u.met = mean(abs(u.met)), 
+                                     mean.v.met = mean(abs(v.met)), 
+
+                                     mean.uv.raob = mean(abs(c(u.raob, v.raob))), 
+                                     mean.u.raob = mean(abs(u.raob)), 
+                                     mean.v.raob = mean(abs(v.raob)), 
+
+                                     siguverr = sqrt(mean(c(u.err^2, v.err^2))), 
                                      siguerr = sqrt(mean(u.err^2)), 
                                      sigverr = sqrt(mean(v.err^2)), 
+
                                      mbuverr = mean(c(u.err, v.err)), 
-                                     mbuerr  = mean(u.err), mbverr = mean(v.err))
-        err.stat <- err.stat %>% mutate(timestr = timestr, site = site)
+                                     mbuerr  = mean(u.err), 
+                                     mbverr  = mean(v.err)) %>% 
+                    mutate(timestr = timestr, site = site)
 
         # start plotting
         if (plotTF) {

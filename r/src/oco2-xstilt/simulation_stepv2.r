@@ -152,23 +152,24 @@ simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
         return()
       } # end if length
 
-      particle <- calc_trajectory(varsiwant, conage, cpack, delt, dxf, dyf, dzf,
-                                  emisshrs, frhmax, frhs, frme, frmr, frts, frvs,
-                                  hscale, ichem, iconvect, initd, isot, ivmax,
-                                  kbls, kblt, kdef, khmax, kmix0, kmixd, kmsl,
-                                  kpuff, krnd, kspl, kzmix, maxdim, maxpar,
-                                  met_files, mgmin, ncycl, ndump, ninit, numpar,
-                                  nturb, n_hours, outdt, outfrac, output, p10f,
-                                  qcycle, random, splitf, tkerd, tkern, rm_dat,
-                                  timeout, tlfrac, tratio, tvmix, veght, vscale,
-                                  0, w_option, zicontroltf, ziscale, z_top,
-                                  rundir)
-      if (is.null(particle)) return()
+        cat('calculating trajec without wind error...\n')
+        particle <- calc_trajectory(varsiwant, conage, cpack, delt, dxf, dyf, dzf,
+                                    emisshrs, frhmax, frhs, frme, frmr, frts, frvs,
+                                    hscale, ichem, iconvect, initd, isot, ivmax,
+                                    kbls, kblt, kdef, khmax, kmix0, kmixd, kmsl,
+                                    kpuff, krnd, kspl, kzmix, maxdim, maxpar,
+                                    met_files, mgmin, ncycl, ndump, ninit, numpar,
+                                    nturb, n_hours, outdt, outfrac, output, p10f,
+                                    qcycle, random, splitf, tkerd, tkern, rm_dat,
+                                    timeout, tlfrac, tratio, tvmix, veght, vscale,
+                                    0, w_option, zicontroltf, ziscale, z_top,
+                                    rundir)
+        if (is.null(particle)) return()
 
-      # Bundle trajectory configuration metadata with trajectory informtation
-      output$particle <- particle
-      output$params <- read_config(file = file.path(rundir, 'CONC.CFG'))
-
+        # Bundle trajectory configuration metadata with trajectory informtation
+        output$particle <- particle
+        output$params <- read_config(file = file.path(rundir, 'CONC.CFG'))
+    
       # Optionally execute second trajectory simulations to quantify transport
       # error using parameterized correlation length and time scales
       xyerr <- write_winderr(siguverr, tluverr, zcoruverr, horcoruverr,
@@ -177,6 +178,7 @@ simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
                           file = file.path(rundir, 'ZIERR'))
       winderrtf <- (!is.null(xyerr)) + 2 * !is.null(zerr)
       if (winderrtf > 0) {
+        cat('calculating trajec with wind error...\n')
         particle_error <- calc_trajectory(varsiwant, conage, cpack, delt, dxf,
                                           dyf, dzf, emisshrs, frhmax, frhs, frme,
                                           frmr, frts, frvs, hscale, ichem,

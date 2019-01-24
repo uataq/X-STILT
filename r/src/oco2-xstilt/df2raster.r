@@ -9,8 +9,8 @@ df2raster <- function(df) {
     spg <- df
     colnms <- colnames(spg)
 
-    if (x   %in% colnms & y   %in% colnms) coordinates(spg) <- ~ x + y
-    if (lon %in% colnms & lat %in% colnms) coordinates(spg) <- ~ lon + lat
+    if ('x' %in% colnms & 'y' %in% colnms) coordinates(spg) <- ~ x + y
+    if ('lon' %in% colnms & 'lat' %in% colnms) coordinates(spg) <- ~ lon + lat
 
     # coerce to SpatialPixelsDataFrame
     gridded(spg) <- TRUE
