@@ -63,6 +63,7 @@ run.xstilt <- function(namelist){
   hnf_plume      <- namelist$hnf_plume
   smooth_factor  <- namelist$smooth_factor
   time_integrate <- namelist$time_integrate
+  projection     <- namelist$projection 
 
   # Transport and dispersion settings
   conage      <- 48
@@ -125,7 +126,7 @@ run.xstilt <- function(namelist){
     before_footprint <- function() {output}
     before_trajec <- function() {output}
   } else {
-    before_footprint <- generate_before_footprint_xstilt(ak.wgt, pwf.wgt, oco2.path)
+    before_footprint <- before_footprint_xstilt
     before_trajec <- before_trajec_xstilt
   } # end if columnTF
 
@@ -173,7 +174,6 @@ run.xstilt <- function(namelist){
     if (!file.exists(met_loc)) invisible(file.symlink(met_directory, met_loc))
   } else met_loc <- met_directory
 
-  # add variables for XSTILT, 'ak.wgt', 'pwf.wgt', 'oco2.path' and two functions
   output <- stilt_apply(FUN = simulation_step,
                         slurm = slurm, 
                         slurm_options = slurm_options,
@@ -263,6 +263,12 @@ run.xstilt <- function(namelist){
                         zicontroltf = zicontroltf,
                         ziscale = ziscale,
                         z_top = z_top,
-                        zcoruverr = zcoruverr)
+                        zcoruverr = zcoruverr, 
+
+  # pass additional variables to stilt_apply and then to simulation_step() 
+  # needed for X-STILT, DW, 01/25/2019
+                        oco2.path = oco2.path, 
+                        ak.wgt = ak.wgt, 
+                        pwf.wgt = pwf.wgt)
 
 }

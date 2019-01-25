@@ -119,7 +119,7 @@ get.wgt.funcv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 	# OR assign all AK as 1 if ak.wgt is FALSE
 	if (ak.wgt) {
 	  lower.ak.norm <- approx(x = oco2.pres, y = oco2.ak.norm, xout = recp.pres,
-			                      rule = 2)$y
+			                  rule = 2)$y
 
 	  # AK=0 for upper levels --> keep original OCO2 AK profiles, DW, 04/06/2017
 	  upper.ak.norm   <- oco2.ak.norm[upper.index]

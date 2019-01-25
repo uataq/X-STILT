@@ -32,26 +32,28 @@ get.recp.info <- function(timestr, oco2.ver, oco2.path, lon.lat, selTF, recp.ind
     col <- def.col()
     col.range <- seq(380, 420, 2)
     m1 <- ggplot.map(map = 'ggmap', center.lat = lon.lat$citylat,
-          center.lon = lon.lat$citylon, zoom = zoom)[[1]] + theme_bw()
+                     center.lon = lon.lat$citylon, zoom = zoom)[[1]] + theme_bw()
 
     # add observed XCO2
-    c1 <- m1 + geom_point(data = sel.oco2, aes(lon, lat, colour = xco2))
-    c1 <- c1 + labs(x = 'LONGITUDE [degE]', y = 'LATITUDE [degN]')
-    c1 <- c1 + labs(title = paste('OCO-2 XCO2 [ppm] for', site, 'on',
-      substr(timestr, 1, 8)))
-    c1 <- c1 + scale_colour_gradientn(name = 'OCO-2 XCO2 [ppm]',
-      colours = col, breaks = col.range, labels = col.range)
+    c1 <- m1 + geom_point(data = sel.oco2, aes(lon, lat, colour = xco2)) + 
+               labs(x = 'LONGITUDE [degE]', y = 'LATITUDE [degN]', 
+                    title = paste('OCO-2 XCO2 [ppm] for', site, 'on',
+                                  substr(timestr, 1, 8))) + 
+               scale_colour_gradientn(name = 'OCO-2 XCO2 [ppm]',
+                                      colours = col, breaks = col.range, 
+                                      labels = col.range)
 
     # add themes
     c2 <- c1 + theme(legend.position = 'bottom',
-      legend.text = element_text(size = font.size),
-      legend.key = element_blank(), legend.key.height = unit(0.5, 'cm'),
-      legend.key.width = unit(3, 'cm'),
-      axis.title.y = element_text(size = font.size, angle = 90),
-      axis.title.x = element_text(size = font.size, angle = 0),
-      axis.text = element_text(size = font.size),
-      axis.ticks = element_line(size = font.size),
-      title = element_text(size = font.size))
+                      legend.text = element_text(size = font.size),
+                      legend.key = element_blank(), 
+                      legend.key.height = unit(0.5, 'cm'),
+                      legend.key.width = unit(3, 'cm'),
+                      axis.title.y = element_text(size = font.size, angle = 90),
+                      axis.title.x = element_text(size = font.size, angle = 0),
+                      axis.text = element_text(size = font.size),
+                      axis.ticks = element_line(size = font.size),
+                      title = element_text(size = font.size))
     picname <- paste0('ggmap_xco2_', site,'_', substr(timestr, 1, 8), '.png')
     ggsave(c2, filename = picname, width = 6, height = 6)
   }  # end if plotTF
@@ -71,11 +73,12 @@ get.recp.info <- function(timestr, oco2.ver, oco2.path, lon.lat, selTF, recp.ind
     # get overpass time by merging with observed XCO2 and compute run_time
     sel.oco2$find.lat <- signif(sel.oco2$lat, max(nchar(recp.info$recp.lat)) - 1)
     sel.oco2$find.lon <- signif(sel.oco2$lon, max(nchar(recp.info$recp.lon)) - 1)
-    recp.info <- recp.info %>%
-      dplyr::select('lati' = 'recp.lat', 'long' = 'recp.lon') %>%
-      left_join(sel.oco2, by = c('lati' = 'find.lat', 'long' = 'find.lon')) %>%
-      mutate(run_times_utc = as.POSIXct(substr(id, 1, 14), '%Y%m%d%H%M%S',
-                                        tz = 'UTC'))
+    recp.info <- recp.info %>% dplyr::select('lati' = 'recp.lat', 'long' = 'recp.lon') %>%
+                               left_join(sel.oco2, by = c('lati' = 'find.lat', 
+                                                          'long' = 'find.lon')) %>%
+                               mutate(run_times_utc = as.POSIXct(substr(id, 1, 14), 
+                                                                 '%Y%m%d%H%M%S',
+                                                                  tz = 'UTC'))
 
   } else {
 
@@ -108,7 +111,7 @@ get.recp.info <- function(timestr, oco2.ver, oco2.path, lon.lat, selTF, recp.ind
   if (!is.null(find.lat)) recp.info <- recp.info[findInterval(find.lat, recp.info$lati), ]
 
   ## add release height
-  recp.info$zagl <- agl
+  recp.info$zagl <- list(agl)
 
   # return receptor info
   return(recp.info)

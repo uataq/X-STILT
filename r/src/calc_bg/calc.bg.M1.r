@@ -6,7 +6,7 @@
 #' (from 'create_namelist_oco2-xsilt.r')
 #' paths and data for CarbonTracker fluxes and mole fractions
 
-calc.M1.bg <- function(all.timestr, foot.path, traj.path, ct.ver, flux.path, 
+calc.bg.M1 <- function(all.timestr, foot.path, traj.path, ct.ver, flux.path, 
                        mf.path, output.path, oco2.ver, txtfile, writeTF = F, 
                        nhrs = -72) {
 

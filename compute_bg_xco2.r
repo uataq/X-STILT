@@ -13,14 +13,15 @@
 #' add CT-derived background M1, DW, 09/14/2018
 #' update code according to v9 changes, DW, 10/19/2018
 #' remove data filtering, always use QF = 0 for background estimates, DW, 10/31/2018
+#' refaectoring based on new stilt-submodule, DW, 01/25/2019 
+
 
 ## source all functions and load all libraries
 # CHANGE working directory ***
 homedir <- '/uufs/chpc.utah.edu/common/home'
-workdir <- file.path(homedir, 'lin-group7/wde/github/XSTILT') #current dir
+workdir <- file.path(homedir, 'lin-group5/wde/X-STILT') #current dir
 setwd(workdir)   # move to working directory
 source('r/dependencies.r') # source all functions
-
 
 # insert your API for the use of ggplot and ggmap
 api.key <- ''
@@ -39,11 +40,11 @@ oco2.ver <- c('b7rb', 'b8r', 'b9r')[1]  # OCO-2 version
 # M3. X-STILT overpass-specific (based on Wu et al., GMDD)
 method <- c('M1', 'M2H', 'M2S', 'M3')[4]
 
-## output and input paths, txtfile name for storing background values
-input.path  <- file.path(homedir, 'lin-group7/wde/input_data')
+## required output and input paths, txtfile name for storing background values
+input.path  <- file.path(homedir, 'lin-group5/wde/input_data')
 output.path <- file.path(workdir, gsub(' ', '', lon.lat$regid), site)
-txtfile     <- file.path(output.path, 
-                         paste0(method, '_bg_', site, '_', oco2.ver, '.txt'))
+bg.txtfile  <- file.path(output.path, paste0(method, '_bg_', site, '_', 
+                                             oco2.ver, '.txt'))
 oco2.path   <- file.path(input.path, 'OCO-2/L2', paste0('OCO2_lite_', oco2.ver))
 
 # path for storing overpass sampling info by 'get,site.track'
@@ -65,46 +66,26 @@ if (method == 'M1') {
   ct.ver    <- ifelse(substr(all.timestr, 1, 4) >= '2016', 'v2017', 'v2016-1')
   flux.path <- file.path(input.path, 'CT-NRT', ct.ver, 'fluxes/optimized')
   mf.path   <- file.path(input.path, 'CT-NRT', ct.ver, 'molefractions/co2_total')
+
+  # trajec and footprint paths, pointing to 'by-id', change them if needed
   foot.path <- file.path(output.path, paste('out', timestr, site, sep = '_'), 
                          'by-id')
   traj.path <- foot.path 
   
   # call function to get background
-  bg.info <- calc.M1.bg(all.timestr, foot.path, traj.path, ct.ver, flux.path, 
-                        mf.path, output.path, oco2.ver, txtfile, writeTF = T, 
-                        nhrs = -72)
+  bg.info <- calc.bg.M1(all.timestr, foot.path, traj.path, ct.ver, flux.path, 
+                        mf.path, output.path, oco2.ver, txtfile = bg.txtfile, 
+                        writeTF = T, nhrs = -72)
 } # end if M1
 
-
 # ------------------------ M2H. Regional daily median  ---------------------- #
-if (method == 'M2H')
-  bg.info <- calc.M2H.bg(lon.lat, all.timestr, output.path, oco2.ver, oco2.path, 
-                         txtfile, plotTF = F)
-
+if (method == 'M2H') bg.info <- calc.bg.M2H(lon.lat, all.timestr, output.path, 
+                                            oco2.ver, oco2.path, 
+                                            txtfile = bg.txtfile, plotTF = F)
 
 # ------------------------ M2S. Normal statistics  -------------------------- #
-if (method == 'M2S') {
-  library(MASS)
-
-  # 4x4 deg box around hotsplot, from Silva and Arellano, 2017
-  lon.lat <- get.lon.lat(site, dlat = 2, dlon = 2)
-
-  silva.bg <- NULL
-  for (t in 1:length(all.timestr)) {
-
-    # grab observations and calculate the mean and SD
-    obs    <- grab.oco2(oco2.path, all.timestr[t], lon.lat, oco2.ver) %>% 
-              filter(qf == 0)
-    tmp.bg <- as.numeric(fitdistr(obs$xco2, 'normal')$estimate[1]) -
-              as.numeric(fitdistr(obs$xco2, 'normal')$estimate[2])
-    silva.bg <- c(silva.bg, tmp.bg)
-
-  }  # end for t
-  
-  silva.bg <- data.frame(timestr = all.timestr, silva.bg = silva.bg)
-  write.table(silva.bg, quote = F, row.names = F, sep =',', file = txtfile)
-} # end if M2S
-
+if (method == 'M2S') bg.info <- calc.bg.M2S(site, all.timestr, oco2.path, 
+                                            oco2.ver, txtfile = bg.txtfile)
 
 # -------------------------- M3. Overpass-specific --------------------------- #
 # need to run forward runs from a box around the city
@@ -112,14 +93,26 @@ if (method == 'M3') {
 
   #------------------------------ STEP 1 --------------------------------- #
   #### Whether forward/backward, release from a column or a box
-  run_trajec <- T  # whether to run forward traj, if T, will overwrite existing
-  plotTF     <- F  # whether to calculate background and plot 2D density
-  delt       <- 2  # fixed timestep [min]; set = 0 for dynamic timestep
-  
-  ### MUST-HAVE parameters about errors
+  run_trajec  <- T  # whether to run forward traj, if T, will overwrite existing
+  run_bg      <- F  # whether to calculate background and plot 2D density 
+                    # this requires forward trajec ready
   run_hor_err <- T  # run trajec with hor wind errors/calc trans error
   run_ver_err <- F  # run trajec with mixed layer height scaling
 
+  # path for radiosonde data, FSL format from NOAA
+  # needed if adding wind error component, run_hor_err = T
+  raob.path <- file.path(input.path, 'RAOB', site)  # radiosonde
+  err.path  <- file.path(output.path, 'wind_err') # needed if run_hor_err = T
+
+  # if one does not want to run the whole wind error interpolation 
+  # (it needs RAOB data and takes time), thus set overwrite == F 
+  # and give a reasonable wind RMSE value, m/s
+  overwrite <- F
+  siguverr  <- 3     # wind RMSE, m/s
+
+  # set zisf = 1 if run_ver_err = F
+  zisf <- c(0.6, 0.8, 1.0, 1.2, 1.4)[3]; if (!run_ver_err) zisf <- 1.0       
+  
   # release particles from a box (dxyp x dxyp) around the city center
   dxyp  <- 0.4               # degree around city center
   nhrs  <- 12                # forward run, nhrs should always be positive
@@ -137,59 +130,45 @@ if (method == 'M3') {
   # path for the ARL format of WRF and GDAS
   # simulation_step() will find corresponding met files
   met.indx   <- 2
-  met        <- c('hrrr', 'gdas0p5', 'edas40')[met.indx]
+  met        <- c('hrrr', 'gdas0p5', 'edas40', 'wrf')[met.indx]
   met.path   <- file.path(homedir, 'u0947337', met)
   met.num    <- 1     # min number of met files needed
-
-  # met file name convention
-  met.format <- c('%Y%m%d.%Hz.hrrra', '%Y%m%d_gdas0p5', 'edas.%Y%m')[met.indx]
+  met.format <- c('%Y%m%d.%Hz.hrrra', '%Y%m%d_gdas0p5', 'edas.%Y%m', '%Y%m%d')[met.indx]
   
-  # plot will be stored in 'outpath' as well
-  if (run_trajec == T) outpath <- NULL  # will be generated in copies
-  if (run_trajec == F) outpath <- file.path(output.path, 'out_forward/') 
-
   # **** NEED CHANGES: which side for background, north, south, or both
   # can be interpolated from forward-plume, after being generated
   clean.side <- rep('south', length(all.timestr))  # just an example
-
-  # path for radiosonde data, 
-  # needed if adding wind error component, run_hor_err = T
-  raob.path  <- file.path(input.path, 'RAOB/middle.east/riyadh') 
 
   ### loop over each overpass
   bg.info <- NULL
   for (t in 1 : length(all.timestr)) {
 
     timestr <- all.timestr[t]
-      cat(paste('\n\n## ----- working on city', site, 
-                     'for the overpass on', timestr, '----- ##\n'))
+    cat(paste('\n\n## ----- Working on', site, 'on', timestr, '----- ##\n'))
 
    #------------------------------ STEP 3 --------------------------------- #
     ## get horizontal transport error component if run_hor_err = T
     # if overwrite = T, prepare RAOB data and compute model-data wind comparisons
-    # if you do not want to run wind error analysis, set overwrite to FALSE and 
-    # prescribe a horizontal wind error, e.g., siguverr = 3 (with unit of m/s)
+    # *** if you do not want to run wind error analysis, set overwrite to FALSE 
+    # and prescribe a horizontal wind error, e.g., siguverr = 3 (with unit of m/s)
     # for more info, please see get.uverr.r
-    hor.err <- get.uverr(run_hor_err, site, timestr, workdir, overwrite = F,
+    hor.err <- get.uverr(run_hor_err, site, timestr, workdir, overwrite,
                          raob.path, raob.format = 'fsl', nhrs, met, met.path, 
                          met.format, met.files, lon.lat, agl = c(0, 100), 
-                         nfTF = T, forwardTF = T, siguverr = 3, 
-                         err.path = file.path(output.path, 'wind_err'))
+                         nfTF = T, siguverr = siguverr, err.path = err.path)
 
     ## get vertical transport error component if run_ver_err = T
-    zisf <- c(0.6, 0.8, 1.0, 1.2, 1.4)[3]
-    if (!run_ver_err) zisf <- 1.0       # set zisf = 1 if run_ver_err = F
     pbl.err <- get.zierr(run_ver_err, nhrs.zisf = 24, const.zisf = zisf)
     cat('Done with choosing met & inputting wind errors...\n')
 
     #------------------------------ STEP 4 -------------------------------- #
     # !!! need to add makefile for AER_NOAA_branch in fortran ;
     # link two hymodelcs in exe directory
-    tmp.info <- run.forward.trajec(site, timestr, overwrite = run_trajec, 
-                                   nummodel = timestr, lon.lat, delt, dxyp, 
+    tmp.info <- run.forward.trajec(site, timestr, run_trajec, run_bg, 
+                                   nummodel = timestr, lon.lat, delt = 2, dxyp, 
                                    dzp = 0, dtime, agl, numpar, nhrs, workdir, 
-                                   outpath, hor.err, pbl.err, met, met.format, 
-                                   met.path, met.num = 1, plotTF, oco2.path, 
+                                   output.path, hor.err, pbl.err, met, 
+                                   met.format, met.path, met.num = 1, oco2.path, 
                                    oco2.ver, zoom = 7, td = 0.05, bg.dlat = 1, 
                                    perc = 0.1, clean.side = clean.side[t])
 
@@ -197,6 +176,6 @@ if (method == 'M3') {
     bg.info <- rbind(bg.info, tmp.info)
   } # end for t
 
-  if (plotTF) 
-    write.table(bg.info, quote = F, row.names = F, sep = ',', file = txtfile)
+  if (run_bg) 
+    write.table(bg.info, quote = F, row.names = F, sep = ',', file = bg.txtfile)
 } # end if method == 'M3'

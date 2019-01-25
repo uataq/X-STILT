@@ -11,7 +11,6 @@
 # version 2 for matching Ben's STILT-R version 2, call calc_trajectory DW, 05/29/2018
 # allows for multiple agl, when interpolating winds at receptors, DW, 08/29/2018
 # allow for prescribing met files, e.g., customized WRF, DW, 08/31/2018
-# simplify the code, DW, 01/18/2019
 
 get.ground.hgt <- function(receptor = NULL, agl = 5, run_trajec = T, 
                            varsiwant, conage, cpack, dxf, dyf, dzf, emisshrs, 
@@ -48,9 +47,11 @@ get.ground.hgt <- function(receptor = NULL, agl = 5, run_trajec = T,
   # get met files for + or - 1 hour
   met_files <- find_met_files(receptor$run_time, met_file_format, n_hours,
                               met_loc)
-
-  if (run_trajec) {
-    cat('get.ground.hgt(): NO trajec found...\n')
+  
+  particle <- NULL
+  if (file.exists(output$file)) particle <- readRDS(output$file)
+  
+  if (length(particle) == 0 | run_trajec) {
     # for simply getting ground heights, no need to add ziscale or other wind errors
     # modify the code based on Ben's code, 01/20/2019 
     particle <- calc_trajectory(varsiwant, conage, cpack, delt, dxf, dyf, dzf,
@@ -70,13 +71,9 @@ get.ground.hgt <- function(receptor = NULL, agl = 5, run_trajec = T,
       return()
     } else {
       saveRDS(particle, output$file)
-      cat(paste(basename(output$file), 'created\n'))
-    } # end if length
-
-  } else {
-    particle <- readRDS(output$file)
-    cat('get.ground.hgt(): trajec found...\n')
-  } # end if run_trajec
+      cat(paste('get.ground.hgt():', basename(output$file), 'created\n'))
+    } # end if length  
+  } 
 
   # select the min timestep, which is the most closed to the receptor
   sel <- abs(particle$time) == min(unique(abs(particle$time)))

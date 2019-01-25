@@ -1,4 +1,4 @@
-
+# dependencies for Trajecmulti()
 
 julian<-function(m, d, y, origin.){
 #returns day since 1/1/1960

@@ -1,17 +1,22 @@
 #' separate script that includes all site information, including timestr, lat, lon \
 #' @author: Dien Wu, 06/15/2018
 
-#' @variables:
+#' @param:
 #' urbanTF, dlon, dlat: for find.overpass(), e.g., city.lat +/- dlat
 #' site: name of site, e.g., "Riyadh"
 #' thred.count.per.deg: sounding thredshold, # of soundings per 1 degree lat
 #' txtpath: path to store an output txtfile
+#' lon.lat: generate from get.lon.lat()
+
+#' @updates:
+#' add season selction, rmTF, remove overpasses during growing seasons, DW, 01/25/2019
 
 get.site.track <- function(site, oco2.ver, oco2.path, searchTF = F,
                            date.range = c('20140101', '20181231'), 
                            thred.count.per.deg = 100, lon.lat, urbanTF, 
                            dlon.urban = NULL, dlat.urban = NULL,
-                           thred.count.per.deg.urban = NULL, txtpath){
+                           thred.count.per.deg.urban = NULL, txtpath, 
+                           rmTF = F){
 
   library(dplyr)
 
@@ -50,6 +55,20 @@ get.site.track <- function(site, oco2.ver, oco2.path, searchTF = F,
     thred.count.urban <- thred.count.per.deg.urban * dlat.urban * 2
     oco2.track <- oco2.track %>% filter(tot.urban.count > thred.count.urban)
   } # end if urbanTF
+
+  # track selection, whether to remove summtertime tracks
+  if (rmTF) {
+    if (lon.lat$citylat > 0) {   
+      # northern Hemi
+      oco2.track <- oco2.track %>% filter(substr(timestr, 5, 6) < '05' | 
+                                          substr(timestr, 5, 6) > '08')
+    } else {  
+
+      # southern Hemi
+      oco2.track <- oco2.track %>% filter(substr(timestr, 5, 6) < '12' & 
+                                          substr(timestr, 5, 6) > '03')
+    } # end if Hemisphere
+  }  # end if rmTF
 
   return(oco2.track)
 }

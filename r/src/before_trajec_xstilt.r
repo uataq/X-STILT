@@ -10,7 +10,7 @@ before_trajec_xstilt <- function() {
     # need modeled ground height to interpolate pres-hgt relation to
     # interpolate satellite weighting profiles from OCO-2 20 levels to model
     # levels, added by Dien Wu, 05/26/2018
-    cat('before_trajec(): estimating modeled ground heights for X-STILT ...\n')
+    cat('before_trajec_xstilt(): estimating modeled ground heights for X-STILT ...\n')
 
     # store trajec from 5mAGL in the same copy dir 'rundir' by calling
     # get.ground.height() that calls calc_trajectory() to estimate ground
