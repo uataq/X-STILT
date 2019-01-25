@@ -6,7 +6,7 @@
 # add ziscale, DW, 07/25/2018
 # add two before_* functions for getting ground height and AK PW weighting, DW, 01/24/2019
 
-run.xstilt <- function(namelist, before_trajec, before_footprint){
+run.xstilt <- function(namelist){
 
   # User inputs ----------------------------------------------------------------
   stilt_wd  <- namelist$workdir
@@ -24,8 +24,6 @@ run.xstilt <- function(namelist, before_trajec, before_footprint){
   ak.wgt    <- namelist$ak.wgt     # whether weighted foot by averaging kernel
   pwf.wgt   <- namelist$pwf.wgt    # whether weighted foot by pres weighting
   oco2.path <- namelist$oco2.path
-  stilt.ver <- namelist$stilt.ver
-  dmassTF   <- namelist$dmassTF
 
   # Model control
   rm_dat     <- T
@@ -119,6 +117,22 @@ run.xstilt <- function(namelist, before_trajec, before_footprint){
   w_option    <- 0
   z_top       <- 25000
 
+  # customized functions
+  # before_*_xstilt() are two customized functions for OCO-2/XSTILT
+  # they are loaded after sourcing the dependency, 
+  # if columnTF is turned off, initial it with identity functions, DW, 01/24/2019
+  if (columnTF == F) {
+    before_footprint <- function() {output}
+    before_trajec <- function() {output}
+  } else {
+    before_footprint <- generate_before_footprint_xstilt(ak.wgt, pwf.wgt, oco2.path)
+    before_trajec <- before_trajec_xstilt
+  } # end if columnTF
+
+  # require list form for stilt_apply.r
+  before_footprint <- list(before_footprint)
+  before_trajec <- list(before_trajec)
+
   # Parallel simulation settings
   slurm_options <- namelist$slurm_options
   slurm         <- namelist$slurm
@@ -160,16 +174,13 @@ run.xstilt <- function(namelist, before_trajec, before_footprint){
   } else met_loc <- met_directory
 
   # add variables for XSTILT, 'ak.wgt', 'pwf.wgt', 'oco2.path' and two functions
-  output <- stilt_apply(FUN = simulation_stepv2,
+  output <- stilt_apply(FUN = simulation_step,
                         slurm = slurm, 
                         slurm_options = slurm_options,
-                        n_cores = n_cores, 
-                        n_nodes = n_nodes, 
-                        before_trajec = before_trajec, 
-                        before_footprint = before_footprint,
-                        ak.wgt = ak.wgt, 
-                        oco2.path = oco2.path, 
-                        pwf.wgt = pwf.wgt,
+                        n_cores = n_cores,
+                        n_nodes = n_nodes,
+                        before_footprint = list(before_footprint),
+                        before_trajec = list(before_trajec),
                         conage = conage,
                         cpack = cpack,
                         delt = delt, 

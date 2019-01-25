@@ -9,20 +9,20 @@
 # interpolate ground heights from multiple receptors,
 # add vector forms of lat/lon/agl, DW, 05/02/2018
 # version 2 for matching Ben's STILT-R version 2, call calc_trajectory DW, 05/29/2018
-# allows for multiple r_zagl, when interpolating winds at receptors, DW, 08/29/2018
+# allows for multiple agl, when interpolating winds at receptors, DW, 08/29/2018
 # allow for prescribing met files, e.g., customized WRF, DW, 08/31/2018
 # simplify the code, DW, 01/18/2019
 
-get.ground.hgt <- function(receptor = NULL, r_zagl = 5, run_trajec = T, 
+get.ground.hgt <- function(receptor = NULL, agl = 5, run_trajec = T, 
                            varsiwant, conage, cpack, dxf, dyf, dzf, emisshrs, 
                            frhmax, frhs, frme, frmr, frts, frvs, hnf_plume = F, 
                            hscale, ichem, iconvect, initd, isot, kbls, kblt, 
                            kdef, khmax, kmix0, kmixd, kmsl, kpuff, krnd, kspl, 
                            kzmix, maxdim, maxpar, met_file_format, met_loc,
                            mgmin, ncycl, ndump, ninit, n_hours, outdt, outfrac, 
-                           p10f, qcycle, random, splitf, tkerd, tkern, 
-                           rm_dat = T, rundir, timeout, tlfrac, tratio, 
-                           tvmix, veght, vscale, w_option, zicontroltf, z_top){
+                           p10f, qcycle, random, splitf, tkerd, tkern, rm_dat, 
+                           rundir, timeout, tlfrac, tratio, tvmix, veght, 
+                           vscale, w_option, zicontroltf, z_top){
 
   # before run trajec, create new 'output'
   output  <- list()
@@ -31,19 +31,19 @@ get.ground.hgt <- function(receptor = NULL, r_zagl = 5, run_trajec = T,
   # only release one particle, but turn on turbulance 'nturb'
   delt    <- 1
   nturb   <- T
-  numpar  <- 1 * length(r_zagl)
+  numpar  <- 1 * length(agl)
   n_hours <- sign(n_hours)  # only allow for one hours back or forward
 
   # write output
   timestr <- strftime(receptor$run_time, tz = 'UTC', format = '%Y%m%d%H')
   output$file <- file.path(rundir, paste0(timestr, '_', receptor$long, '_', 
                                           receptor$lati, '_',
-                                          ifelse(length(r_zagl) > 1, 'X', r_zagl), 
+                                          ifelse(length(agl) > 1, 'X', agl), 
                                           '_traj.rds'))
 
-  # replace 'receptor$zagl' with 'r_zagl'
+  # replace 'receptor$zagl' with 'agl'
   output$receptor <- list(run_time = receptor$run_time, lati = receptor$lati, 
-                          long = receptor$long, zagl = r_zagl)
+                          long = receptor$long, zagl = agl)
 
   # get met files for + or - 1 hour
   met_files <- find_met_files(receptor$run_time, met_file_format, n_hours,
@@ -66,7 +66,7 @@ get.ground.hgt <- function(receptor = NULL, r_zagl = 5, run_trajec = T,
                                 z_top, rundir)
 
     if (length(particle) == 0) {
-      cat('get.ground.hgt(): no particle can be generated, check hymodelc.out...\n')
+      cat('get.ground.hgt(): no particle generated, check hymodelc.out...\n')
       return()
     } else {
       saveRDS(particle, output$file)
@@ -89,21 +89,21 @@ get.ground.hgt <- function(receptor = NULL, r_zagl = 5, run_trajec = T,
   ubar <- NULL; vbar <- NULL; wbar <- NULL; zsfc <- NULL; temp <- NULL
 
   # if interpolate met variables for 1+ AGL levels
-  for (s in 1:length(r_zagl)) {
+  for (s in 1:length(agl)) {
 
     tmp.part <- sel.part[s, ]
     delx <- distCosine(p1 = c(tmp.part$long, receptor$lati),
                        p2 = c(receptor$long, receptor$lati)) # in meter
     dely <- distCosine(p1 = c(receptor$long, tmp.part$lati),
                        p2 = c(receptor$long, receptor$lati))
-    delz <- abs(tmp.part$zagl - r_zagl[s])
+    delz <- abs(tmp.part$zagl - agl[s])
 
     # U-, V- and W- velocities [m/s]
     # if n_hours is negative (ie., -1), switch wind direction
     # delx always > 0, no direction, sign(long - long) provides direction on delx
     ubar <- c(ubar, sign(tmp.part$long - receptor$long) * delx / nsec[s] * sign(n_hours))
     vbar <- c(vbar, sign(tmp.part$lati - receptor$lati) * dely / nsec[s] * sign(n_hours))
-    wbar <- c(wbar, sign(tmp.part$zagl - r_zagl[s]) * delz / nsec[s] * sign(n_hours))
+    wbar <- c(wbar, sign(tmp.part$zagl - agl[s]) * delz / nsec[s] * sign(n_hours))
 
     # ground height
     zsfc <- c(zsfc, tmp.part$zsfc)

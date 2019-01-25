@@ -48,7 +48,7 @@
 #### source all functions and load all libraries
 # CHANGE working directory ***
 homedir <- '/uufs/chpc.utah.edu/common/home'
-workdir <- file.path(homedir, 'lin-group5/wde/x-stilt') # current dir
+workdir <- file.path(homedir, 'lin-group5/wde/X-STILT') # current dir
 setwd(workdir)   # move to working directory
 source('r/dependencies.r') # source all functions
 
@@ -148,10 +148,6 @@ if (run_trajec) cat('Need to generate trajec...\n')
 if (run_foot)   cat('Need to generate footprint...\n\n')
 
 columnTF   <- T      # whether a column receptor or fixed receptor
-# before_*_xstilt() are two customized functions for OCO-2/XSTILT
-# they are loaded after sourcing the dependency, 
-# if columnTF is turned off, assign NA to these two functions, DW, 01/23/2019
-if (columnTF == F) before_trajec_xstilt = NA; before_footprint_xstilt = NA
 
 # whether to perform XCO2 and its error simulations
 run_sim       <- F    # whether to run analysis, see details in STEP 8
@@ -222,7 +218,7 @@ if (selTF) {
 } else { recp.indx <- NULL }
 
 # whether to subset receptors when debugging; if no subset, insert NULL
-recp.num <- 1:16     # can be a number for max num of receptors or a vector
+recp.num <- NULL     # can be a number for max num of receptors or a vector
 find.lat <- NULL     # for debug or test, model one sounding
 
 # select satellite soundings, plotTF for whether plotting OCO-2 observed XCO2
@@ -330,7 +326,7 @@ if (run_trajec | run_foot) {
 
   # create a namelist including all variables
   # namelist required for generating trajec
-  namelist <- list(agl = agl, ak.wgt = ak.wgt, delt = delt, dmassTF = dmassTF,
+  namelist <- list(agl = agl, ak.wgt = ak.wgt, columnTF = columnTF, delt = delt,
                    dpar = dpar, foot.info = foot.info, hnf_plume = hnf_plume, 
                    hor.err = hor.err, lon.lat = lon.lat, met = met, 
                    met.format = met.format, met.num = met.num, 
@@ -347,8 +343,8 @@ if (run_trajec | run_foot) {
   cat('Done with creating namelist...\n')
 
   # call run_stiltv2() to start running trajec and foot
-  run.xstilt(namelist, before_trajec = before_trajec_xstilt, 
-                       before_footprint = before_footprint_xstilt)
+  run.xstilt(namelist)
+  q('no')
 } # end if run trajec or foot
 
 
@@ -397,7 +393,7 @@ if (run_trajec * run_foot == F) {
                                    tiff.path, gzTF = F)
 
       # get error statistics via calling 'cal.trajfoot.stat()'
-      stilt_apply(X = 1:nrecp, FUN = cal.trajfoot.stat, slurm = slurm, 
+      stilt_apply(FUN = cal.trajfoot.stat, slurm = slurm, 
                   slurm_options = slurm_options, n_nodes = n_nodes, 
                   n_cores = n_cores, workdir = workdir, outdir = outdir, 
                   emiss.file = emiss.file, met = met, dpar = dpar, 
