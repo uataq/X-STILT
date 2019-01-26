@@ -34,9 +34,7 @@ vignettes/*.pdf
 
 old/*
 out*
-Copy*
 *.sh
-Eurasia
 in
 *.conf
 *.txt
@@ -45,3 +43,4 @@ _rslurm*
 *DS_Store
 r/*DS_Store/
 r/src/*DS_Store/
+paper*

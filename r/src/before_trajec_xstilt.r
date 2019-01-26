@@ -17,7 +17,7 @@ before_trajec_xstilt <- function() {
     # height [m] along w. u-, v- and w- component instantaneous wind
     # given receptor lat/lon/time/agl=5 (near ground)
     # remove ziscale and zicontroltf from get.ground.hgt(), DW
-    rundir <- dirname(output$file)
+    #rundir <- dirname(output$file)
     agl <- 5
     recp.var <- get.ground.hgt(receptor = output$receptor, agl, run_trajec, 
                                varsiwant, conage, cpack, dxf, dyf, dzf, emisshrs, 

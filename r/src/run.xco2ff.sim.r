@@ -1,25 +1,28 @@
 #### subroutine to readin ODIAC emissions and then couple with STILT footprint
-# as footprints have already been weighted by AK and PW,
-# just multiple emission with 2D footprint map, originated from 'foot.odiacv3'
-# written by Dien Wu, 09/13/2016
+#' as footprints have already been weighted by AK and PW,
+#' just multiple emission with 2D footprint map, originated from 'foot.odiacv3'
+#' @author Dien Wu, 09/13/2016
 
-# Updates:
-# ADD ODIACv2016, flag 1 for using v2015a, flag 2 for v2016, DW 02/14/2017
-# note that v2015a does not have emission for year 2015
-# ADD PRD ODIAC emissions, DW 03/08/2017
-# ADD TIMES hourly scaling factors for ODIACv2016, DW 03/08/2017
-# Get rid of variable 'odiac.vname',
-# always preprocess and read ODIAC emission before call this function...
+#' @Updates:
+#' ADD ODIACv2016, flag 1 for using v2015a, flag 2 for v2016, DW 02/14/2017
+#' note that v2015a does not have emission for year 2015
+#' ADD PRD ODIAC emissions, DW 03/08/2017
+#' ADD TIMES hourly scaling factors for ODIACv2016, DW 03/08/2017
+#' Get rid of variable 'odiac.vname',
+#'       always preprocess and read ODIAC emission before call this function...
 
-# version 2 modify based on Ben's code, DW
-# can work with multiple receptors at a time, now, DW, 06/05/2018
-# fix footprint lat/lon to lower lefts, as Ben uses centered lat/lon
-# use raster rather than nc_open, DW, 06/19/2018
-# add plotTF for plotting XCO2 contribution maps, DW, 06/20/2018
-# store output contribution map into the same by-d directory,
-#   remove store.path, DW, 07/26/2018
-# remove foot.path, use full path as foot.file, DW, 07/26/2018
-# fix a minor bug in interpreting footprint filename, DW, 10/11/2018 
+#' version 2 modify based on Ben's code, DW
+#'       can work with multiple receptors at a time, now, DW, 06/05/2018
+#' fix footprint lat/lon to lower lefts, as Ben uses centered lat/lon
+# '      use raster rather than nc_open, DW, 06/19/2018
+#'
+#' add plotTF for plotting XCO2 contribution maps, DW, 06/20/2018
+#' store output contribution map into the same by-d directory,
+# '      remove store.path, DW, 07/26/2018
+#' 
+#' remove foot.path, use full path as foot.file, DW, 07/26/2018
+#' fix a minor bug in interpreting footprint filename, DW, 10/11/2018 
+#' accommodate the diff in foot.nc filename, using two versions, DW, 01/25/2019
 
 run.xco2ff.sim <- function(site = 'Riyadh', timestr = '2014100920', vname = '2018', 
                            tiff.path, outdir, foot.res, workdir, store.path, 
@@ -29,8 +32,26 @@ run.xco2ff.sim <- function(site = 'Riyadh', timestr = '2014100920', vname = '201
 
   # grab footprint files and get footprint domain
   foot.path <- file.path(outdir, 'by-id')
-  foot.patt <- paste0(signif(foot.res, 3), 'x', signif(foot.res, 3), '_foot.nc')
-  foot.file <- list.files(foot.path, foot.patt, recursive = T, full.names = T)
+  #foot.patt <- paste0(signif(foot.res, 3), 'x', signif(foot.res, 3), '_foot.nc')
+  foot.patt <- '_foot.nc'
+  foot.files <- list.files(foot.path, foot.patt, recursive = T, full.names = T)
+  foot.indx <- grep(signif(foot.res, 3), basename(foot.files))
+
+  # in a previous version of X-STILT, foot.res is shown on the foot nc file, 
+  # but, after the refactoring, no more foot.res, 
+  # make this if statement, if foot was generated using a previous version
+  # DW, 01/25/2019
+  if (length(foot.indx) > 0) {
+    foot.file <- foot.files[foot.indx]
+  } else {
+    foot.file <- foot.files
+  }
+  
+  if (length(foot.file) == 0) {
+    cat('run.xco2ff.sim(): NO footprint found...please check by-id...\n')
+    return()
+  }
+
   tmp.foot  <- raster(foot.file[1])
   foot.extent <- extent(tmp.foot)
 
@@ -87,10 +108,10 @@ run.xco2ff.sim <- function(site = 'Riyadh', timestr = '2014100920', vname = '201
     print(sel.emiss[sel.emiss$emiss >= 100, ])
 
     e1 <- mm[[1]] + coord_equal() +
-      geom_raster(data = sel.emiss, aes(lon + mm[[3]], lat + mm[[2]],
-                  fill = emiss)) +
-      scale_fill_gradientn(trans = 'log10', colours = def.col(),
-                           limits = c(1, 1E5))
+          geom_raster(data = sel.emiss, aes(lon + mm[[3]], lat + mm[[2]],
+                      fill = emiss)) +
+          scale_fill_gradientn(trans = 'log10', colours = def.col(),
+                               limits = c(1, 1E5))
     ggsave(plot = e1, filename = gsub('.nc', '.png', emiss.file),
            width = 8, hright = 8)
   } # end if plotTF

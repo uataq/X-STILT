@@ -14,7 +14,7 @@
 before_footprint_xstilt <- function() {
 
     # check whether weighted trajec exists already, DW, 07/13/2018
-    rundir <- dirname(output$file)
+    #rundir <- dirname(output$file)
     wgt.file <- file.path(rundir, paste0(basename(rundir), '_wgttraj.rds'))
 
     if (file.exists(wgt.file)) {    # if true, grab from by-id directory

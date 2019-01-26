@@ -15,7 +15,6 @@
 #' remove data filtering, always use QF = 0 for background estimates, DW, 10/31/2018
 #' refaectoring based on new stilt-submodule, DW, 01/25/2019 
 
-
 ## source all functions and load all libraries
 # CHANGE working directory ***
 homedir <- '/uufs/chpc.utah.edu/common/home'
@@ -42,7 +41,7 @@ method <- c('M1', 'M2H', 'M2S', 'M3')[4]
 
 ## required output and input paths, txtfile name for storing background values
 input.path  <- file.path(homedir, 'lin-group5/wde/input_data')
-output.path <- file.path(workdir, gsub(' ', '', lon.lat$regid), site)
+output.path <- file.path(homedir, 'lin-group5/wde/output', site)
 bg.txtfile  <- file.path(output.path, paste0(method, '_bg_', site, '_', 
                                              oco2.ver, '.txt'))
 oco2.path   <- file.path(input.path, 'OCO-2/L2', paste0('OCO2_lite_', oco2.ver))

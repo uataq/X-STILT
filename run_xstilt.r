@@ -51,7 +51,7 @@
 #### source all functions and load all libraries
 # CHANGE working directory ***
 homedir <- '/uufs/chpc.utah.edu/common/home'
-workdir <- file.path(homedir, 'lin-group5/wde/X-STILT') # current dir
+workdir <- file.path(homedir, 'lin-group7/wde/X-STILT') # current dir
 setwd(workdir)   # move to working directory
 source('r/dependencies.r') # source all functions
 
@@ -67,7 +67,7 @@ lon.lat <- get.lon.lat(site = site, dlon = 1, dlat = 1.5)
 
 # required paths for input datasets
 # e.g., OCO2 XCO2, SIF, NOAA RAOB, ODAIC emission (1km tiff files)
-input.path  <- file.path(homedir, 'lin-group5/wde/input_data')
+input.path  <- file.path(homedir, 'lin-group7/wde/input_data')
 oco2.ver    <- c('b7rb', 'b8r', 'b9r')[3]           # OCO-2 version
 oco2.path   <- file.path(input.path, paste0('OCO-2/L2/OCO2_lite_', oco2.ver))
 sif.path    <- file.path(input.path, paste0('OCO-2/L2/OCO2_lite_SIF_', oco2.ver))
@@ -76,7 +76,7 @@ odiac.vname <- c('2016', '2017', '2018')[3]         # ODIAC version
 tiff.path   <- file.path(input.path, 'ODIAC', paste0('ODIAC', odiac.vname))  
 
 # path for storing plot or CO2 statistics, change if needed
-store.path <- file.path(workdir, gsub(' ', '', lon.lat$regid), site)
+store.path <- file.path(homedir, 'lin-group7/wde/output', site)
 dir.create(store.path, showWarnings = F, recursive = T)
 
 # whether search for overpasses over urban region,
@@ -306,13 +306,12 @@ if (run_trajec | run_foot) {
 
   # call run_stiltv2() to start running trajec and foot
   run.xstilt(namelist)  # more variables are defined in run.xstilt()
-  q('no')
 } # end if run trajec or foot
 
 
 #------------------------------ STEP 8 --------------------------------------- #
 ### calculate XCO2 concentration and its error (need trajec and footprint ready)
-if (run_trajec * run_foot == F) {
+if (!run_trajec & !run_foot) {
 
   #------------------------  Horizontal trans error -------------------------- #
   ### simulate transport error in XCO2 due to met errors, DW, 07/25/2018
