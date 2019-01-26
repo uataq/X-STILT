@@ -4,7 +4,7 @@
 #' require: 
 #' continent info, oco2 path
 
-calc.M2H.bg <- function(lon.lat, all.timestr, output.path, oco2.ver, oco2.path, 
+calc.bg.M2H <- function(lon.lat, all.timestr, output.path, oco2.ver, oco2.path, 
                         txtfile, plotTF = F) {
 
     bg <- NULL

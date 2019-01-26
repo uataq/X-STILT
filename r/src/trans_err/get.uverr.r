@@ -13,30 +13,37 @@
 get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
                       raob.path = NULL, raob.format = c('fsl', 'ncdf'), 
                       nhrs = -120, met = c('gdas1', 'gdas0p5', 'hrrr')[2], 
-                      met.path, met.format, lon.lat, agl, nfTF = F, 
-                      forwardTF = F, err.path, siguverr = 2, TLuverr = NULL, 
-                      zcoruverr = NULL, horcoruverr = NULL, met.files = NULL) {
-
+                      met.path, met.format, lon.lat, agl, nfTF = F, err.path, 
+                      siguverr = NULL, TLuverr = NULL, zcoruverr = NULL, 
+                      horcoruverr = NULL, met.files = NULL) {
+  
+  forwardTF <- ifelse(nhrs > 0, TRUE, FALSE)
+  
   if (run_hor_err) {
-
     cat('+++ horizontal wind error component +++\n')
 
     # intput correlation lengthscale (in meter) and timescales (in mins)
     # correlation timescale, horizontal and vertical lengthscales
     if (met == 'gdas0p5') {
-      TLuverr <- 1*60; zcoruverr <- 600; horcoruverr <- 40
+      TLuverr <- 1 * 60
+      zcoruverr <- 600
+      horcoruverr <- 40
 
     } else if (met == 'gdas1') {
-      TLuverr <- 2.4*60; zcoruverr <- 700; horcoruverr <- 97
+      TLuverr <- 2.4 * 60
+      zcoruverr <- 700
+      horcoruverr <- 97
 
     } else if (met == 'edas40') {
-      TLuverr <- 1*60; zcoruverr <- 600; horcoruverr <- 40
+      TLuverr <- 1 * 60
+      zcoruverr <- 600
+      horcoruverr <- 40
 
     } else {
-      cat ('get.uverr(): NO default value found...
-               Please input the time, horizontal and vertical 
-               wind error covariance (TLuverr, horcoruverr, zcoruverr) 
-               for your met fields...\n')
+      cat ('get.uverr(): NO default values found...
+            Please input the time, horizontal and vertical 
+            wind error covariance (TLuverr, horcoruverr, zcoruverr) 
+            for your met fields...\n')
     } # end if met
     
     # grab modeled winds, *** if no file found, this takes a long time to run
@@ -46,14 +53,15 @@ get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
     if (!file.exists(raob.file) & overwrite == F) {
 
       # if one does not want to run wind error analysis and no RAOB file found
-      cat('no wind error comparisons found; 
+      cat('get.uverr(): no wind error comparisons found; 
            make a consevative assumption for siguverr;
-           use prescribed RMSE wind error 
-           OR a default error of 2 m/s for the Middle East...\n')
+           use user-defined RMSE wind error,
+           OR a default value of 2 m/s from Wu et al. [2018]...\n')
       err.stat <- NULL
 
       # make a conservative assumption about the wind error, or use prescribed #
-      # < 2 m/s for GDAS 0.5deg for the Middle East, based on Wu et al., GMDD
+      # < 2 m/s for GDAS 0.5deg for the Middle East, based on Wu et al., 2018, GMD
+      if (is.null(siguverr)) siguverr <- 2
       err.stat$siguverr <- siguverr
 
     } else {

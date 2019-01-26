@@ -15,15 +15,19 @@
 # overpass events, DW, 07/31/2018
 # add customized data filtering, DW, 08/20/2018
 # remove data filtering, always use QF = 0 for background estimates, DW, 10/31/2018
+# rename output folder names, DW, 01/25/2019 
 
-run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
+run.forward.trajec <- function(site, timestr, run_trajec, run_bg, nummodel = 0,
                                lon.lat, delt, dxyp, dzp, dtime, agl, numpar, 
-                               nhrs, workdir, outpath = NULL, hor.err = NULL, 
+                               nhrs, workdir, output.path, hor.err = NULL, 
                                pbl.err = NULL, met, met.format, met.path, 
-                               met.num = 1, plotTF = F, oco2.path, oco2.ver, 
-                               zoom = 7, td = 0.05, bg.dlat = 0.5, perc = 0.2,
+                               met.num = 1, oco2.path, oco2.ver, zoom = 7, 
+                               td = 0.05, bg.dlat = 0.5, perc = 0.2,
                                clean.side = c('north', 'south', 'both')[3]){
-
+  
+  if (!run_trajec * !run_bg) 
+    cat('run.forward.trajec(): do nothing, check run_trajec and run_bg...\n')
+    
   # get lat/lon for city center
   clon <- signif(lon.lat$citylon, 6)
   clat <- signif(lon.lat$citylat, 6)
@@ -51,20 +55,21 @@ run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
                  formatC(agl, width = 5, flag = 0), paste0(numpar, 'P'),
                  dxyp, sep = 'x')
 
-  # if not outpath is inputted, here is the default directory
-  if (is.null(outpath)) outpath <- paste0(workdir, '/Copy', nummodel, '/')
-
+  # create out_forward dir for generating forward trajec
+  rundirname <- paste0('out_forward_', nummodel, '_', site)
+  output.path <- file.path(output.path, rundirname)
+  
   # if running trajec
-  if (overwrite) {
+  if (run_trajec) {
 
     # delete previous directories and then create new one
-    system(paste0('rm -rf ', outpath), ignore.stderr = T)
-    dir.create(outpath, showWarnings = FALSE, recursive = T)
+    system(paste0('rm -rf ', output.path), ignore.stderr = T)
+    dir.create(output.path, showWarnings = FALSE, recursive = T)
 
     # linking AER_NOAA_branch's hymodelc and other executables to outpath
-    exes <- list.files(file.path(workdir, 'exe/AER_NOAA_branch'))
-    file.symlink(file.path(workdir, 'exe/AER_NOAA_branch', exes), outpath)
-
+    exes <- list.files(file.path(workdir, 'exe'))
+    file.symlink(file.path(workdir, 'exe', exes), output.path)
+    
     # if using multiple receptors, or box of receptors or sources, turn it on,
     # then call updated Trajecmulti() instead of Trajec()
     varstrajec <- c('time', 'index', 'lat', 'lon', 'agl', 'grdht', 'foot',
@@ -93,27 +98,27 @@ run.forward.trajec <- function(site, timestr, overwrite = F, nummodel = 0,
                 agl  = rep(agl, nrow(format.date)),
                 nhrs = rep(nhrs, nrow(format.date)),
                 nummodel = nummodel, metd = c('fnl','awrf'),
-                outpath = outpath, overwrite = overwrite,
+                outpath = output.path, overwrite = run_trajec,
                 metfile = metfiles, metlib = paste0(met.path, '/'),
-                doublefiles = T, rundir = paste0(workdir, '/'),
+                doublefiles = T, rundir = dirname(output.path), 
+                rundirname = basename(output.path), 
                 varsout = varstrajec, siguverr = hor.err$siguverr, 
                 TLuverr = hor.err$TLuverr, zcoruverr = hor.err$zcoruverr, 
                 horcoruverr = hor.err$horcoruverr,
-                hymodelc.exe = './hymodelc', 
+                hymodelc.exe = './hymodelc.aer', # use the AER version of hymodelc
                 setup.list = list(DELT = delt, VEGHT = 0.5)) %>%
     invisible()
-  } # end if overwrite
+  } # end if run_trajec
 
-  # if plotting...
-  if (plotTF) {
-    bg.info <- ggplot.forward.trajec(ident, trajpath = outpath, site, timestr,
-                                     oco2.path, oco2.ver, met, zoom, lon.lat,
-                                     font.size = rel(1.2), td, bg.dlat, perc,
-                                     clean.side)
+  # calculating the forward background and plot kernel density map
+  if (run_bg) { # need forward trajec ready
+    bg.info <- calc.bg.forward.trajec(ident, trajpath = outpath, site, timestr,
+                                      oco2.path, oco2.ver, met, zoom, lon.lat,
+                                      font.size = rel(1.2), td, bg.dlat, perc,
+                                      clean.side)
     return(bg.info)
-  } else {
-    return()
-  }
-}
+  } # end if run_bg
+
+} 
 
 # end of script

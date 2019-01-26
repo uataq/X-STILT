@@ -23,11 +23,11 @@
 # merge two plots together if there's an intersection between overpass and plume,
 #   DW, 10/30/2018 
 
-ggplot.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path, 
-                                  oco2.ver, met, zoom = 7, lon.lat, 
-                                  font.size = rel(1.2), td = 0.05, 
-                                  bg.dlat = 0.5, perc = 0.2, 
-                                  clean.side = c('north', 'south', 'both')[3]){
+calc.bg.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path, 
+                                   oco2.ver, met, zoom = 7, lon.lat, 
+                                   font.size = rel(1.2), td = 0.05, 
+                                   bg.dlat = 0.5, perc = 0.2, 
+                                   clean.side = c('north', 'south', 'both')[3]){
 
   # call grab.oco2() to read in observations and compute overpass time
   # lon.lat used for grabbing OCO2 should be wider, e.g., by 2 deg +

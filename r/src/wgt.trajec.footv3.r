@@ -25,7 +25,7 @@ wgt.trajec.footv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 		trajdat.err <- output$particle_error 
 		trajdat.err <- trajdat.err[order(abs(trajdat.err$time)), ]
 	}
-	
+
 	# HERE, ak.wgt and pwf.wgt is passed on for weighting trajec
 	combine.prof <- get.wgt.funcv3(output = output, oco2.info = oco2.info,
 		                             ak.wgt = ak.wgt, pwf.wgt = pwf.wgt)

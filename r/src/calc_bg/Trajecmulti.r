@@ -7,10 +7,10 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
                         horcoruverr=NA,
                         varsout=c("time", "index", "lat", "lon", "agl", "grdht",
                                   "foot","temp0","swrad","zi","dens","dmass"),
-                        rundir=NULL, nummodel=NULL, outname=NULL, outpath="", 
-                        overwrite=T, emisshrs=1/100, sourcepath="./", 
-                        debugTF=TRUE, max.counter=NULL, sigzierr=NA, 
-                        TLzierr=NA, horcorzierr=NA, zsg.name=NULL, 
+                        rundir=NULL, rundirname = NULL, nummodel=NULL, 
+                        outname=NULL, outpath="", overwrite=T, emisshrs=1/100, 
+                        sourcepath="./", debugTF=TRUE, max.counter=NULL, 
+                        sigzierr=NA, TLzierr=NA, horcorzierr=NA, zsg.name=NULL, 
                         create.X0=FALSE, setup.list=list(), hymodelc.exe=NULL, 
                         write.r=TRUE, write.nc=FALSE){
 #Function to run HYSPLIT particle dispersion model and to check distribution of particles
@@ -151,7 +151,7 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
   }
   n.col<-length(varsout)
 
-  varsouttxt <- paste("'",paste(varsout.f,collapse="','"),"'",sep="")
+  varsouttxt <- paste0("'", paste(varsout.f,collapse="','"), "'")
   setup.list$IVMAX <- length(varsout.f) #number of output variables
   setup.list$VARSIWANT <- varsouttxt #4-letter code for output variables
 
@@ -202,10 +202,10 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
                   ziscale,siguverr,TLuverr,zcoruverr,horcoruverr,sigzierr,TLzierr,horcorzierr,varsout.r,
                   nummodel,outpath,overwrite,status,' ')
 
-  names.returninfo<-c(names.returninfo,"metlib",paste("metd",1:length(metd),sep=""),"doublemetfiles")
-  if(!is.null(metfile))names.returninfo<-c(names.returninfo,paste("metfile",1:length(metfile),sep=""))
+  names.returninfo<-c(names.returninfo,"metlib", paste0("metd", 1:length(metd)),"doublemetfiles")
+  if(!is.null(metfile))names.returninfo<-c(names.returninfo, paste0("metfile", 1:length(metfile)))
   names.returninfo<-c(names.returninfo,"conv")
-  if(!is.null(ziscale))names.returninfo<-c(names.returninfo,paste("ziscale",1:length(ziscale),sep=""))
+  if(!is.null(ziscale))names.returninfo<-c(names.returninfo, paste0("ziscale", 1:length(ziscale)))
 
   # changed is.null to is.na to fit the XSTILT code, DW, 11/30/2018
   if(!is.na(siguverr))names.returninfo<-c(names.returninfo,"siguverr")
@@ -216,7 +216,7 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
   if(!is.na(TLzierr))names.returninfo<-c(names.returninfo,"TLzierr")
   if(!is.na(horcorzierr))names.returninfo<-c(names.returninfo,"horcorzierr")
 
-  names.returninfo<-c(names.returninfo,paste("varsout",1:length(varsout.r),sep=""),
+  names.returninfo<-c(names.returninfo, paste0("varsout",1:length(varsout.r)),
                       "nummodel","outpath","overwrite","status","metoutname")
 
   names(returninfo)<-names.returninfo
@@ -231,7 +231,7 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
   if(!overwrite){
   #check if there, if so, don't overwrite, just return with status 3
     for (irow in 1:npos) {
-      if(existsr(outname,outpath) || file.exists(paste(outpath,'stilt',outname,'.nc',sep=''))) {
+      if(existsr(outname,outpath) || file.exists(paste0(outpath,'stilt',outname,'.nc'))) {
         mask.rows[irow] <- FALSE
         returnvalue[irow,"status"]<-3
         cat("Trajec(): found object", outname, " in ", outpath, "; use this.\n")
@@ -239,8 +239,10 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
     }
     if (sum(mask.rows) == npos) return(return.value)
   }
-
-  rundir<-paste(rundir,"Copy",nummodel,"/",sep="")
+  
+  # rename rundir folder names, DW, 01/25/2019
+  if (is.null(rundirname)) rundirname <- paste0("Copy_", nummodel, "/")
+  rundir <- file.path(rundir, rundirname)
   #cat("Trajec(): directory where STILT is run: ", rundir, "\n")
 
   # Date computations: Convert all starting times to floating point hours:
@@ -275,36 +277,40 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
                             sprintf('%2.2i',day.arg),sprintf('%2.2i',hr.arg),sep='x')
   if (encode.minutes) ident.start.date <- paste(ident.start.date,'00',sep='x')
 
-  input1<-paste(rundir,"CONTROL",sep="")  #general input file for 'chghymodelc'
-  input2<-paste(rundir,"SETUP.CFG",sep="")  #namelist file for 'chghymodelc'
-  input3<-paste(rundir,"ZICONTROL",sep="") #file for prescribing mixed-layer heights
-  input4<-paste(rundir,"WINDERR",sep="")  #wind error covariance
-  input5<-paste(rundir,"ZSG_LEVS.IN",sep="")  #file for prescribing heights in met fields to achieve better match with internal levels
-  input6<-paste(rundir,"ZIERR",sep="")  #mixed layer height error covariance
+  input1 <- file.path(rundir, "CONTROL")  #general input file for 'chghymodelc'
+  input2 <- file.path(rundir, "SETUP.CFG")  #namelist file for 'chghymodelc'
+  input3 <- file.path(rundir, "ZICONTROL") #file for prescribing mixed-layer heights
+  input4 <- file.path(rundir, "WINDERR")  #wind error covariance
+  input5 <- file.path(rundir, "ZSG_LEVS.IN")  #file for prescribing heights in met fields to achieve better match with internal levels
+  input6 <- file.path(rundir, "ZIERR")  #mixed layer height error covariance
   gatt.files <-        c(input1,   input2,     input3,     input4,   input5,       input6 )
   names(gatt.files) <- c("CONTROL","SETUP.CFG","ZICONTROL","WINDERR","ZSG_LEVS.IN","ZIERR")
   #
   ##First delete any previous files--so not have same run results between runs if run doesn't succeed
-  unix(paste("rm -f ",input1,sep=""))
-  unix(paste("rm -f ",input2,sep=""))
-  unix(paste("rm -f ",input3,sep=""))
-  unix(paste("rm -f ",input4,sep=""))
-  unix(paste("rm -f ",input5,sep=""))
-  unix(paste("rm -f ",input6,sep=""))
+  unix(paste0("rm -f ", input1))
+  unix(paste0("rm -f ", input2))
+  unix(paste0("rm -f ", input3))
+  unix(paste0("rm -f ", input4))
+  unix(paste0("rm -f ", input5))
+  unix(paste0("rm -f ", input6))
   #unix(paste("rm -f ",rundir,"hymodelc.out",sep=""))
   #
   #Write the prescribed heights in met fields for ECMWF fields (hybrid coordinate)
   ecflag<-FALSE;if(!is.null(metfile)){if(length(grep("ec",tolower(metfile)))>0)ecflag<-TRUE}
   if(length(grep("ec",tolower(metd)))>0)ecflag<-TRUE
+
   if(ecflag){
-    metfile1<-getmetfile(yr=yr.arg,mon=mon.arg,day=day.arg,hr=hr.arg,nhrs=nhrs.arg,metd="ECmetF",doublefiles=doublefiles)[1] #get name(s) of met files required to drive model
+    metfile1<-getmetfile(yr=yr.arg, mon=mon.arg, day=day.arg, hr=hr.arg, 
+                         nhrs=nhrs.arg, metd="ECmetF", doublefiles=doublefiles)[1] 
+                         #get name(s) of met files required to drive model
     if (is.null(zsg.name)) {
       zname<-paste(substring(metfile1,1,nchar(metfile1)-nchar("arl")),"IN",sep="")
     } else {
       zname <- zsg.name
     }
   #print(paste(metlib,zname,sep=""))
-    file.copy(from=paste(metlib,zname,sep=""), to=paste(rundir,"ZSG_LEVS.IN",sep=""), overwrite = TRUE) #use correct sigma levels, specific for ECMWF metdata file
+    file.copy(from = paste(metlib, zname, sep=""), 
+              to = file.path(rundir,"ZSG_LEVS.IN"), overwrite = TRUE) #use correct sigma levels, specific for ECMWF metdata file
   }  #if(ecflag){
 
   #Write the prescribed scaling factors for mixed-layer heights to 'ZICONTROL'
@@ -332,13 +338,13 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
   }  #if(!is.null(sigzierr)&!is.null(TLzierr)&!is.null(horcorzierr)){
 
   #create batch file to run hymodelc in 'rundir'
-  batchname<-paste(rundir,"runhymodelc.bat",sep="")  #name for executable
-  cat(paste("cd ",rundir,"\n",sep=""),file=batchname)
+  batchname <- file.path(rundir, "runhymodelc.bat")  #name for executable
+  cat(paste0("cd ", rundir, "\n"), file = batchname)
   if (is.null(hymodelc.exe)) hymodelc.exe <- "hymodelc"
   if (!debugTF) {
-    cat(paste(hymodelc.exe," >! hymodelc.out","\n",sep=""),file=batchname,append=T)
+    cat(paste0(hymodelc.exe," >! hymodelc.out","\n"), file=batchname, append=T)
   } else {
-    cat(paste(hymodelc.exe," >>! hymodelc.out","\n",sep=""),file=batchname,append=T)
+    cat(paste0(hymodelc.exe," >>! hymodelc.out","\n"), file=batchname, append=T)
   }
 
   outdat<-NULL
@@ -346,7 +352,8 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
   #
   if(is.null(metfile)){
     for (i in 1:length(metd)){
-      metf<-getmetfile(yr=yr.arg,mon=mon.arg,day=day.arg,hr=hr.arg,nhrs=nhrs.arg,metd=metd[i],doublefiles=doublefiles) #get name(s) of met files required to drive model
+      metf<-getmetfile(yr=yr.arg, mon=mon.arg, day=day.arg, hr=hr.arg, 
+                       nhrs=nhrs.arg, metd=metd[i], doublefiles=doublefiles) #get name(s) of met files required to drive model
       metfile<-c(metfile,metf)
     }
   }
@@ -369,7 +376,8 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
       zname <- zsg.name
     }
     print(paste("Using ",sourcepath,zname,sep=""))
-    file.copy(from=paste(sourcepath,zname,sep=""), to=paste(rundir,"ZSG_LEVS.IN",sep=""), overwrite = TRUE)
+    file.copy(from = paste(sourcepath,zname,sep=""), 
+              to = file.path(rundir,"ZSG_LEVS.IN"), overwrite = TRUE)
   }
 
   #generate emit variables for netCDF file
@@ -428,11 +436,11 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
   cat(paste(" /","\n",sep=""),file=input2,append=T)
 
   #remove old PARTICLE.DAT
-  unix(paste("rm -f ",rundir,"PARTICLE.DAT",sep=""))
-  unix(paste("rm -f ",rundir,"core",sep=""))
+  unix(paste0("rm -f ", file.path(rundir,"PARTICLE.DAT")))
+  unix(paste0("rm -f ",file.path(rundir, "core")))
   #debug:
   if (debugTF) {
-    for (tmp.file in paste(rundir,c("CONTROL","SETUP.CFG"),sep="")) {
+    for (tmp.file in file.path(rundir,c("CONTROL", "SETUP.CFG"))) {
       cat(tmp.file,":\n")
       unix(paste("cat",tmp.file,sep=" "),intern=F)
     }
@@ -442,30 +450,30 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
 
   # Issue with deallocate "uverr" in hymodelc.f90, line 4066, not an error, try suppress the warning, DW, 11/09/2017
   #unix.shell(paste("source ",rundir,"runhymodelc.bat",sep=""),shell="/bin/csh")   #output in 'PARTICLE.DAT' in same directory
-  try(unix.shell(paste("source ",rundir,"runhymodelc.bat",sep=""),shell="/bin/csh"),silent=TRUE)
+  try(unix.shell(paste0("source ", file.path(rundir,"runhymodelc.bat")), shell="/bin/csh"), silent=TRUE)
   unix.shell(paste("sync",sep=""),shell="/bin/csh")   #sync after to make sure files are writen before read
 
   #doesn't crash when PARTICLE.DAT isn't there
   dat <- NULL
-  if(! file.exists(paste(rundir, "PARTICLE.DAT",sep='')) ){
+  if(! file.exists(file.path(rundir, "PARTICLE.DAT")) ){
     print("Trajec(): PARTICLE.DAT not found");
   } else {
     #doesn't read the data when core was dumped; necessary since PARDUMP file will not be updated
-    if(length(unix.shell(paste("if (-e ",rundir,"core) echo 'core dumped'; endif",sep=""),shell="/bin/csh"))>0) {
+    if(length(unix.shell(paste0("if (-e ", file.path(rundir,"core"), ") echo 'core dumped'; endif"), shell="/bin/csh"))>0) {
       print("Trajec(): core was dumped, don't use")
     } else {
       #doesn't crash when PARTICLE.DAT is empty or has only one line (checking if larger than 500 b)
-      if(as.numeric(unix(paste("cat ", rundir,"PARTICLE.DAT | wc -l",sep=""))) < 2){
+      if(as.numeric(unix(paste0("cat ", file.path(rundir, "PARTICLE.DAT"), " | wc -l"))) < 2){
         print("Trajec(): PARTICLE.DAT too short");
       } else {
         #DMM Modification to cover downstream to solve ******* in EDAS40 output of PARTICLE.DAT; This is a cluge!
         if(length(grep("edas40",tolower(metd)))>0) {
-          datb<-scan(paste(rundir,"PARTICLE.DAT",sep=""),what=character(),skip=npos,quiet=T) #now read it
+          datb<-scan(file.path(rundir, "PARTICLE.DAT"),what=character(),skip=npos,quiet=T) #now read it
           datb[which(substring(datb,1,2)=="**")]<-NA
           datbb<-as.numeric(datb)
           dat<-matrix(datbb,byrow=T,ncol=n.col)
         } else {
-          dat<-matrix(scan(paste(rundir,"PARTICLE.DAT",sep=""),skip=npos,quiet=T),byrow=T,ncol=n.col) #now read it
+          dat<-matrix(scan(file.path(rundir, "PARTICLE.DAT"),skip=npos,quiet=T),byrow=T,ncol=n.col) #now read it
         }  #if(metdat=="edas40")
       }
     }
