@@ -65,21 +65,38 @@ get.siguverr <- function(met.raob, nfTF = F, forwardTF = F, lon.lat = NULL,
 
   }else{    #### if not nearfield wind statistics
 
+    library(fields)
+
     # we have 5 days statistics, only grab first 3 days backward
-    # if backward, ndays < 0
-    max.date <- as.POSIXct(as.character(recp.time), format = '%Y%m%d%H', tz = 'UTC')
-    min.date <- max.date + nhrs * 60 * 60
+    # if backward, ndays < 0, DW, 01/23/2019
+    date1 <- as.POSIXct(as.character(recp.time), format = '%Y%m%d%H', tz = 'UTC')
+    date2 <- date1 + nhrs * 60 * 60
+    min.date <- min(date1, date2)
+    max.date <- max(date1, date2)
 
     # select met.raob based on time and mAGL as well, DW, 07/31/2018
-    sel.met.raob <- met.raob %>%
-      mutate(date = as.POSIXct(as.character(timestr), format = '%Y%m%d%H', tz = 'UTC')) %>%
-      filter(hgt  >= min(unlist(agl)) & hgt <= max(unlist(agl)) &
-             date >= min.date & date <= max.date)
-  } # end if nfTF
+    sel.met.raob <- met.raob %>% 
+                    mutate(date = as.POSIXct(as.character(timestr), 
+                                            format = '%Y%m%d%H', tz = 'UTC'), 
 
-  # finally calculate mean wind errors and biases
+                    # calculate the distance between raob and city, in km
+                    dist = as.numeric(rdist.earth(
+                                            x1 = lon.lat[c('citylon', 'citylat')], 
+                                            x2 = met.raob[c('lon', 'lat')], 
+                                            miles = F))) %>% 
+
+                    # remove wind error outlier, abs() > 40 m/s and far away raob
+                    # select wind errors based on nhrs and recep hgts
+                    filter(abs(u.err) <= 40, abs(v.err) <= 40, dist <= 2000, 
+                           date >= min.date, date <= max.date, 
+                           hgt >= min(unlist(agl)), hgt <= 3000) %>% #max(unlist(agl))) %>% 
+                    na.omit()
+
+  } # end if 
+
+  # finally calculate meawind errors and biases
   if (length(sel.met.raob) > 0) {
-    siguverr <- sqrt(mean((sel.met.raob$u.err^2 + sel.met.raob$v.err^2)/2))
+    siguverr <- sqrt(mean(c(sel.met.raob$u.err^2, sel.met.raob$v.err^2)))
     u.bias   <- mean(sel.met.raob$u.err)
     v.bias   <- mean(sel.met.raob$v.err)
     ws.bias  <- mean(sel.met.raob$ws.err)
