@@ -37,7 +37,9 @@ bio.trajfoot <- function(trajdat, timestr, ctflux.path, ct.hr = seq(0, 21, 3),
   # then match time to 3 hourly ct and get ct timestr for each particle,
   # find the correct hr and date.hr string given 3 hourly ct
   trajdat <- trajdat %>% mutate(match.hr = ct.hr[findInterval(hr, ct.hr)],
-    match.date.hr = paste0(timestr, formatC(match.hr, width = 2, flag = 0)))
+                                match.date.hr = paste0(timestr, 
+                                                formatC(match.hr, width = 2, 
+                                                        flag = 0)))
   uni.date.hr <- unique(trajdat$match.date.hr)
   uni.hr <- as.numeric(substr(uni.date.hr, 9, 10))
 
@@ -50,9 +52,12 @@ bio.trajfoot <- function(trajdat, timestr, ctflux.path, ct.hr = seq(0, 21, 3),
 
     # open the daily file just once
     ctfile <- list.files(path = ctflux.path, pattern = substr(uni.date.hr[d], 1, 8))
+    if (length(ctfile) == 0) 
+      stop('bio.trajfoot(): NO CT fluxes available for this overpass...\n')
 
     # read as raster, find the correct band from 'bands'
-    bio <- raster(file.path(ctflux.path, ctfile), band = bands[d], varname = varname)
+    bio <- raster(file.path(ctflux.path, ctfile), band = bands[d], 
+                  varname = varname)
 
     # find corresponding 1x1deg CT grid for biospheric fluxes
     sel.trajdat <- trajdat %>% filter(match.date.hr == uni.date.hr[d])

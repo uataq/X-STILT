@@ -357,11 +357,10 @@ if (!run_trajec & !run_foot) {
       stilt_apply(FUN = cal.trajfoot.stat, slurm = slurm, 
                   slurm_options = slurm_options, n_nodes = n_nodes, 
                   n_cores = n_cores, workdir = workdir, outdir = outdir, 
-                  emiss.file = emiss.file, met = met, dpar = dpar, 
-                  ct.ver = ct.ver, ctflux.path = ctflux.path, 
-                  ctmole.path = ctmole.path, r_run_time = recp.info$run_time, 
-                  r_lati = recp.info$lati, r_long = recp.info$long, 
-                  r_zagl = recp.info$zagl)
+                  emiss.file = emiss.file, met = met, ct.ver = ct.ver, 
+                  ctflux.path = ctflux.path, ctmole.path = ctmole.path, 
+                  r_run_time = recp.info$run_time, r_lati = recp.info$lati, 
+                  r_long = recp.info$long, r_zagl = recp.info$zagl)
       q('no')
     } # end if run_sim
   

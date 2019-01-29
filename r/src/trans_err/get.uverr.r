@@ -13,7 +13,7 @@
 get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
                       raob.path = NULL, raob.format = c('fsl', 'ncdf'), 
                       nhrs = -120, met = c('gdas1', 'gdas0p5', 'hrrr')[2], 
-                      met.path, met.format, lon.lat, agl, nfTF = F, err.path, 
+                      met.path, met.format, lon.lat, agl, err.path, nfTF = F, 
                       siguverr = NULL, TLuverr = NULL, zcoruverr = NULL, 
                       horcoruverr = NULL, met.files = NULL) {
   
