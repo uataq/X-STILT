@@ -285,7 +285,7 @@ if (run_hor_err) {
   foot.ext <- extent(foot.info$xmn, foot.info$xmx, foot.info$ymn, foot.info$ymx)
   emiss.file <- tif2nc.odiacv3(site, timestr, vname = odiac.vname, workdir, 
                                foot.ext, tiff.path, gzTF = F)
-} else { emiss.file = NA}
+} else { emiss.file = NA }
 
 
 ### 2) whether weighted footprint by AK and PW for column simulations (X-STILT)
@@ -310,7 +310,9 @@ cat('Done with footprint setup...\n\n')
 if (run_trajec | run_foot) {
 
   ## use SLURM for parallel simulation settings
-  n_nodes  <- 6
+  # avoid using < 10 cores per node when running trans error stat (run_hor_err) 
+  # along with calculating 2D foot together (run_foot), *** memory limits
+  n_nodes  <- 8
   n_cores  <- ceiling(nrecp / n_nodes)
 
   # time allowed for running hymodelc before forced terminations
@@ -375,4 +377,7 @@ if (!run_trajec & !run_foot & run_sim) {
   } # end if run_hor_err
 } # end if run_sim
 
+
+if (!run_trajec & !run_foot & !run_sim) 
+  cat('NO simulations or analysis will be performed, please check run_*..\n')
 ##### end of script

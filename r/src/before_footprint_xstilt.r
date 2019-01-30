@@ -53,7 +53,7 @@ before_footprint_xstilt <- function() {
         stat.file <- cal.trajfoot.stat(workdir = stilt_wd, output = output, 
                                        outdir = output_wd, met = args$met, 
                                        emiss.file = args$emiss.file, 
-                                       combine.prof = wgt.output$combine.prof, 
+                                       combine.prof = wgt.output$wgt.prof, 
                                        ct.ver = args$ct.ver, 
                                        ctflux.path = args$ctflux.path, 
                                        ctmole.path = args$ctmole.path, 
