@@ -13,11 +13,18 @@
 #' read bio fluxes as raster layer that is more efficient, DW, 07/23/2018
 #' add stilt.ver, if v = 1, convert colnames--
 #' remove dmass correction
+#' remove zero footprint to save time and space, DW, 01/29/2019 
 
 bio.trajfoot <- function(trajdat, timestr, ctflux.path, ct.hr = seq(0, 21, 3),
                          varname = 'bio_flux_opt'){
 
   library(raster)
+
+  # compute the total indx before any operations
+  tot.p <- data.frame(indx = unique(trajdat$indx))
+
+  # remove zero footprint to save time and space, DW, 01/29/2019 
+  trajdat <- trajdat %>% filter(foot > 0)
 
   #### NOW grab a CO2.bio fluxes for each selected trajec ###
   # match 3-houly footprint and 3-houly biosperhic fluxes
@@ -26,12 +33,12 @@ bio.trajfoot <- function(trajdat, timestr, ctflux.path, ct.hr = seq(0, 21, 3),
   traj.date <- recp.date + trajdat$time * 60 # convert to seconds
 
   # get day, mon, year for trajec time
-  trajdat <- trajdat %>% mutate(
-    timestr = as.numeric(gsub('-', '', substr(traj.date, 1, 10))),
-    yr  = as.numeric(substr(timestr, 1, 4)),
-    mon = as.numeric(substr(timestr, 5, 6)),
-    day = as.numeric(substr(timestr, 7, 8)),
-    hr  = as.numeric(substr(traj.date, 12, 13)))
+  trajdat <- trajdat %>%
+             mutate(timestr = as.numeric(gsub('-', '', substr(traj.date, 1, 10))),
+                    yr  = as.numeric(substr(timestr, 1, 4)),
+                    mon = as.numeric(substr(timestr, 5, 6)),
+                    day = as.numeric(substr(timestr, 7, 8)),
+                    hr  = as.numeric(substr(traj.date, 12, 13)))
   uni.date <- unique(trajdat$timestr)
 
   # then match time to 3 hourly ct and get ct timestr for each particle,
@@ -48,7 +55,7 @@ bio.trajfoot <- function(trajdat, timestr, ctflux.path, ct.hr = seq(0, 21, 3),
 
   # loop over all combinations
   new.trajdat <- NULL
-  for (d in 1:length(uni.date.hr)){
+  for (d in 1 : length(uni.date.hr)) {
 
     # open the daily file just once
     ctfile <- list.files(path = ctflux.path, pattern = substr(uni.date.hr[d], 1, 8))
@@ -65,8 +72,8 @@ bio.trajfoot <- function(trajdat, timestr, ctflux.path, ct.hr = seq(0, 21, 3),
 
     # get bio fluxes (convert to umol/m2/s) and finally get co2.bio
     sel.trajdat <- sel.trajdat %>% 
-      mutate(find.bio = raster::extract(x = bio * 1E6, y = trajcor), 
-             co2 = find.bio * foot)
+                   mutate(find.bio = raster::extract(x = bio * 1E6, y = trajcor), 
+                          co2 = find.bio * foot)
 
     # store trajdat
     new.trajdat <- rbind(new.trajdat, sel.trajdat)
@@ -75,6 +82,15 @@ bio.trajfoot <- function(trajdat, timestr, ctflux.path, ct.hr = seq(0, 21, 3),
   # also, compute total dCO2 for each traj over all backwards hours
   sum.trajdat <- new.trajdat %>% group_by(indx) %>%
                                  dplyr::summarize(bio.sum = sum(co2))
+
+  # since we removed particles with zero footprint, we need to add zero to bio.sum 
+  # to let `sum.trajdat` have the same amount of total particles as `tot.p`, 
+  # DW, 01/29/2019 
+  sum.trajdat <- sum.trajdat %>% right_join(tot.p, by = 'indx') 
+
+  # NA will show up in above `sum.trajdat` for particles with foot = 0
+  # thus, replace NA with 0 
+  sum.trajdat$bio.sum[is.na(sum.trajdat$bio.sum)] <- 0 
 
   return(sum.trajdat)
 } # end of subroutine

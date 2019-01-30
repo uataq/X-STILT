@@ -22,48 +22,43 @@
 # get rid of the checking portion, DW, 01/27/2019 
 # use non-weighted trajec-level foot for getting errors, DW, 01/28/2019 
 
-cal.trajfoot.stat <- function(workdir, outdir, emiss.file, met, ct.ver, 
-                              ctflux.path, ctmole.path, r_run_time, r_lati, 
-                              r_long, r_zagl, pct = 0.99, max.sd.trans = 200) {
+# due to momery limit, do not load weighted traj for AK and PW weighting prof, 
+#   instead, call get.wgt.funcv3() to get `combine.prof` and
+#   remove zero footprint to save time and space in ff/bio_trajfoot.r, DW, 01/29/2019 
 
-    print(r_run_time)
-        
-    # Ensure dependencies are loaded for current node/process
-    setwd(workdir); source('r/dependencies.r'); library(raster); library(dplyr)
+cal.trajfoot.stat <- function(workdir, output = NULL, outdir, met, emiss.file, 
+                              combine.prof, ct.ver, ctflux.path, ctmole.path, 
+                              r_run_time, r_lati, r_long, r_zagl, 
+                              pct = 0.99, max.sd.trans = 200) {
+  try({
 
     # 1. grab all trajec info
     # new version of STILT stored both trajec before and after perturbations into
     # one single rds file
     timestr <- substr(format(r_run_time, "%Y%m%d%H%M%S"), 1, 10)
     traj.path <- file.path(outdir, 'by-id')
-	wgt.traj.file <- list.files(traj.path, '_X_wgttraj.rds', recursive = T, 
-                                full.names = T)
-    traj.file <- list.files(traj.path, '_X_traj.rds', recursive = T, 
-                            full.names = T)
+    traj.file <- list.files(traj.path, '_X_traj.rds', recursive = T, full.names = T)
 
     # get the correct traj file
     traj.file <- traj.file[grep(r_lati, traj.file)]
-    wgt.traj.file <- wgt.traj.file[grep(r_lati, wgt.traj.file)]
 
-    if (length(traj.file) == 0 | length(wgt.traj.file) == 0) {
+    if (length(traj.file) == 0) {
         cat('cal.trajfoot.stat(): NO trajec file found...\n'); return()}
     emiss <- raster(emiss.file)   # get emissions
 
 	#------------------------------------------------------------------------- #
     #### 2. directly read from exiting weighted trajs -------------------------
     cat(paste('cal.trajfoot.stat(): Reading in trajec for', r_lati, 'N...\n'))
-    r.wgt <- readRDS(wgt.traj.file)
-    r.all <- readRDS(traj.file)
+    if (is.null(output)) output <- readRDS(traj.file) 
+    p1 <- output$particle         # traj without error
+    p2 <- output$particle_error   # traj with error
+    invisible(gc())
 
-    combine.prof <- r.wgt$wgt.prof
-    p1 <- r.all$particle         # traj without error
-    p2 <- r.all$particle_error   # traj with error
-        
     # get column receptor info from particle lists
-    xhgt <- unique(p1$xhgt)
+    xhgt   <- unique(p1$xhgt)
     nlevel <- length(xhgt)
     numpar <- length(unique(p1$indx))
-    dpar <- numpar / nlevel
+    dpar   <- numpar / nlevel
     
     #### 3. USE non-weighted trajec (orig vs. err) ----------------------------
     # to calculate the dCO2.ff
@@ -71,12 +66,14 @@ cal.trajfoot.stat <- function(workdir, outdir, emiss.file, met, ct.ver,
     cat('cal.trajfoot.stat(): working on FFCO2 Contribution...\n')
     co2.ff1 <- ff.trajfoot(trajdat = p1, emiss)
     co2.ff2 <- ff.trajfoot(trajdat = p2, emiss)
+    invisible(gc())
 
     #### 4. USE non-weighted trajec (orig vs. err) ----------------------------
     # to calculate the dCO2.bio
     cat('cal.trajfoot.stat(): working on bio CO2 Contribution...\n')
     co2.bio1 <- bio.trajfoot(trajdat = p1, timestr, ctflux.path)
     co2.bio2 <- bio.trajfoot(trajdat = p2, timestr, ctflux.path)
+    invisible(gc())
 
     ### 5. USE non-weighted trajec (orig vs. err) -----------------------------
     # to grab background CO2 for STILT levels
@@ -86,6 +83,7 @@ cal.trajfoot.stat <- function(workdir, outdir, emiss.file, met, ct.ver,
     # bug fixed by DW, 01/28/2019
     co2.edp1 <- endpts.trajfoot(trajdat = p1, timestr, ctmole.path)
     co2.edp2 <- endpts.trajfoot(trajdat = p2, timestr, ctmole.path)
+    invisible(gc())
 
     ### 6. NOW, sum up all 3 contributions ------------------------------------
     # to calculate CO2.true profiles (w/wout errors) for each particle
@@ -111,7 +109,6 @@ cal.trajfoot.stat <- function(workdir, outdir, emiss.file, met, ct.ver,
     co2.stat <- full_join(stat.orig, stat.err, by = 'level') %>% na.omit() %>%
                 mutate(dVAR = var.err - var.orig, hgt = unique(p1$xhgt))
 
-
     ### 8. An additional step ----------------------------------------------------
     # to remove negative trans error and output in txt file
     # scale trans errors based on weighted linear regression lines
@@ -127,6 +124,10 @@ cal.trajfoot.stat <- function(workdir, outdir, emiss.file, met, ct.ver,
     all.stat.info <- list(merge.co2 = merge.co2, stat.info = lr.stat.info, 
                           combine.prof = combine.prof)
     saveRDS(all.stat.info, file = stat.file)
-    cat(paste('cal.trajfoot.stat(): saving all error statistic info as in', 
-               stat.file, '...\n'))
+    cat(paste('cal.trajfoot.stat(): saving error statistic info for', r_lati, 'N\n'))
+    invisible(gc())
+
+    return(stat.file) # return the name of the stat.file
+  })
+  
 } # end of subroutine

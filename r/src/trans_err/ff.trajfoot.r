@@ -13,17 +13,23 @@
 # generalizt to merge with Ben's code, DW, 07/23/2018
 # change the form of 'emiss' as raster, DW, 07/23/2018
 # remove dmass correction
+# remove zero footprint to save time and space, DW, 01/29/2019 
 
 #########
 ff.trajfoot <- function(trajdat, emiss){
 
   library(dplyr)
 
+  # compute the total indx before any operations
+  tot.p <- data.frame(indx = unique(trajdat$indx))
+
   # cut particles beyond emission grid
+  # remove zero footprint to save time and space, DW, 01/29/2019 
   trajdat <- trajdat %>% filter(long >= extent(emiss)@xmin,
                                 long <  extent(emiss)@xmax, 
                                 lati >= extent(emiss)@ymin,
-                                lati <  extent(emiss)@ymax)
+                                lati <  extent(emiss)@ymax, 
+                                foot > 0)
 
   # find emissions and calculate CO2
   trajcor <- trajdat %>% dplyr::select(long, lati) 
@@ -44,8 +50,17 @@ ff.trajfoot <- function(trajdat, emiss){
   }
 
   # also, compute total dCO2 for each traj over all backwards hours
-  sum.trajdat <- trajdat %>% group_by(indx) %>%   
+  sum.trajdat <- trajdat %>% group_by(indx) %>% na.omit() %>%
                              dplyr::summarize(ff.sum = sum(co2)) %>% ungroup()
+
+  # since we removed particles with zero footprint, we need to add zero to ff.sum 
+  # to let `sum.trajdat` have the same amount of total particles as `tot.p`, 
+  # DW, 01/29/2019 
+  sum.trajdat <- sum.trajdat %>% right_join(tot.p, by = 'indx') 
+
+  # NA will show up in above `sum.trajdat` for particles with foot = 0
+  # thus, replace NA with 0 
+  sum.trajdat$ff.sum[is.na(sum.trajdat$ff.sum)] <- 0 
 
   return(sum.trajdat)
 

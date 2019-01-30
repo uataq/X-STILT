@@ -278,19 +278,3 @@ run.xstilt <- function(namelist){
                         ctflux.path = namelist$ctflux.path, 
                         ctmole.path = namelist$ctmole.path)
 }
-
-# for debugging before_*
-if (F) {
-  args <- list(oco2.path = oco2.path, ak.wgt = ak.wgt, pwf.wgt = pwf.wgt, 
-               overwrite_wgttraj = namelist$overwrite_wgttraj, 
-               run_hor_err = namelist$run_hor_err,
-               emiss.file = namelist$emiss.file, met = namelist$met, 
-               ct.ver = namelist$ct.ver, ctflux.path = namelist$ctflux.path, 
-               ctmole.path = namelist$ctmole.path)
-  
-  X <- 1
-  r_run_time = receptors$run_time[X]
-  r_lati = receptors$lati[X]
-  r_long = receptors$long[X]
-  r_zagl = receptors$zagl[X]
-}

@@ -1,57 +1,59 @@
 #' create a namelist for running X-STILT trajectories
 #' @author Dien Wu, 04/18/2018
-#' -----------------------------------------------------------------------------
+#' ---------------------------------------------------------------------------
 
 #' @flags: 
-#' 1. run_trajec, run_foot: run trajectory or footprint
-#' 1) if run_hor_err == T or run_ver_err == T
-#'    X-STILT generates trajectory with perturbations from wind or PBL errors
-#'    see details in STEP 4. 
-#' 2) if run_emiss_err is turned on
-#'    X-STILT generates footprint with horizontal resolution of 0.1deg, 
-#'    rather than 1km, because the absolute emission error has res of 0.1deg. 
-#'    see details in STEP 7. 
-
-#' 2. run_sim: run simulations (requires at least trajec done)
-#' 1) if no other flags is turned on, 
-#'    X-STILT models the XCO2 enhancements based on FFCO2 emission from 1km ODIAC
-#' 2) if run_hor_err is turned on, 
-#'    X-STILT models XCO2 error due to hortizontal transport error, See STEP 7. 
-#' -----------------------------------------------------------------------------
+#' A. run_trajec == T or run_foot == T: 
+#'    run trajectory or footprint, simulations will be started in STEP 6
+#'
+#' A1. if run_hor_err == T or run_ver_err == T (set error parameters in STEP 4)
+#'     X-STILT generates trajec with perturbations from wind or PBL errors.
+#'         along with traj-level CO2 and its error statistics to info.rds files
+#'      
+#' A2. if run_emiss_err == T (set error paramters in STEP 4):
+#'     X-STILT generates trajec and footprint with a resolution of 0.1deg, 
+#'     since the absolute emission error has res of 0.1deg. 
+#'
+#' ---------------------------------------------------------------------------
+#' B. run_trajec == F & run_foot == F & run_sim = T:  
+#'    Simulations will be started in STEP 8 (requires trajec and foot ready)
+#'    X-STILT models XCO2 enhancements based on FFCO2 emission from 1km ODIAC;
+#'                or XCO2 errors due to emission errors (run_emiss_err == T);
+#'                or XCO2 errors due to transport errors (run_hor_err == T).
+#'
+#' ---------------------------------------------------------------------------
 
 #' @updates:
 #' now build upon Ben Fasoli's STILT-R version 2 codes, DW, 05/23/2018
 #' !!! need to clear up codes for forward run, based on Ben's parallel computing
 #' Add plotting scripts for footprint and XCO2 enhancements, DW, 06/28/2018
-#
 #' Add horizontal transport error module with flag 'run_hor_err'
 #'   with additional subroutines in /src/oco2-xstilt/trans_err, DW, 07/23/2018
-#
 #' Add vertical trans error module, with flag 'run_ver_err', add ziscale
 #'   when scaling PBL heights and break trans error part (step 4) into
 #'   horizontal wind error and vertical trans error (via PBL perturb), 
 #'   DW, 07/25/2018
-#
 #' simplify main code and use 'get.uverr()' to get horizontal wind error stat,
 #'   DW, 08/31/2018
-#
 #' add emission uncertainty, DW, 09/06/2018
 #' update code according to v9 changes, DW, 10/19/2018
-#
 #' Optimize horizontal trans error using parallel computing, DW, 10/21/2018
 #'
-#' --------------- Reconstruct X-STILT codes, DW, BF, 01/25-29/2019 -----------
+#' --------------- Reconstruct X-STILT codes, DW, BF, 01/25/2019 -------------
 #' remove STILTv1 (Lin et al., 2003) from X-STILT;
 #' separate its modification from STILT; 
 #' now STILTv2 (Fasoli et al., 2018) is a SUBMODULE of X-STILT;
 #' customize before_trajec and before_footprint functions to mutate `output`. 
 #'
+#' --------------- Changes to trans error, DW, 01/29/2019 --------------------
 #' move the section of estimating trajec-level CO2 from main script to 
 #'    before_footprint_xstilt.r. So, each core will work on calculating the 
 #'    required trans error statistics (since it takes time).  DW, 01/29/2019
 #' to simplify the main script, remove calculations of lat-int signals or err, 
 #'    DW, 01/29/2019 
-#' -----------------------------------------------------------------------------
+#' optimize the trans error codes to remove zero footprint during the
+#'    trajec-level CO2 calculations to reduce required memories, DW
+#' ---------------------------------------------------------------------------
 
 
 #### source all functions and load all libraries
@@ -91,7 +93,7 @@ dir.create(err.path, showWarnings = F, recursive = T)
 
 ### 3) call get.site.track() to get lon.lat and OCO2 overpasses info
 # txt.path, path for storing output from 'get.site.track()'
-txt.path   <- file.path(input.path, 'OCO-2/overpass_city') 
+txt.path <- file.path(input.path, 'OCO-2/overpass_city') 
 
 # whether to search for overpasses over urban region,
 # defined as city.lat +/- dlat, city.lon +/- dlon
@@ -129,20 +131,20 @@ cat('Done with choosing cities & overpasses...\n')
 #------------------------------ STEP 2 --------------------------------------- #
 # T:rerun hymodelc, even if particle location object found
 # F:re-use previously calculated particle location object
-run_trajec <- F     # whether to generate trajec, see STEP 6
-run_foot   <- F     # whether to generate footprint, see STEP 6
+run_trajec <- T     # whether to generate trajec; runs start in STEP 6
+run_foot   <- T     # whether to generate footprint; runs start STEP 6
 if (run_trajec) cat('Need to generate trajec...\n')
 if (run_foot)   cat('Need to generate footprint...\n\n')
 
 # if columnTF == F, no need to get ground height or 
-#                   perform vertical weighting on trajec-level footprint
+# perform vertical weighting on trajec-level footprint
 columnTF <- T       # column receptor (T) or fixed receptor
 
 # whether to perform XCO2 and its error simulations
-run_hor_err   <- T  # T: set error parameters in STEP 4 and set run_foot == T
+run_hor_err   <- F  # T: set error parameters in STEP 4
 run_ver_err   <- F  # T: set error parameters in STEP 4
-run_emiss_err <- F  # T: get XCO2 error due to prior emiss err, see STEP 7
-run_sim       <- T  # T: do analysis with existing trajec/foot, see STEP 7
+run_emiss_err <- F  # T: get XCO2 error due to prior emiss err, see STEP 4 and 8
+run_sim       <- F  # T: do analysis with existing trajec/foot, see STEP 8
 
 delt <- 2           # fixed timestep [min]; set = 0 for dynamic timestep
 nhrs <- -72         # number of hours backward (-) or forward (+)
@@ -201,9 +203,9 @@ if (selTF) {
   num.peak <- 40   # e.g., every 40 pts in 1 deg
 
   # recp.indx: how to pick receptors from all screened soundings (QF = 0)
-  recp.indx <- c(seq(lon.lat$minlat,  peak.lat[1], 1/num.bg),
-                 seq(peak.lat[1], peak.lat[2], 1/num.peak),
-                 seq(peak.lat[1], lon.lat$maxlat,  1/num.bg))
+  recp.indx <- c(seq(lon.lat$minlat,  peak.lat[1],     1 / num.bg),
+                 seq(peak.lat[1],     peak.lat[2],     1 / num.peak),
+                 seq(peak.lat[1],     lon.lat$maxlat,  1 / num.bg))
 } else { recp.indx <- NULL }
 
 # whether to subset receptors when debugging; if no subset, insert NULL
@@ -234,14 +236,14 @@ hor.err  <- get.uverr(run_hor_err, site, timestr, workdir, overwrite = F,
                       raob.path, raob.format = 'fsl', nhrs, met, met.path, 
                       met.format, lon.lat, agl, err.path)
 
-### if calculating XCO2 error due to horizontal wind error, need biospheric input
-# add CT paths and files, DW, 07/28/2018
+## if run_hor_err = T, require ODIAC and CT fluxes and mole fractions
+# to calculate trans error of total CO2, DW, 07/28/2018
 if (run_hor_err) {
-  ct.ver  <- ifelse(substr(timestr, 1, 4) >= '2016', 'v2017', 'v2016-1')
-  ct.path <- file.path(input.path, 'CT-NRT', ct.ver)
+  ct.ver      <- ifelse(substr(timestr, 1, 4) >= '2016', 'v2017', 'v2016-1')
+  ct.path     <- file.path(input.path, 'CT-NRT', ct.ver)
   ctflux.path <- file.path(ct.path, 'fluxes/optimized')
   ctmole.path <- file.path(ct.path, 'molefractions/co2_total')
-} else { ct.ver <- NA; ctflux.path <- NA; ctmole.path <- NA } # end if run_hor_err
+} else { ct.ver <- NA; ctflux.path <- NA; ctmole.path <- NA }
 
 
 ### 3) get vertical transport error component if run_ver_err = T
@@ -268,7 +270,6 @@ cat('Done with choosing met & inputting parameters for error estimates...\n')
 ### 1) SET spatial domains and resolution for calculating footprints
 foot.res <- 1/120  # footprint resolution, 1km for ODIAC
 if (run_emiss_err) foot.res <- 1/10  # for emiss error, generate 0.1deg foot
-#foot.res <- 1     # for generating foot that matches CarbonTracker
 
 # these variables will determine resoluation and spatial domain of footprint
 # 20x20 degree domain around the city center
@@ -278,7 +279,13 @@ foot.info <- data.frame(xmn = round(lon.lat$citylon) - 10,
                         ymn = round(lon.lat$citylat) - 10, 
                         ymx = round(lon.lat$citylat) + 10,
                         xres = foot.res, yres = foot.res); print(foot.info)
-foot.extent <- extent(foot.info$xmn, foot.info$xmx, foot.info$ymn, foot.info$ymx)
+
+# and prepare ODIAC based on footprint domain 
+if (run_hor_err) {
+  foot.ext <- extent(foot.info$xmn, foot.info$xmx, foot.info$ymn, foot.info$ymx)
+  emiss.file <- tif2nc.odiacv3(site, timestr, vname = odiac.vname, workdir, 
+                               foot.ext, tiff.path, gzTF = F)
+} else { emiss.file = NA}
 
 
 ### 2) whether weighted footprint by AK and PW for column simulations (X-STILT)
@@ -286,9 +293,8 @@ foot.extent <- extent(foot.info$xmn, foot.info$xmx, foot.info$ymn, foot.info$ymx
 ak.wgt  <- ifelse(columnTF, TRUE, NA)
 pwf.wgt <- ifelse(columnTF, TRUE, NA)
 
-# whether to overwrite existing wgttraj file
-# if false, read from existing wgttraj.rds
-overwrite_wgttraj <- TRUE  
+# whether to overwrite existing wgttraj; if F, read from existing wgttraj.rds
+overwrite_wgttraj <- F  
 
 
 ### 3) other footprint parameters using STILTv2 (Fasoli et al., 2018)
@@ -305,21 +311,13 @@ if (run_trajec | run_foot) {
 
   ## use SLURM for parallel simulation settings
   n_nodes  <- 6
-  n_cores  <- ceiling(nrecp/n_nodes)
+  n_cores  <- ceiling(nrecp / n_nodes)
 
   # time allowed for running hymodelc before forced terminations
-  timeout  <- 24 * 60 * 60  # in sec
-  job.time <- '24:00:00'    # total job time
+  timeout  <- 4 * 60 * 60  # in sec
+  job.time <- '04:00:00'    # total job time
   slurm    <- n_nodes > 0
   slurm_options <- list(time = job.time, account = 'lin-kp', partition = 'lin-kp')
-
-  # if run_hor_err = T, require ODIAC or other flux grids to calculate trans error
-  # trans error simulation is performed for each core, see before_footprint_xstilt()
-  # DW, 01/29/2019
-  if (run_hor_err) {
-    emiss.file <- tif2nc.odiacv3(site, timestr, vname = odiac.vname, workdir, 
-                                 foot.extent, tiff.path, gzTF = F)
-  } else { emiss.file = NA }
 
   # create a namelist including all variables
   # namelist required for generating trajec
@@ -339,15 +337,15 @@ if (run_trajec | run_foot) {
                    timeout = timeout, varstrajec = varstrajec, workdir = workdir)        
   cat('Done with creating namelist...\n')
 
-  # call run_stiltv2() to start running trajec and foot
-  run.xstilt(namelist)  # more variables are defined in run.xstilt()
+  # call run.xstilt() to start running trajec and foot
+  run.xstilt(namelist)  # see more variables defined in run.xstilt()
+  q('no')
 } # end if run trajec or foot
 
 
 #------------------------------ STEP 7 --------------------------------------- #
 ### calculate XCO2 concentration and its error (need trajec and footprint ready)
 if (!run_trajec & !run_foot & run_sim) {
-  library(zoo)
 
   #------------------------  Horizontal trans error -------------------------- #
   ### simulate transport error in XCO2 due to met errors, DW, 07/25/2018
