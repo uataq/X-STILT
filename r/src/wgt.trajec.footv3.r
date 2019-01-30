@@ -82,9 +82,9 @@ wgt.trajec.footv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 			trajdat$newfoot[hgt.indx] <- trajdat$foot[hgt.indx] * wgt.prof[h] * nlevel
 
 			# also weight the trajec with error, DW, 10/21/2018
+			# typo fixed, DW, 01/29/2019
 			if (errTF) 
-			  trajdat.err$newfoot[hgt.indx] <- 
-				  trajdat.err$newfoot[hgt.indx] * wgt.prof[h] * nlevel
+			  trajdat.err$newfoot[hgt.indx] <- trajdat.err$foot[hgt.indx] * wgt.prof[h] * nlevel
 		} # end loop h
 
 	} # end if all flags, ak.wgt & pwf.wgt
@@ -103,7 +103,7 @@ wgt.trajec.footv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 	# put 'newtraj' back to 'output'
 	wgt.output <- output
 	wgt.output$particle <- newtraj # overwrite with weighted trajec
-	if (errTF) wgt.output$particle.err <- newtraj.err
+	if (errTF) wgt.output$particle_error <- newtraj.err
 
   # add interpolated AK, PW profiles
 	wgt.output$wgt.prof <- combine.prof  

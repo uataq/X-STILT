@@ -38,6 +38,7 @@ out*
 in
 *.conf
 *.txt
+*.png
 _rslurm*
 
 *DS_Store
