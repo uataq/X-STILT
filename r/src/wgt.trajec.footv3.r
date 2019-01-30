@@ -103,7 +103,7 @@ wgt.trajec.footv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 	# put 'newtraj' back to 'output'
 	wgt.output <- output
 	wgt.output$particle <- newtraj # overwrite with weighted trajec
-	if (errTF) wgt.output$particle_err <- newtraj.err
+	if (errTF) wgt.output$particle_error <- newtraj.err
 
   # add interpolated AK, PW profiles
 	wgt.output$wgt.prof <- combine.prof  

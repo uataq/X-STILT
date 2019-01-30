@@ -27,8 +27,8 @@
 run.xco2ff.sim <- function(site = 'Riyadh', timestr = '2014100920', vname = '2018', 
                            tiff.path, outdir, foot.res, workdir, store.path, 
                            nhrs, dpar, smooth_factor, zisf, oco2.ver, met, 
-                           lon.lat, run_emiss_err, edgar.file = NULL, 
-                           ffdas.file = NULL, plotTF = F, writeTF = T){
+                           lon.lat, run_emiss_err, edgar.file = NA, 
+                           ffdas.file = NA, plotTF = F, writeTF = T){
 
   # grab footprint files and get footprint domain
   foot.path <- file.path(outdir, 'by-id')

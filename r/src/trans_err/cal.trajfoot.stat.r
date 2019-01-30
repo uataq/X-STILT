@@ -22,20 +22,10 @@
 # get rid of the checking portion, DW, 01/27/2019 
 # use non-weighted trajec-level foot for getting errors, DW, 01/28/2019 
 
-# for debug..
-if (F) {
-    X = 10
-    r_run_time = recp.info$run_time[X]
-    r_lati = recp.info$lati[X]
-    r_long = recp.info$long[X]
-    r_zagl = recp.info$zagl[X]
-}
-
 cal.trajfoot.stat <- function(workdir, outdir, emiss.file, met, ct.ver, 
                               ctflux.path, ctmole.path, r_run_time, r_lati, 
                               r_long, r_zagl, pct = 0.99, max.sd.trans = 200) {
 
-  try({
     print(r_run_time)
         
     # Ensure dependencies are loaded for current node/process
@@ -49,7 +39,7 @@ cal.trajfoot.stat <- function(workdir, outdir, emiss.file, met, ct.ver,
 	wgt.traj.file <- list.files(traj.path, '_X_wgttraj.rds', recursive = T, 
                                 full.names = T)
     traj.file <- list.files(traj.path, '_X_traj.rds', recursive = T, 
-                           full.names = T)
+                            full.names = T)
 
     # get the correct traj file
     traj.file <- traj.file[grep(r_lati, traj.file)]
@@ -75,7 +65,6 @@ cal.trajfoot.stat <- function(workdir, outdir, emiss.file, met, ct.ver,
     numpar <- length(unique(p1$indx))
     dpar <- numpar / nlevel
     
-
     #### 3. USE non-weighted trajec (orig vs. err) ----------------------------
     # to calculate the dCO2.ff
     # return data frame with index number and corresponding modeled co2
@@ -127,13 +116,12 @@ cal.trajfoot.stat <- function(workdir, outdir, emiss.file, met, ct.ver,
     # to remove negative trans error and output in txt file
     # scale trans errors based on weighted linear regression lines
     # based on Wu et al., 2018
-    lr.stat.info <- scale.dvar(co2.stat = co2.stat)
+    lr.stat.info <- scale.dvar(co2.stat)
 
     # store vertical profile of trans errors in the same dir as 'by-id'
     outname <- gsub('_X_traj.rds', '', basename(traj.file))
     stat.file <- file.path(dirname(traj.file), 
-                           paste(outname, met, 'info.rds', sep = '_'))
-
+                           paste(outname, met, 'emiss_info.rds', sep = '_'))
 
     # add `combine.prof` for further error accumulation in calc.trans.err()
     all.stat.info <- list(merge.co2 = merge.co2, stat.info = lr.stat.info, 
@@ -141,5 +129,4 @@ cal.trajfoot.stat <- function(workdir, outdir, emiss.file, met, ct.ver,
     saveRDS(all.stat.info, file = stat.file)
     cat(paste('cal.trajfoot.stat(): saving all error statistic info as in', 
                stat.file, '...\n'))
-  })  # try()
 } # end of subroutine

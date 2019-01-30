@@ -5,7 +5,7 @@
 #' @variables: 
 #' traj.path: path that stores trajec (that include a 'by-id' directory)
 #' store.path: path that store the txtfile (result)
-#' Lh: vertical error covariance lengthscale, in meter
+#' Lh: vertical error covariance length scale for transport errors, in meter
 
 #' @updates:
 #' add vertical integration of errors, DW
@@ -16,7 +16,7 @@ cal.trans.err <- function(site, timestr, workdir, traj.path, store.path, met,
 
 	# txt file name for outputting model error results
 	txtfile <- file.path(store.path, 
-	                     paste0(timestr, '_', site, '_horerr_', met, '.txt'))
+	                     paste0('horerr_', timestr, '_', site,'_', met, '.txt'))
 
 	traj.patt <- '_X_wgttraj.rds'
 	traj.path <- file.path(outdir, 'by-id')
@@ -25,19 +25,20 @@ cal.trans.err <- function(site, timestr, workdir, traj.path, store.path, met,
 	outname   <- gsub(traj.patt, '', basename(traj.file))
 	recp.info <- strsplit.to.df(outname, colnms = c('timestr', 'lon', 'lat'))
 	recp.info <- recp.info %>% mutate_all(funs(as.numeric), colnames(recp.info)) %>% 
-                 mutate(xco2.trans = NA)
+                 mutate(xco2.trans = NA) %>% dplyr::arrange(lat)
 
 	#------------------------------------------------------------------------- #
 	### loop over all unique lat lon and merge two traj
 	cat('cal.trans.err(): start vertically integrating trans error...\n')
-	for (i in 1:length(traj.file)) {
+	for (i in 1 : length(traj.file)) {
 
 		# get error statistic info rds file in each by-id
-		stat.file <- list.files(dirname(traj.file[i]), paste0(met, '_info.rds'), 
-		                        full.names = T)
+		stat.file <- list.files(dirname(traj.file[i]), 
+		                        paste0(met, '_emiss_info.rds'), full.names = T)
 
 		if (length(stat.file) == 0) {
-			cat('NO info on horizontal transport error statistics found...skip\n')
+			cat(paste('NO rds file found for horizontal trans error stat for',
+			    recp.info$lat[i], 'N, check `by-id` and skip..\n'))
 		    next
 		} 
 		
@@ -76,6 +77,8 @@ cal.trans.err <- function(site, timestr, workdir, traj.path, store.path, met,
 	# write in txtfile
 	recp.info <- recp.info %>% na.omit()
     write.table(recp.info, file = txtfile, sep = ',', quote = F, row.names = F)
+	cat(paste('cal.trans.err(): receptor-level trans error has been written in', 
+	          txtfile, '...\n'))
 
     return(recp.info)
 } # end of subroutine

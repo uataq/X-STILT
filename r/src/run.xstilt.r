@@ -24,7 +24,7 @@ run.xstilt <- function(namelist){
   ak.wgt    <- namelist$ak.wgt     # whether weighted foot by averaging kernel
   pwf.wgt   <- namelist$pwf.wgt    # whether weighted foot by pres weighting
   oco2.path <- namelist$oco2.path
-
+  
   # Model control
   rm_dat     <- T
   timeout    <- namelist$timeout  # in sec
@@ -266,9 +266,31 @@ run.xstilt <- function(namelist){
                         zcoruverr = zcoruverr, 
 
   # pass additional variables to stilt_apply and then to simulation_step() 
-  # needed for X-STILT, DW, 01/25/2019
+  # needed for before_*_xstilt() for X-STILT, DW, 01/29/2019
                         oco2.path = oco2.path, 
                         ak.wgt = ak.wgt, 
-                        pwf.wgt = pwf.wgt)
+                        pwf.wgt = pwf.wgt, 
+                        overwrite_wgttraj = namelist$overwrite_wgttraj, 
+                        run_hor_err = namelist$run_hor_err,
+                        emiss.file = namelist$emiss.file, 
+                        met = namelist$met, 
+                        ct.ver = namelist$ct.ver, 
+                        ctflux.path = namelist$ctflux.path, 
+                        ctmole.path = namelist$ctmole.path)
+}
 
+# for debugging before_*
+if (F) {
+  args <- list(oco2.path = oco2.path, ak.wgt = ak.wgt, pwf.wgt = pwf.wgt, 
+               overwrite_wgttraj = namelist$overwrite_wgttraj, 
+               run_hor_err = namelist$run_hor_err,
+               emiss.file = namelist$emiss.file, met = namelist$met, 
+               ct.ver = namelist$ct.ver, ctflux.path = namelist$ctflux.path, 
+               ctmole.path = namelist$ctmole.path)
+  
+  X <- 1
+  r_run_time = receptors$run_time[X]
+  r_lati = receptors$lati[X]
+  r_long = receptors$long[X]
+  r_zagl = receptors$zagl[X]
 }

@@ -6,8 +6,8 @@
 # edgar.file for EDGAR emissions (year 2008)
 # emiss.file for the ODIAC emission (during overpass month, e.g., 2014 DEC emission)
 
-cal.emiss.err <- function (site, timestr, odiac.file.2008, edgar.file, 
-                           ffdas.file, emiss.file, overwrite, plotTF = F) {
+cal.emiss.err <- function (site, timestr, odiac.file.2008, edgar.file = NA, 
+                           ffdas.file = NA, emiss.file, overwrite, plotTF = F) {
 
   library(raster)
   odiac.2008  <- raster(odiac.file.2008)
@@ -20,6 +20,7 @@ cal.emiss.err <- function (site, timestr, odiac.file.2008, edgar.file,
   sel.odiac.2008 <- aggregate(odiac.2008, fact = 12)
 
   # load EDGAR and convert from kg/m2/s to umol/m2/s
+  if (is.na(edgar.file)) stop('cal.emiss.err(): Missing EDGAR file, stop\n')
   edgar <- raster(edgar.file) * 1E3 / 44 * 1E6
 
   # fix (0, 360) to (-180, 180) for EDGAR's longitude
@@ -34,6 +35,7 @@ cal.emiss.err <- function (site, timestr, odiac.file.2008, edgar.file,
   sel.edgar <- crop(edgar, crop.extent)  # select EDGAR emissions
 
   # load FFDAS and convert unit from kgC/m2/y to umol/m2/s
+  if (is.na(ffdas.file)) cat('cal.emiss.err(): Missing FFDAS file\n')
   ffdas <- raster(ffdas.file) * 1E3 / 12 / 366 / 24 / 3600 * 1E6
   ffdas[ffdas < 0] <- 0
   sel.ffdas <- crop(ffdas, crop.extent)
