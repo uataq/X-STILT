@@ -13,7 +13,7 @@
 # minor bug occur when writing table into a txt file, DW, 12/04/2018
 
 cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
-                         workdir, site, timestr, overwrite = F, 
+                         workdir, err.path, site, timestr, overwrite = F, 
                          raob.path = NULL, nhrs = -120, raob.format = 'fsl'){
 
   # loop over each time period
@@ -36,7 +36,7 @@ cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
                            long = as.numeric(uni.recp[, 'lon'])) %>% 
                 mutate(run_time = as.POSIXct(uni.recp[, 'time'], '%Y%m%d%H', tz = 'UTC'))
 
-    rundir <- file.path(workdir, paste0('out_wind_', timestr, '_', met))
+    rundir <- file.path(err.path, paste0('out_wind_', timestr, '_', met))
     #var1 <- c('time', 'index', 'lon', 'lat', 'agl', 'grdht', 'zi', 'temp', 'pres')
     var2 <- c('time', 'indx', 'long', 'lati', 'zagl', 'zsfc', 'mlht', 'temp', 'pres')
 
@@ -46,9 +46,10 @@ cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
 
     # change the path of hymodelc executable, DW, 07/31/2018
     # since we added another version of hymodelc (AER_NOAA_branch) under exe
-    link_files <- dir(file.path(workdir, 'exe', 'master'))
+    # reorganize HYSPLIT dependencies, DW, 02/19/2019
+    link_files <- dir(file.path(workdir, 'exe'))
     if (!file.exists(file.path(rundir, link_files))[1])
-        file.symlink(file.path(workdir, 'exe', 'master', link_files), rundir)
+        file.symlink(file.path(workdir, 'exe', link_files), rundir)
 
     # loop over each unique location + time
     cat(paste(nrow(receptor), 'unique raob station + raob time\n'))
@@ -58,17 +59,16 @@ cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
                 'ws.raob', 'wd.raob', 'u.raob', 'v.raob', 'u.met', 'v.met', 
                 'w.met', 'zsfc', 'temp.met', 'zagl', 'ws.met', 'wd.met', 
                 'temp.err', 'u.err', 'v.err', 'ws.err', 'wd.err')
+                
     write(header, file = filename, append = F, sep = ',', ncolumns = length(header))
 
     for (i in 1 : nrow(receptor)) {
       cat(paste('working on #', i, 'unique raob\n'))
 
       # obtain ground hgts, if no rds found, will start to generate trajec
-      tmp.info <- get.ground.hgt(varsiwant = var2, met_loc = met.path,
-                                 met_file_format = met.format, n_hours = 1, 
-                                 receptor = receptor[i,], rundir = rundir, 
-                                 timeout = 10 * 60, met_files = met.files, 
-                                 run_trajec = T)
+      tmp.info <- get.ground.hgt(receptor = receptor[i,], varsiwant = var2, 
+                                 met_file_format = met.format, met_loc = met.path,
+                                 n_hours = 1, rundir = rundir, timeout = 10 * 60)
       
       # add error message, DW, 11/16/2018
       if (is.null(tmp.info)) {cat('NO ground hgt interpolation performed...\n'); next}
@@ -87,11 +87,10 @@ cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
 
       # if no postive AGL
       if (length(pos.agl) == 0) next
-      int.info <- get.ground.hgt(varsiwant = var2, met_loc = met.path,
-                                 met_file_format = met.format, n_hours = 1, 
-                                 receptor = receptor[i,], rundir = rundir, 
-                                 timeout = 20 * 60, r_zagl = pos.agl, 
-                                 run_trajec = T) 
+      int.info <- get.ground.hgt(receptor = receptor[i,], varsiwant = var2, 
+                                 met_file_format = met.format, met_loc = met.path, 
+                                 n_hours = 1, rundir = rundir, timeout = 20 * 60, 
+                                 agl = pos.agl) 
 
       # add error message, DW, 11/16/2018
       if (is.null(int.info)) {cat('NO interpolation performed...\n'); next}

@@ -15,7 +15,7 @@ get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
                       nhrs = -120, met = c('gdas1', 'gdas0p5', 'hrrr')[2], 
                       met.path, met.format, lon.lat, agl, err.path, nfTF = F, 
                       siguverr = NULL, TLuverr = NULL, zcoruverr = NULL, 
-                      horcoruverr = NULL, met.files = NULL) {
+                      horcoruverr = NULL) {
   
   forwardTF <- ifelse(nhrs > 0, TRUE, FALSE)
   
@@ -47,10 +47,9 @@ get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
     } # end if met
     
     # grab modeled winds, *** if no file found, this takes a long time to run
-    raob.file <- file.path(err.path, 
-                           paste0(site, '_', met, '_rad_', timestr, '.txt'))
+    err.file <- file.path(err.path,  paste0(site, '_', met, '_rad_', timestr, '.txt'))
 
-    if (!file.exists(raob.file) & overwrite == F) {
+    if (!file.exists(err.file) & overwrite == F) {
 
       # if one does not want to run wind error analysis and no RAOB file found
       cat('get.uverr(): no wind error comparisons found; 
@@ -65,10 +64,11 @@ get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
       err.stat$siguverr <- siguverr
 
     } else {
+
       # run the entire wind interpolation and get error statistics
-      met.raob <- cal.met.wind(filename = raob.file, met, met.path, met.format, 
-                               met.files, workdir, site, timestr, overwrite, 
-                               raob.path, nhrs = -120, raob.format)
+      met.raob <- cal.met.wind(filename = err.file, met, met.path, met.format, 
+                               met.files, workdir, err.path, site, timestr, 
+                               overwrite, raob.path, nhrs = -120, raob.format)
 
       # call get.SIGUVERR() to interpolate most near-field wind errors
       err.stat <- get.siguverr(met.raob, nfTF, forwardTF, lon.lat, nhrs, agl, 

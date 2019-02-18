@@ -11,7 +11,7 @@
 # generalize and clear up codes, DW, 07/23/2018
 
 cal.var.cov <- function(sd, L = NULL, w = NULL, x,
-                        type = c('hor', 'ver', 'time', NULL)){
+                        type = c('hor', 'ver', 'time', NULL)[4]){
 
   # create a diagonal grid, either spatial or temporal with ndim
   library(geosphere)
@@ -54,10 +54,10 @@ cal.var.cov <- function(sd, L = NULL, w = NULL, x,
 
   # now create the weighting matrix
   if (!is.null(w)) {
-    wgt <- array(0, dim = c(max(num), max(num)), dimnames = list(num, num))
+    w2 <- array(0, dim = c(max(num), max(num)), dimnames = list(num, num))
 
-    for(n in 1:length(num)) wgt[n,] <- w[n] * w
-    prod.wgt <- wgt * prod
+    for(n in 1:length(num)) w2[n,] <- w[n] * w
+    prod.wgt <- w2 * prod
     prod <- prod.wgt
   }
 

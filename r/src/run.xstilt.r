@@ -5,6 +5,7 @@
 # preserve original 'run_stilt.r' and modify 'run_stilt.r' as a subroutine
 # add ziscale, DW, 07/25/2018
 # add two before_* functions for getting ground height and AK PW weighting, DW, 01/24/2019
+# allows for generate footprints with different resolutions, DW, 02/11/2019 
 
 run.xstilt <- function(namelist){
 
@@ -54,12 +55,17 @@ run.xstilt <- function(namelist){
   ziscale     <- namelist$pbl.err$ziscale   # prescribe PBL scaling, vector form
 
   # Footprint grid settings
-  xmn            <- as.numeric(namelist$foot.info$xmn)
-  xmx            <- as.numeric(namelist$foot.info$xmx)
-  ymn            <- as.numeric(namelist$foot.info$ymn)
-  ymx            <- as.numeric(namelist$foot.info$ymx)
-  xres           <- as.numeric(namelist$foot.info$xres)
-  yres           <- as.numeric(namelist$foot.info$yres)
+  xmn   <- as.numeric(namelist$foot.info$xmn)
+  xmx   <- as.numeric(namelist$foot.info$xmx)
+  ymn   <- as.numeric(namelist$foot.info$ymn)
+  ymx   <- as.numeric(namelist$foot.info$ymx)
+  xres  <- as.numeric(namelist$foot.info$xres)
+  yres  <- as.numeric(namelist$foot.info$yres)
+
+  # footprint with diff resolution, can be NA or numbers
+  xres2 <- namelist$foot.info$xres2
+  yres2 <- namelist$foot.info$yres2
+
   hnf_plume      <- namelist$hnf_plume
   smooth_factor  <- namelist$smooth_factor
   time_integrate <- namelist$time_integrate
@@ -129,10 +135,6 @@ run.xstilt <- function(namelist){
     before_footprint <- before_footprint_xstilt
     before_trajec <- before_trajec_xstilt
   } # end if columnTF
-
-  # require list form for stilt_apply.r
-  before_footprint <- list(before_footprint)
-  before_trajec <- list(before_trajec)
 
   # Parallel simulation settings
   slurm_options <- namelist$slurm_options
@@ -266,7 +268,7 @@ run.xstilt <- function(namelist){
                         zcoruverr = zcoruverr, 
 
   # pass additional variables to stilt_apply and then to simulation_step() 
-  # needed for before_*_xstilt() for X-STILT, DW, 01/29/2019
+  # needed for before_*_xstilt() for X-STILT, DW, 02/11/2019
                         oco2.path = oco2.path, 
                         ak.wgt = ak.wgt, 
                         pwf.wgt = pwf.wgt, 
@@ -276,5 +278,7 @@ run.xstilt <- function(namelist){
                         met = namelist$met, 
                         ct.ver = namelist$ct.ver, 
                         ctflux.path = namelist$ctflux.path, 
-                        ctmole.path = namelist$ctmole.path)
+                        ctmole.path = namelist$ctmole.path, 
+                        xres2 = xres2, 
+                        yres2 = yres2)
 }

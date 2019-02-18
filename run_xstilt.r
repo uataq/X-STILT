@@ -54,6 +54,10 @@
 #' optimize the trans error codes to remove zero footprint during the
 #'    trajec-level CO2 calculations to reduce required memories, DW
 #' ---------------------------------------------------------------------------
+#' 
+#' allows for generating footprint with multiple reslutions at a time, 
+#'    see `foot.res2` and `before_footprint_xstilt.r` for more info, 
+#'    DW, 02/11/2019
 
 
 #### source all functions and load all libraries
@@ -269,18 +273,24 @@ cat('Done with choosing met & inputting parameters for error estimates...\n')
 #### Settings for generating footprint maps
 ### 1) SET spatial domains and resolution for calculating footprints
 foot.res <- 1/120  # footprint resolution, 1km for ODIAC
-if (run_emiss_err) foot.res <- 1/10  # for emiss error, generate 0.1deg foot
+
+# allow to generate footprint with different resolutions other than "foot.res"
+# foot.res2 can be a vector, foot filename will contain res info, DW, 02/11/2019
+# if no need to generate second sets of footprints, set it to NA     
+foot.res2 <- c(NA, 1/10, 1/20, 1)[1]     
+if (run_emiss_err) foot.res2 <- 1/10 # for emiss err, need to generate 0.1deg foot
 
 # these variables will determine resoluation and spatial domain of footprint
 # 20x20 degree domain around the city center
 # one can also customize the data.frame of `foot.info`
-foot.info <- data.frame(xmn = round(lon.lat$citylon) - 10, 
-                        xmx = round(lon.lat$citylon) + 10,
-                        ymn = round(lon.lat$citylat) - 10, 
-                        ymx = round(lon.lat$citylat) + 10,
-                        xres = foot.res, yres = foot.res); print(foot.info)
+foot.info <- list(xmn = round(lon.lat$citylon) - 10, 
+                  xmx = round(lon.lat$citylon) + 10,
+                  ymn = round(lon.lat$citylat) - 10, 
+                  ymx = round(lon.lat$citylat) + 10,
+                  xres  = foot.res,  yres  = foot.res, 
+                  xres2 = foot.res2, yres2 = foot.res2)
 
-# and prepare ODIAC based on footprint domain 
+### and prepare ODIAC based on footprint domain 
 if (run_hor_err) {
   foot.ext <- extent(foot.info$xmn, foot.info$xmx, foot.info$ymn, foot.info$ymx)
   emiss.file <- tif2nc.odiacv3(site, timestr, vname = odiac.vname, workdir, 

@@ -10,6 +10,8 @@
 #'      @param ak.wgt logical flag for AK weighting, T or F 
 #'      @param pwf.wgt logical flag for PW weighting, T or F 
 
+#' allow for generating footprint with various horizontal resolutions, DW, 02/11/2019 
+
 before_footprint_xstilt <- function() {
 
     # check whether weighted trajec exists already, DW, 07/13/2018
@@ -28,7 +30,7 @@ before_footprint_xstilt <- function() {
 
         if (is.null(oco2.info)) {
             warning('before_footprint_xstilt(): 
-                     NO OCO-2 info found for this receptor lat/lon\n');return()
+                     NO OCO-2 info found for this receptor lat/lon\n'); return()
         } # end if is.null
 
         # Weight footprint: call wgt.trajec.footv3() to weight trajec-level
@@ -60,6 +62,29 @@ before_footprint_xstilt <- function() {
                                        r_run_time, r_lati, r_long, r_zagl)
     } # end if run_hor_err
 
-    cat('before_footprint_xstilt(): END OF FUNCTION, start to calculate foot if needed...\n')
+    # we would like to generate footprint with different resolutions, if needed
+    # DW, 02/11/2019 
+    if ( !(NA %in% args$xres2) & !(NA %in% args$yres2) ) {
+
+        cat('before_footprint_xstilt(): generate footprint with diff res...\n')
+        for (f in 1: length(args$xres2)) {
+            foot_file <- file.path(rundir, paste0(basename(rundir), '_', 
+                                                  signif(args$xres2[f], 3), 'x', 
+                                                  signif(args$yres2[f], 3), 
+                                                  '_foot.nc'))
+            
+            # use weighted output for footprint
+            foot <- calc_footprint(wgt.output$particle, output = foot_file,
+                                   r_run_time = r_run_time,
+                                   smooth_factor = smooth_factor,
+                                   time_integrate = time_integrate,
+                                   xmn = xmn, xmx = xmx, 
+                                   xres = as.numeric(args$xres2[f]),
+                                   ymn = ymn, ymx = ymx, 
+                                   yres = as.numeric(args$yres2[f]))
+        } # end for f
+    } # end if is na
+
+    cat('before_footprint_xstilt(): END OF FUNCTION, start to calculate foot...\n')
     return(wgt.output) # return weighted output
 }

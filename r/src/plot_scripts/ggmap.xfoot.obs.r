@@ -12,10 +12,11 @@ ggmap.xfoot.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path = NULL,
                             min.foot.sig = 1E-6, max.foot.sig = 1E-2, 
                             titleTF = F, sumTF = T, qfTF = T, picname, 
                             storeTF = T, width = 12, height = 8, 
-                            leg.pos = 'bottom', foot.unit = 'ppm/(umol/m2/s)'){
+                            leg.pos = 'bottom', foot.unit = 'ppm/(umol/m2/s)', 
+                            title = NULL){
 
   col <- def.col()
-  m1 <- mm[[1]] + theme_bw() + coord_equal(1.1)
+  m1 <- mm[[1]] + theme_bw() + coord_equal(1.15)
 
   # grab observations using map lat/lon
   map.ext <- data.frame(minlon = min(mm[[1]]$data$lon),
@@ -34,8 +35,7 @@ ggmap.xfoot.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path = NULL,
                               lat >= map.ext$minlat & lat <= map.ext$maxlat &
                               foot >= min.foot.sig)
 
-  title <- NULL
-  if (titleTF) 
+  if (titleTF & is.null(title)) 
   title <- paste0('Spatial time-integrated weighted column footprint (', nhrs, 
                   ' hours; ', dpar, ' dpar; ', foot.sf, '; ziscale = ', zisf,
                   '; met = ', met, ')\nusing STILT version', stilt.ver, 
@@ -97,9 +97,8 @@ ggmap.xfoot.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path = NULL,
                          alpha = 0.8) +
              scale_fill_gradientn(limits = c(min.foot.sig, max.foot.sig), 
                                   name = paste0('FOOTPRINT\n', foot.unit), 
-                                  trans = 'log10', colours = col, breaks = lab,
-                                  labels = lab) +
-             scale_alpha_manual(values = c('all' = 0.5, 'screened' = 1.0))
+                                  trans = 'log10', colours = col, 
+                                  breaks = lab,labels = lab)
 
   if ('fac' %in% colnames(sel.foot)){
     if (length(unique(sel.foot$fac)) > 1)
@@ -111,7 +110,7 @@ ggmap.xfoot.obs <- function(mm, lon.lat, site, oco2.ver, oco2.path = NULL,
                    legend.text = element_text(size = font.size),
                    legend.key = element_blank(), 
                    legend.key.width = unit(width/10, 'cm'),
-                   legend.key.height = unit(height/10, 'cm'),
+                   legend.key.height = unit(height/15, 'cm'),
                    axis.title.y = element_text(size = font.size, angle = 90),
                    axis.title.x = element_text(size = font.size, angle = 0),
                    axis.text = element_text(size = font.size),

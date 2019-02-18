@@ -13,15 +13,21 @@
 # allow for prescribing met files, e.g., customized WRF, DW, 08/31/2018
 
 get.ground.hgt <- function(receptor = NULL, agl = 5, run_trajec = T, 
-                           varsiwant, conage, cpack, dxf, dyf, dzf, emisshrs, 
-                           frhmax, frhs, frme, frmr, frts, frvs, hnf_plume = F, 
-                           hscale, ichem, iconvect, initd, isot, kbls, kblt, 
-                           kdef, khmax, kmix0, kmixd, kmsl, kpuff, krnd, kspl, 
-                           kzmix, maxdim, maxpar, met_file_format, met_loc,
-                           mgmin, ncycl, ndump, ninit, n_hours, outdt, outfrac, 
-                           p10f, qcycle, random, splitf, tkerd, tkern, rm_dat, 
-                           rundir, timeout, tlfrac, tratio, tvmix, veght, 
-                           vscale, w_option, zicontroltf, z_top){
+                           varsiwant, conage = 48, cpack = 1, dxf = 1, dyf = 1, 
+                           dzf = 0.01, emisshrs = 0.01, frhmax = 3, frhs = 1, 
+                           frme = 0.1, frmr = 0, frts = 0.1, frvs = 0.1, 
+                           hnf_plume = F, hscale = 10800, ichem = 0, iconvect = 0,
+                           initd = 0, isot = 0, kbls = 1, kblt = 1, kdef = 1, 
+                           khmax = 9999, kmix0 = 250, kmixd = 3, kmsl = 0, 
+                           kpuff = 0, krnd = 6, kspl = 1, kzmix = 1, maxdim = 1, 
+                           maxpar = 10000, met_file_format, met_loc,
+                           mgmin = 2000, ncycl = 0, ndump = 0, ninit = 1, 
+                           n_hours, outdt = 0, outfrac = 0.9, p10f = 1, 
+                           qcycle = 0, random = 1, splitf = 1, tkerd = 0.18, 
+                           tkern = 0.18, rm_dat = T, rundir, timeout, 
+                           tlfrac = 0.1, tratio = 0.9, tvmix = 1, veght = 0.5, 
+                           vscale = 200, w_option = 0, zicontroltf = 0, 
+                           z_top = 25000){
 
   # before run trajec, create new 'output'
   output  <- list()
