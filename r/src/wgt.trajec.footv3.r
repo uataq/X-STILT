@@ -12,6 +12,7 @@
 # version 3 for matching Ben's STILTv2, DW, 05/29/2018
 # use 'xhgt' instead of 'level', DW, 06/01/2018
 # add PW and Ak weighting for trajec with error and fix a bug, DW, 10/21/2018
+# minor bug and typo fixed for weighting trajec with error, DW, 02/21/2019 
 
 wgt.trajec.footv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 
@@ -83,8 +84,11 @@ wgt.trajec.footv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 
 			# also weight the trajec with error, DW, 10/21/2018
 			# typo fixed, DW, 01/29/2019
-			if (errTF) 
-			  trajdat.err$newfoot[hgt.indx] <- trajdat.err$foot[hgt.indx] * wgt.prof[h] * nlevel
+			# hgt.indx can be diff for trajdat and trajdat.err, bug fixed, DW, 02/21/2019
+			if (errTF) {
+				hgt.indx.err <- which(trajdat.err$xhgt == uni.xhgt[h])
+				trajdat.err$newfoot[hgt.indx.err] <- trajdat.err$foot[hgt.indx.err] * wgt.prof[h] * nlevel
+			}  # end if errTF
 		} # end loop h
 
 	} # end if all flags, ak.wgt & pwf.wgt
