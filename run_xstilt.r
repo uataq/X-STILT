@@ -83,7 +83,7 @@ lon.lat <- get.lon.lat(site = site, dlon = 1, dlat = 1.5)
 input.path  <- file.path(homedir, 'lin-group7/wde/input_data')
 oco2.ver    <- c('b7rb', 'b8r', 'b9r')[3]           # OCO-2 version
 oco2.path   <- file.path(input.path, paste0('OCO-2/L2/OCO2_lite_', oco2.ver))
-sif.path    <- file.path(input.path, paste0('OCO-2/L2/OCO2_lite_SIF_', oco2.ver))
+sif.path    <- file.path(input.path, 'OCO-2/L2/OCO2_lite_SIF_b8r')
 raob.path   <- file.path(input.path, 'RAOB', site)  # NOAA radiosonde
 odiac.vname <- c('2016', '2017', '2018')[3]         # ODIAC version
 tiff.path   <- file.path(input.path, 'ODIAC', paste0('ODIAC', odiac.vname))  

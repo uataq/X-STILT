@@ -2,10 +2,10 @@
 # by DW, 05/25/2017
 # modify original script as a function, 08/29/2018
 
-grab.raob <- function(raob.path, timestr, workdir, nhrs, format = c('ncdf', 'fsl'), 
-                      overwrite = F){
+grab.raob <- function(raob.path, timestr, err.path, nhrs, 
+                      format = c('ncdf', 'fsl')[1], overwrite = F){
 
-  filename <- file.path(workdir, paste0(site, '_rad_', timestr, '.txt'))
+  filename <- file.path(err.path, paste0(site, '_rad_', timestr, '.txt'))
   
   if (file.exists(filename) & overwrite == F) {
     options(scipen = 999)
@@ -31,7 +31,7 @@ grab.raob <- function(raob.path, timestr, workdir, nhrs, format = c('ncdf', 'fsl
       site.lon   <- ncvar_get(dat, 'staLon')
       site.elev  <- ncvar_get(dat, 'staElev')
       merge.raob <- data.frame(site = site.name, lon = site.lon, lat = site.lat,
-        elev = site.elev, timestr = rel.timestr)
+                               elev = site.elev, timestr = rel.timestr)
       merge.raob$nobs <- seq(1, nrow(merge.raob))
 
       # grabbing wind speeds, directions, pressure and sounding releasing times

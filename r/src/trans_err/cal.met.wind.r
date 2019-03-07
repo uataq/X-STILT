@@ -20,7 +20,7 @@ cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
   if (overwrite == T | !file.exists(filename)){
 
     # grab RAOB
-    raob <- grab.raob(raob.path, timestr, workdir, nhrs, format = raob.format,
+    raob <- grab.raob(raob.path, timestr, err.path, nhrs, format = raob.format,
                       overwrite) %>% 
             dplyr::rename(temp.raob = temp, u.raob = u, v.raob = v,
                           ws.raob = ws, wd.raob = wd)
