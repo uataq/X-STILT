@@ -1,6 +1,6 @@
 # subroutine to plot OCO-2 info for each selected overpass, DW, 01/25/2019
 
-ggmap.obs.info <- function(plotTF, store.path = NULL, all.timestr = NULL, 
+ggmap.obs.info <- function(plotTF, site, store.path = NULL, all.timestr = NULL, 
                            oco2.ver = NULL, oco2.path = NULL, lon.lat = NULL, 
                            workdir = NULL, dlat.urban = NULL, dlon.urban = NULL) {
 
@@ -14,7 +14,7 @@ ggmap.obs.info <- function(plotTF, store.path = NULL, all.timestr = NULL,
         for (t in 1:length(all.timestr)) {
 
             ggmap.obs.xco2(site, all.timestr[t], oco2.ver, oco2.path, lon.lat, 
-                           workdir, plotdir, zoom = 8, qfTF = F, 
+                           workdir, plotdir, zoom = 8, qfTF = T, 
                            box.dlat = dlat.urban, box.dlon = dlon.urban)
 
             ggmap.obs.sif(site, all.timestr[t], sif.path, lon.lat, workdir, 
