@@ -2,15 +2,20 @@
 # add section to plot observed XCO2 with quality flag on latitude series, 07/03/2018
 # use grab.oco2 to read observations, DW, 08/07/2018
 # update for v9 lite data, QF filtering controled by qfTF, DW, 10/19/2018
+# skip the overpass, if data is not enough, DW, 04/21/2019 
 
 ggmap.obs.xco2 <- function(site, timestr, oco2.ver, oco2.path, lon.lat, workdir,
                            plotdir = file.path(workdir, 'plot'), zoom = 8, 
                            qfTF = F, box.dlat = 0.5, box.dlon = 0.5, size = 0.8){
 
-  library(ggmap); library(ggplot2)
+  library(ggmap); library(ggplot2); library(ggpubr)
   obs.all <- grab.oco2(ocopath = oco2.path, timestr, lon.lat, oco2.ver)
   qf.obs <- obs.all %>% filter(qf == 0)
 
+  # at least need two valid soundings
+  if (nrow(qf.obs) < 2 & qfTF) 
+    return('ggmap.obs.xco2(): NOT enough screened data within lon.lat, skip it...\n') 
+  
   # plot google map
   alpha <- 1; font.size <- rel(0.9); col <- def.col()
   m1 <- ggplot.map(map = 'ggmap', zoom = zoom, center.lat = lon.lat$citylat,
