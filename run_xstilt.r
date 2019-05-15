@@ -261,7 +261,7 @@ pbl.err <- get.zierr(run_ver_err, nhrs.zisf = 24, const.zisf = zisf)
 if (run_emiss_err) { 
   edgar.file <- file.path(homedir,
     'lin-group2/group_data/EDGAR/CO2_2000-2008/v42_CO2_2008_TOT.0.1x0.1.nc')
-  ffdas.path <- file.path(input.path, 'anthro_inventories/FFDAS/')
+  ffdas.path <- file.path(input.path, 'anthro_inventories/FFDAS')
   ffdas.file <- list.files(path = ffdas.path, pattern = 'totals')
   ffdas.file <- file.path(ffdas.path, ffdas.file[grep('2008', ffdas.file)])
 } else { edgar.file = NA; ffdas.file = NA }  # end if run_emiss_err
