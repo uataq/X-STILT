@@ -122,8 +122,8 @@ print(all.timestr)
 
 # whether to plot them on maps, plotTF = T/F,
 # this helps you choose which overpass to simulate, see 'tt' below
-ggmap.obs.info(plotTF = F, store.path, all.timestr, oco2.ver, oco2.path, lon.lat, 
-               workdir, dlat.urban, dlon.urban)
+ggmap.obs.info(plotTF = F, site, store.path, all.timestr, oco2.ver, oco2.path, 
+               lon.lat, workdir, dlat.urban, dlon.urban)
 
 ### 5) *** NOW choose the timestr that you'd like to work on...
 tt <- 5

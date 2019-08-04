@@ -45,3 +45,4 @@ _rslurm*
 r/*DS_Store/
 r/src/*DS_Store/
 paper*
+bio_model
