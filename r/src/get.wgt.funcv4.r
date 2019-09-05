@@ -24,7 +24,12 @@
 # output refers to all the content from .rds file using STILTv2, 05/25/2018
 # which is the same 'output' from simulation_step()
 
-get.wgt.funcv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
+# *** USE OCO-2 retrieved surface pressure/altitude for air column 
+# because modeled Psurf/air column differs from retrieved Psurf/air column
+# DW, 08/30/2019 
+
+
+get.wgt.funcv4 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 
 	if (ak.wgt) {
 		cat("Turn on weighting OCO-2 simulation using averaging kernel...\n")
@@ -41,11 +46,12 @@ get.wgt.funcv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 
     # grab OCO-2 profiles
 	# e.g., press weighting function, pressures, normalized AK, a priori
-	oco2.ap       <- oco2.info$ap
-	oco2.pwf      <- oco2.info$pwf
-	oco2.pres     <- oco2.info$pres
-    oco2.ak.norm  <- oco2.info$ak.norm
-
+	oco2.ap      <- oco2.info$ap
+	oco2.pwf     <- oco2.info$pwf
+	oco2.pres    <- oco2.info$pres
+    oco2.ak.norm <- oco2.info$ak.norm
+	oco2.zsfc    <- oco2.info$oco2.grdhgt
+	oco2.psfc    <- max(oco2.pres)
 
 	#### ------ CONVERT STILT release levels from heights to pressures ----- ####
 	# interpolate starting pressure based on starting hgts, by looking at press
@@ -55,22 +61,31 @@ get.wgt.funcv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 	min.time <- min(abs(trajdat$time)) * sign(trajdat$time[1])  # MIN time in mins
 	sel.traj <- trajdat[trajdat$time == min.time, ] # trajec near receptor
 
-	# calculate mASL, add ground height (zsfc) to mAGL
-	sel.traj$zasl <- sel.traj$zagl + sel.traj$zsfc	# ASL near receptor
+	# calculate modeled mASL for each particle
+	traj.zasl <- sel.traj$zagl + sel.traj$zsfc	  # ASL for each particle
+	traj.pres <- sel.traj$pres				 	  # pressure for each particle
 
-	# calculate mASL of each release level (mAGL 'r_zagl' + sfc height 'zsfc')
-	recp.zasl <- r_zagl + zsfc
+	# Z_sfc - Z_trajec, use OCO-2 surface altitude to calculate the correct AGL
+	traj.delt.zagl <- oco2.zsfc - traj.zasl	  # Z0 - Z_traj; negative values
 
-	### interpolate pressures for each release levels given their values in mAGLs
-	# rule=2 allows us to interpolate pressure beyond the range by using the data
-	#        extreme, e.g., the surface pressure (z=0)
-	# ruel=1 return NA values to values beyond data range
-	recp.pres <- Hmisc::approxExtrap(x = sel.traj$zasl, y = sel.traj$pres,
-		                               xout = recp.zasl, rule = 2)$y
+	# --------- fit nonlinear regression to pressure - altitude relation ----- #
+	# inferred from trajec, DW, 08/30/2019 
+	# P = Psfc * exp (g/RT * (Zsfc - Z)), fit nonlinear regression to P and Z,
+	# since T_avg is unknown here 
+	nls.model <- stats::nls(traj.pres ~ oco2.psfc * exp(a * traj.delt.zagl), 
+	                        start = list(a = 1E-4))
+	a <- coef(nls.model)[[1]]
 
-	# for debug--
-	#plot(sel.traj$zasl, sel.traj$pres, ylim = c(1013, 0))
-	#points(recp.zasl, recp.pres, col="red")
+	# check correlation coefficient
+	cor(traj.pres, predict(nls.model))	# 0.99984
+
+	# predict on new data, new AGL for receptor levels
+	recp.delt.zagl <- -r_zagl	# Z0 - Z, negative values
+	recp.pres <- oco2.psfc * exp(a * recp.delt.zagl)
+
+	# check if modeled pressures are interpolated correctly.
+	#plot(abs(x), y, ylim = c(1013, 0), xlim = c(0, 7000))
+	#points(abs(new.x), recp.pres, col = 'red')
 
 
 	#### ------------------------ DEALING WITH OCO-2 NOW -------------------- ####
@@ -83,7 +98,7 @@ get.wgt.funcv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 	oco2.nlev <- length(oco2.pres)
 	oco2.pres <- oco2.pres[length(oco2.pres):1]	# flip pressure levels
 	attributes(oco2.pres)$names <-
-	            attributes(oco2.pres)$names[length(attributes(oco2.pres)$names):1]
+	        attributes(oco2.pres)$names[length(attributes(oco2.pres)$names):1]
 
 	# flip 20 levels (--> from sfc to TOA) and assign names
 	oco2.ak.norm <- oco2.ak.norm[length(oco2.ak.norm):1]
@@ -101,8 +116,8 @@ get.wgt.funcv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 	# for model levels, keep OCO2 levels with zero AK above the max STILT level
 	# for levels above model levels, use OCO2 prof
 	min.recp.pres <- min(recp.pres)
-	upper.index   <- oco2.pres <  min.recp.pres	  # return T/F
-	lower.index   <- oco2.pres >= min.recp.pres
+	upper.index <- oco2.pres <  min.recp.pres	  # return T/F
+	lower.index <- oco2.pres >= min.recp.pres
 
 
 	### -------------------  FOR a combined pressure prof ----------------- ###
@@ -168,7 +183,7 @@ get.wgt.funcv3 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 
 	# get modeled and original OCO-2 dp ratios for the 'interface'
 	intf.stilt.dp <- abs(diff(combine.pres))[recp.nlev]
-	intf.oco2.dp  <- lower.oco2.pres[length(lower.oco2.pres)] - upper.oco2.pres[1]
+	intf.oco2.dp <- lower.oco2.pres[length(lower.oco2.pres)] - upper.oco2.pres[1]
 
 	## Step 3) Interpolate dp.oco2.lower onto STILT levels using pres (EXCEPT the
 	# bottom level, first element) + pres diff at LOWER OCO level

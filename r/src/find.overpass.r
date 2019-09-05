@@ -11,6 +11,7 @@
 # add a flag ''urbanTF' for searching soundings near urban region, DW, 06/15/2018
 # dlat, dlon for lat,lon from city center
 # update for v9 data, DW, 10/19/2018 
+# drop the scientific notation for sounding ID, DR, DW, 09/04/2019
 
 find.overpass <- function(date.range, lon.lat, oco2.ver = c('b7rb','b8r', 'b9r'),
                           oco2.path, urbanTF = F, dlon = 0.5, dlat = 0.5){
@@ -30,10 +31,10 @@ find.overpass <- function(date.range, lon.lat, oco2.ver = c('b7rb','b8r', 'b9r')
 
   # for b8 or b9
   if (oco2.ver != 'b7rb') {
-    SEL.day   <- all.timestr >= substr(date.range[1], 3, 8) &
-                 all.timestr <= substr(date.range[2], 3, 8)
+    SEL.day <- all.timestr >= substr(date.range[1], 3, 8) &
+               all.timestr <= substr(date.range[2], 3, 8)
     oco2.file <- all.file[SEL.day]
-    timestr   <- paste0('20', substr(oco2.file, 12, 17))
+    timestr <- paste0('20', substr(oco2.file, 12, 17))
 
   } else if (oco2.ver == 'b7rb') {
 
@@ -59,7 +60,9 @@ find.overpass <- function(date.range, lon.lat, oco2.ver = c('b7rb','b8r', 'b9r')
     oco2.lon <- ncvar_get(dat, 'longitude')
     xco2 <- ncvar_get(dat, 'xco2'); xco2[xco2 == -999999] <- NA
     qf <- ncvar_get(dat, 'xco2_quality_flag')
-    id <- as.character(ncvar_get(dat, 'sounding_id'))
+
+    # drop the scientific notation for sounding ID, DR, DW, 09/04/2019
+    id <- format(ncvar_get(dat, 'sounding_id'), scientific = F)
     obs <- data.frame(lat = as.numeric(oco2.lat), lon = as.numeric(oco2.lon), 
                       qf = as.numeric(qf), xco2 = as.numeric(xco2), 
                       timestr = as.numeric(substr(id, 1, 10)), 
