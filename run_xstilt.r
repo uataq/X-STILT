@@ -68,13 +68,13 @@ setwd(workdir)   # move to working directory
 source('r/dependencies.r') # source all functions
 
 # Please insert your API for the use of ggplot and ggmap
-api.key <- 'AIzaSyC1BSjYSw90luYmbcPuj-A_w8-VV_1gsjA'
+api.key <- ''
 register_google(key = api.key)
 
 
 #------------------------------ STEP 1 --------------------------------------- #
 ### 1) input dlat, dlon to get spatial domain around city center
-site <- 'LosAngeles'   # choose a city
+site <- 'Riyadh'   # choose a city
 lon.lat <- get.lon.lat(site = site, dlon = 1, dlat = 1.5)
 
 
@@ -105,7 +105,7 @@ urbanTF <- T; dlon.urban <- 0.5; dlat.urban <- 0.5
 
 # rmTF = T, for removing overpasses during hemispheric growing seasons
 oco2.track <- get.site.track(site, oco2.ver, oco2.path, searchTF = T, 
-                             date.range = c('20140101', '20181231'), 
+                             date.range = c('20140101', '20191231'), 
                              thred.count.per.deg = 100, lon.lat, 
                              urbanTF, dlon.urban, dlat.urban, 
                              thred.count.per.deg.urban = 50, txt.path, rmTF = F)
@@ -117,7 +117,7 @@ oco2.track <- oco2.track %>% filter(qf.urban.count > 50)
 
 
 ### 4) finally narrow down and get timestr
-all.timestr <- oco2.track$timestr#[c(2, 3, 8, 9, 10)]         # v7, Riyadh
+all.timestr <- oco2.track$timestr[c(2, 3, 8, 9, 10)]         # v7, Riyadh
 print(all.timestr)
 
 # whether to plot them on maps, plotTF = T/F,
@@ -126,7 +126,7 @@ ggmap.obs.info(plotTF = F, site, store.path, all.timestr, oco2.ver, oco2.path,
                lon.lat, workdir, dlat.urban, dlon.urban)
 
 ### 5) *** NOW choose the timestr that you'd like to work on...
-tt <- 42
+tt <- 5
 timestr <- all.timestr[tt]
 cat(paste('Working on:', timestr, 'for city/region:', site, '...\n\n'))
 cat('Done with choosing cities & overpasses...\n')
@@ -135,7 +135,7 @@ cat('Done with choosing cities & overpasses...\n')
 #------------------------------ STEP 2 --------------------------------------- #
 # T:rerun hymodelc, even if particle location object found
 # F:re-use previously calculated particle location object
-run_trajec <- F     # whether to generate trajec; runs start in STEP 6
+run_trajec <- T     # whether to generate trajec; runs start in STEP 6
 run_foot   <- T     # whether to generate footprint; runs start STEP 6
 if (run_trajec) cat('Need to generate trajec...\n')
 if (run_foot)   cat('Need to generate footprint...\n\n')
@@ -156,7 +156,7 @@ nhrs <- -72         # number of hours backward (-) or forward (+)
 # path to grab or store trajec, foot and potential trans err stat DW, 07/31/2018
 # ourput directory for storing traj with default convention;
 # store traj with wind err in a separate directory if run_hor_err = T
-outdir <- file.path(store.path, paste('out', timestr, site, 'fixed', sep = '_'))
+outdir <- file.path(store.path, paste('out', timestr, site, sep = '_'))
 if (run_hor_err) outdir <- file.path(err.path, 
                                      paste('out_err', timestr, site, sep = '_'))
 
@@ -304,7 +304,7 @@ ak.wgt  <- ifelse(columnTF, TRUE, NA)
 pwf.wgt <- ifelse(columnTF, TRUE, NA)
 
 # whether to overwrite existing wgttraj.rds files; if F, read from existing wgttraj.rds
-overwrite_wgttraj <- T  
+overwrite_wgttraj <- F  
 
 
 ### 3) other footprint parameters using STILTv2 (Fasoli et al., 2018)
@@ -322,7 +322,7 @@ if (run_trajec | run_foot) {
   ## use SLURM for parallel simulation settings
   # avoid using < 10 cores per node when running trans error stat (run_hor_err) 
   # along with calculating 2D foot together (run_foot), *** memory limits
-  n_nodes  <- 5
+  n_nodes  <- 8
   n_cores  <- ceiling(nrecp / n_nodes)
 
   # time allowed for running hymodelc before forced terminations
