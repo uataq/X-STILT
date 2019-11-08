@@ -74,7 +74,7 @@ get.oco2.info <- function(oco2.path, receptor, diff.td = 1E-4){
 
     # check whether is missing data
     ap[ap == -999999] <- NA
-    pwf [pwf == -999999]  <- NA
+    pwf[pwf == -999999] <- NA
     xco2[xco2 == -999999] <- NA
     pres[pres == -999999] <- NA
     psfc[psfc == -999999] <- NA

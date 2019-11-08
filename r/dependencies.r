@@ -4,14 +4,13 @@
 # add Dien's OCO-2/XSTILT source codes, 05/23/2018, DW
 
 ####
-if (!'stilt_wd' %in% ls())
-  stilt_wd <- getwd()
+if (!'xstilt_wd' %in% ls()) xstilt_wd <- getwd()
 
 ### Source stilt R functions
-rsc <- dir(file.path(stilt_wd, 'stilt/r/src'), pattern = '.*\\.r$', full.names = T)
+rsc <- dir(file.path(xstilt_wd, 'stilt/r/src'), pattern = '.*\\.r$', full.names = T)
 
 ### Source R scripts for Dien's X-STILT, 05/23/2018, DW
-rsc <- c(rsc, dir(file.path(stilt_wd, 'r/src'), pattern = '.*\\.r$',
+rsc <- c(rsc, dir(file.path(xstilt_wd, 'r/src'), pattern = '.*\\.r$',
                   full.names = T, recursive = T))
 
 invisible(lapply(rsc, source))
@@ -27,7 +26,7 @@ load_libs('dplyr', 'ncdf4', 'parallel', 'raster', 'readr', 'rslurm', 'uataq',
           lib.loc = lib.loc)
 
 ### Load permute fortran dll for footprint matrix permutation
-permute_exe <- file.path(stilt_wd, 'stilt/r/src/permute.so')
+permute_exe <- file.path(xstilt_wd, 'stilt/r/src/permute.so')
 if (!file.exists(permute_exe))
   stop('calc_footprint(): failed to find permute.so in stilt/r/src/')
 dyn.load(permute_exe)

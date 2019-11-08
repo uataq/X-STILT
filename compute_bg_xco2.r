@@ -18,8 +18,8 @@
 ## source all functions and load all libraries
 # CHANGE working directory ***
 homedir <- '/uufs/chpc.utah.edu/common/home'
-workdir <- file.path(homedir, 'lin-group5/wde/X-STILT') #current dir
-setwd(workdir)   # move to working directory
+xstilt_wd <- file.path(homedir, 'lin-group7/wde/X-STILT') #current dir
+setwd(xstilt_wd)   # move to working directory
 source('r/dependencies.r') # source all functions
 
 # insert your API for the use of ggplot and ggmap
@@ -30,6 +30,7 @@ register_google(key = api.key)
 #------------------------------ STEP 1 --------------------------------------- #
 site     <- 'Riyadh'  # insert target city
 lon.lat  <- get.lon.lat(site = site, dlon = 1, dlat = 2)
+site.lon <- lon.lat$citylon; site.lat <- lon.lat$citylat
 oco2.ver <- c('b7rb', 'b8r', 'b9r')[1]  # OCO-2 version
 
 ## choose which background method:
@@ -40,8 +41,8 @@ oco2.ver <- c('b7rb', 'b8r', 'b9r')[1]  # OCO-2 version
 method <- c('M1', 'M2H', 'M2S', 'M3')[4]
 
 ## required output and input paths, txtfile name for storing background values
-input.path  <- file.path(homedir, 'lin-group5/wde/input_data')
-output.path <- file.path(homedir, 'lin-group5/wde/output', site)
+input.path  <- file.path(homedir, 'lin-group7/wde/input_data')
+output.path <- file.path(homedir, 'lin-group7/wde/output', site)
 bg.txtfile  <- file.path(output.path, paste0(method, '_bg_', site, '_', 
                                              oco2.ver, '.txt'))
 oco2.path   <- file.path(input.path, 'OCO-2/L2', paste0('OCO2_lite_', oco2.ver))
@@ -97,6 +98,7 @@ if (method == 'M3') {
                     # this requires forward trajec ready
   run_hor_err <- T  # run trajec with hor wind errors/calc trans error
   run_ver_err <- F  # run trajec with mixed layer height scaling
+  traj.path <- file.path(output.path, 'out_forward')
 
   # path for radiosonde data, FSL format from NOAA
   # needed if adding wind error component, run_hor_err = T
@@ -119,8 +121,9 @@ if (method == 'M3') {
   # release FROM # hrs (e.g., -10) before overpass time, 
   # TO overpass time (e.g., 0), with every 0.5 hour release
   dtime <- seq(-10, 0, 0.5)  # time windows to release particles continuously
-
-  ### release particles from fixed levels
+  
+  ### release particles from fixed levels, recort particles for every 2mins
+  delt   <- 2          # in mins
   agl    <- 10         # in mAGL
   numpar <- 1000       # particle # per each time window
   cat(paste('\n\nDone with receptor setup...\n'))
@@ -134,47 +137,45 @@ if (method == 'M3') {
   met.num    <- 1     # min number of met files needed
   met.format <- c('%Y%m%d.%Hz.hrrra', '%Y%m%d_gdas0p5', 'edas.%Y%m', '%Y%m%d')[met.indx]
   
-  # **** NEED CHANGES: which side for background, north, south, or both
+  #------------------------------ STEP 4 -------------------------------- #
+  # !!! need to add makefile for AER_NOAA_branch in fortran ;
+  # link two hymodelcs in exe directory
+  # parallel running, DW, 11/06/2019
+  n_nodes <- 1
+  n_cores <- ceiling(length(all.timestr) / n_nodes)
+  slurm_options <- list(time = '04:00:00', account = 'lin-kp', partition = 'lin-kp')
+  
+  if (run_trajec) {
+    dtime <- list(dtime)
+    xstilt_apply(FUN = run.forward.trajec, slurm = T, slurm_options, n_nodes, 
+                 n_cores, jobname = paste0('XSTILT_forward_', site), 
+                 site, site.lon, site.lat, timestr = all.timestr, 
+                 run_trajec, run_hor_err, run_ver_err, agl, delt, dtime, 
+                 dxyp, dzp = 0, numpar, nhrs, xstilt_wd, output.path = traj.path, 
+                 met, met.format, met.path, met.num, raob.path, 
+                 raob.format = 'fsl', siguverr, err.path, nhrs.zisf = 24, zisf)
+    q('no')
+  }
+
+
+  # ----- calculating the forward background and plot kernel density map ----- #
+  # **** NEED CHANGES: which side for background: 'north', 'south', or 'both'
   # can be interpolated from forward-plume, after being generated
-  clean.side <- rep('south', length(all.timestr))  # just an example
+  clean.side <- rep('both', length(all.timestr))  # just an example
 
-  ### loop over each overpass
-  bg.info <- NULL
-  for (t in 1 : length(all.timestr)) {
-
-    timestr <- all.timestr[t]
-    cat(paste('\n\n## ----- Working on', site, 'on', timestr, '----- ##\n'))
-
-   #------------------------------ STEP 3 --------------------------------- #
-    ## get horizontal transport error component if run_hor_err = T
-    # if overwrite = T, prepare RAOB data and compute model-data wind comparisons
-    # *** if you do not want to run wind error analysis, set overwrite to FALSE 
-    # and prescribe a horizontal wind error, e.g., siguverr = 3 (with unit of m/s)
-    # for more info, please see get.uverr.r
-    hor.err <- get.uverr(run_hor_err, site, timestr, workdir, overwrite,
-                         raob.path, raob.format = 'fsl', nhrs, met, met.path, 
-                         met.format, met.files, lon.lat, agl = c(0, 100), 
-                         nfTF = T, siguverr = siguverr, err.path = err.path)
-
-    ## get vertical transport error component if run_ver_err = T
-    pbl.err <- get.zierr(run_ver_err, nhrs.zisf = 24, const.zisf = zisf)
-    cat('Done with choosing met & inputting wind errors...\n')
-
-    #------------------------------ STEP 4 -------------------------------- #
-    # !!! need to add makefile for AER_NOAA_branch in fortran ;
-    # link two hymodelcs in exe directory
-    tmp.info <- run.forward.trajec(site, timestr, run_trajec, run_bg, 
-                                   nummodel = timestr, lon.lat, delt = 2, dxyp, 
-                                   dzp = 0, dtime, agl, numpar, nhrs, workdir, 
-                                   output.path, hor.err, pbl.err, met, 
-                                   met.format, met.path, met.num = 1, oco2.path, 
-                                   oco2.ver, zoom = 7, td = 0.05, bg.dlat = 1, 
-                                   perc = 0.1, clean.side = clean.side[t])
-
-    if (is.null(tmp.info)) next
-    bg.info <- rbind(bg.info, tmp.info)
-  } # end for t
-
-  if (run_bg) 
+  if (run_trajec == F & run_bg) { # need forward trajec ready
+    
+    bg.info <- NULL
+    for (tt in 1: length(all.timestr)) {  ### loop over each overpass
+      tmp.bg <- calc.bg.forward.trajec(trajpath = traj.path, site, 
+                                       timestr = all.timestr[tt], agl, dtime, 
+                                       numpar, dxyp, oco2.path, oco2.ver, met, 
+                                       zoom = 8, api.key, td = 0.05, 
+                                       bg.dlat = 0.5, perc = 0.2, clean.side[tt])
+      bg.info <- rbind(bg.info, tmp.bg)
+    }
+   
     write.table(bg.info, quote = F, row.names = F, sep = ',', file = bg.txtfile)
+  } # end if run_bg
+    
 } # end if method == 'M3'

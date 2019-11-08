@@ -23,19 +23,18 @@
 # merge two plots together if there's an intersection between overpass and plume,
 #   DW, 10/30/2018 
 
-calc.bg.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path, 
-                                   oco2.ver, met, zoom = 7, lon.lat, 
-                                   font.size = rel(1.2), td = 0.05, 
-                                   bg.dlat = 0.5, perc = 0.2, 
-                                   clean.side = c('north', 'south', 'both')[3]){
-
+calc.bg.forward.trajec <- function(trajpath, site, timestr, agl, dtime, numpar, 
+                                   dxyp, oco2.path, oco2.ver, met, zoom = 7, 
+                                   api.key, td = 0.05, bg.dlat = 0.5, perc = 0.2, 
+                                   clean.side = c('north', 'south', 'both')[3], 
+                                   font.size = rel(1.2)){
+  
+  register_google(key = api.key)
+  
   # call grab.oco2() to read in observations and compute overpass time
   # lon.lat used for grabbing OCO2 should be wider, e.g., by 2 deg +
-  mod.lon.lat <- lon.lat
-  mod.lon.lat[, c('minlon', 'minlat')] <- mod.lon.lat[, c('minlon', 'minlat')] - 2
-  mod.lon.lat[, c('maxlon', 'maxlat')] <- mod.lon.lat[, c('maxlon', 'maxlat')] + 2
-
-  obs <- grab.oco2(oco2.path, timestr, mod.lon.lat, oco2.ver) %>% filter(qf == 0)
+  lon.lat <- get.lon.lat(site, dlat = 2.5, dlon = 2.5)
+  obs <- grab.oco2(oco2.path, timestr, lon.lat, oco2.ver) %>% filter(qf == 0)
   if (nrow(obs) == 0) {
     cat('*** NO observed data with QF = 0 for this event...returning NA ***\n')
     return()
@@ -50,16 +49,22 @@ calc.bg.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
   max.xtime <- max(obs.datestr) + 2 * 60
 
   # read in forward trajec
-  cat('\n\nggplot.forward.trajec(): reading forward trajec, it takes time...\n')
-  trajdat <- NULL
-  for (f in 1 : length(ident)) {
+  cat(paste('\n\ncalc.bg.forward.trajec(): reading forward trajec for', timestr,
+            ', it takes time...\n'))
+  ident <- convert.timestr2ident(timestr, dtime, lon.lat$citylon, lon.lat$citylat, 
+                                 agl, numpar, dxyp)$ident
+  trajfiles <- list.files(trajpath, '.rds', full.names = T, recursive = T)
+  trajfiles <- trajfiles[basename(trajfiles) %in% ident]
 
-    if (!file.exists(paste0(trajpath, ident[f]))) {
+  trajdat <- NULL
+  for (f in trajfiles) {
+
+    if (!file.exists(f)) {
       cat('***** NO forward trajec found...returning NA *****\n')
       return()
     }
 
-    tmp.trajdat <- readRDS(paste0(trajpath, ident[f]))
+    tmp.trajdat <- readRDS(f)
     trajdat <- rbind(trajdat, tmp.trajdat)
   } # end for f
 
@@ -90,7 +95,7 @@ calc.bg.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
                                fill = 'gray30', alpha = 0.5)
 
   ### calculate 2D kernel density and Normalized by the max density
-  cat('ggplot.forward.trajec(): calculating kernel density...\n')
+  cat('calc.bg.forward.trajec(): calculating kernel density...\n')
   dens <- kde2d(sel.trajdat$lon, sel.trajdat$lat, h = c(0.1, 0.1), n = 100)
   densf <- data.frame(expand.grid(lon = dens$x, lat = dens$y),
                       prob = as.vector(dens$z)) %>% 
@@ -172,7 +177,7 @@ calc.bg.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
 
   if (nrow(sel.obs) == 0) {
 
-    cat('ggplot.forward.trajec(): no intersection with screened obs..return NA\n')
+    cat('calc.bg.forward.trajec(): no intersection with screened obs..return NA\n')
     
     # store plot even if there is no intersection
     picname <- file.path(trajpath, paste0('forward_plume_', site, '_', timestr, 
@@ -274,7 +279,7 @@ calc.bg.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
                                            signif(clean.max.lat, 4), '\n'))
 
       } else {
-        cat('Incorrect input of clean.side\n');return()
+        cat('calc.bg.forward.trajec(): Incorrect input of clean.side\n');return()
       } # end if clean.side
 
       mean.bg   <- mean(clean.obs$xco2, na.rm = T)
@@ -297,15 +302,15 @@ calc.bg.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
                            y = mean.bg)
 
       l1 <- ggplot() + theme_bw() +
-        geom_ribbon(data = bg.dat, aes(x, ymin = ymin, ymax = ymax),
-                    colour = 'limegreen', fill = 'limegreen', alpha = 0.3) + 
-        geom_point(data = obs, aes(lat, xco2, fill = as.factor(2)),
-                   colour = 'white', shape = 24, size = 3) + 
-        geom_point(data = pol.obs, aes(lat, xco2, fill = as.factor(4)),
-                   colour = 'white', shape = 24, size = 3) + 
-        geom_line(data = bg.dat, 
-                  aes(x, y, colour = as.factor(6), linetype = as.factor(6)), 
-                  size = 1.1)
+            geom_ribbon(data = bg.dat, aes(x, ymin = ymin, ymax = ymax),
+                        colour = 'limegreen', fill = 'limegreen', alpha = 0.3) + 
+            geom_point(data = obs, aes(lat, xco2, fill = as.factor(2)),
+                      colour = 'white', shape = 24, size = 3) + 
+            geom_point(data = pol.obs, aes(lat, xco2, fill = as.factor(4)),
+                      colour = 'white', shape = 24, size = 3) + 
+            geom_line(data = bg.dat, 
+                      aes(x, y, colour = as.factor(6), linetype = as.factor(6)), 
+                      size = 1.1)
 
       # add smooth spline, make sure clean.obs has data, DW, 10/30/2018
       # if clean.obs or north.obs/south.obs is missing, do not plot smooth spline
@@ -367,7 +372,7 @@ calc.bg.forward.trajec <- function(ident, trajpath, site, timestr, oco2.path,
       width <- 10; height <- 13
     } else {  # if no intersection
 
-      cat('ggplot.forward.trajec(): No intersection with OCO-2 track...return NA\n')
+      cat('calc.bg.forward.trajec(): No intersection with OCO-2 track...return NA\n')
       north.bg <- NA; south.bg <- NA; mean.bg  <- NA; bg.sd <- NA
       sd.spread <- NA; sd.retriv <- NA; num.bg <- NA
       pol.min.lat <- NA; pol.max.lat <- NA; north.min.lat <- NA 

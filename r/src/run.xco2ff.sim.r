@@ -33,7 +33,7 @@ run.xco2ff.sim <- function(site = 'Riyadh', timestr = '2014100920', vname = '201
   # grab footprint files and get footprint domain
   foot.path <- file.path(outdir, 'by-id')
   #foot.patt <- paste0(signif(foot.res, 3), 'x', signif(foot.res, 3), '_foot.nc')
-  foot.patt <- '_foot.nc'
+  foot.patt <- 'X_foot.nc'
   foot.files <- list.files(foot.path, foot.patt, recursive = T, full.names = T)
   foot.indx <- grep(signif(foot.res, 3), basename(foot.files))
 

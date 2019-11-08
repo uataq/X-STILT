@@ -117,7 +117,7 @@ oco2.track <- oco2.track %>% filter(qf.urban.count > 50)
 
 
 ### 4) finally narrow down and get timestr
-all.timestr <- oco2.track$timestr[c(2, 3, 8, 9, 10)]         # v7, Riyadh
+all.timestr <- oco2.track$timestr         # v7, Riyadh
 print(all.timestr)
 
 # whether to plot them on maps, plotTF = T/F,
@@ -280,6 +280,10 @@ foot.res <- 1/120  # footprint resolution, 1km for ODIAC
 foot.res2 <- c(NA, 1/10, 1/20, 1)[1]     
 if (run_emiss_err) foot.res2 <- 1/10 # for emiss err, need to generate 0.1deg foot
 
+#' set # of hours for calculating footprint
+#' if @param foot.nhrs < @param nhrs, XSTILT will subset trajec
+foot.nhrs <- nhrs   # foot.nhrs can be different from nhrs for back-trajec
+
 # these variables will determine resoluation and spatial domain of footprint
 # 20x20 degree domain around the city center
 # one can also customize the data.frame of `foot.info`
@@ -288,7 +292,7 @@ foot.info <- list(xmn = round(lon.lat$citylon) - 10,
                   ymn = round(lon.lat$citylat) - 10, 
                   ymx = round(lon.lat$citylat) + 10,
                   xres  = foot.res,  yres  = foot.res, 
-                  xres2 = foot.res2, yres2 = foot.res2)
+                  xres2 = foot.res2, yres2 = foot.res2, foot.nhrs = foot.nhrs)
 
 ### and prepare ODIAC based on footprint domain 
 if (run_hor_err) {
@@ -330,14 +334,15 @@ if (run_trajec | run_foot) {
   job.time <- '04:00:00'    # total job time
   slurm    <- n_nodes > 0
   slurm_options <- list(time = job.time, account = 'lin-kp', partition = 'lin-kp')
+  jobname <- paste0('XSTILT_', site, '_', timestr)
 
   # create a namelist including all variables
   # namelist required for generating trajec
   namelist <- list(ak.wgt = ak.wgt, columnTF = columnTF, ct.ver = ct.ver, 
                    ctflux.path = ctflux.path, ctmole.path = ctmole.path, 
                    delt = delt, emiss.file = emiss.file, foot.info = foot.info, 
-                   hnf_plume = hnf_plume, hor.err = hor.err, met = met, 
-                   met.format = met.format, met.num = met.num, 
+                   hnf_plume = hnf_plume, hor.err = hor.err, jobname = jobname,
+                   met = met, met.format = met.format, met.num = met.num, 
                    met.path = met.path, nhrs = nhrs, n_cores = n_cores,
                    n_nodes = n_nodes, numpar = numpar, outdir = outdir, 
                    oco2.path = oco2.path, overwrite_wgttraj = overwrite_wgttraj,

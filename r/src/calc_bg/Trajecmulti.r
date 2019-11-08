@@ -505,7 +505,7 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
         if (write.r)
           #assignr(outname[ipos],this.outdat,outpath,printTF=T)
           # use saveRDS instead and store output as data frame, DW, 07/29/2018
-          saveRDS(object = as.data.frame(this.outdat), file = paste0(outpath, outname[ipos]))
+          saveRDS(object = as.data.frame(this.outdat), file = file.path(outpath, outname[ipos]))
         if (write.nc)
           make.stilt.nc4(ident=outname[ipos],part=TRUE,partdat=this.outdat,targetdir=outpath,appendnc=FALSE,
                          global.att.files=gatt.files,ident.start=ident.start,emit=TRUE,emitdat=emitdat[ipos,])
@@ -518,7 +518,7 @@ Trajecmulti <- function(yr=02, mon=8, day=1, hr=6, mn=0, lat=42.536, lon=-72.172
           if (write.r)
             #assignr(outname0,outdat0,outpath,printTF=T)
             # use saveRDS instead and store output as data frame, DW, 07/29/2018
-            saveRDS(object = as.data.frame(outdat0), file = paste0(outpath, outname0))
+            saveRDS(object = as.data.frame(outdat0), file = file.path(outpath, outname0))
           if (write.nc)
             make.stilt.nc4(ident=outname0,part=TRUE,partdat=outdat0,targetdir=outpath,appendnc=FALSE,ident.start=ident.start)
         }

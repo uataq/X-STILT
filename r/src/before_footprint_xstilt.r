@@ -64,13 +64,15 @@ before_footprint_xstilt <- function() {
 
     # we would like to generate footprint with different resolutions, if needed
     # DW, 02/11/2019 
-    if ( !(NA %in% args$xres2) & !(NA %in% args$yres2) ) {
+    xres2 <- unlist(args$xres2)
+    yres2 <- unlist(args$yres2)
+    if ( !(NA %in% xres2) & !(NA %in% yres2) ) {
 
         cat('before_footprint_xstilt(): generate footprint with diff res...\n')
-        for (f in 1: length(args$xres2)) {
+        for (f in 1: length(xres2)) {
             foot_file <- file.path(rundir, paste0(basename(rundir), '_', 
-                                                  signif(args$xres2[f], 3), 'x', 
-                                                  signif(args$yres2[f], 3), 
+                                                  signif(xres2[f], 3), 'x', 
+                                                  signif(yres2[f], 3), 
                                                   '_foot.nc'))
             
             # use weighted output for footprint
@@ -79,11 +81,18 @@ before_footprint_xstilt <- function() {
                                    smooth_factor = smooth_factor,
                                    time_integrate = time_integrate,
                                    xmn = xmn, xmx = xmx, 
-                                   xres = as.numeric(args$xres2[f]),
+                                   xres = as.numeric(xres2[f]),
                                    ymn = ymn, ymx = ymx, 
-                                   yres = as.numeric(args$yres2[f]))
+                                   yres = as.numeric(yres2[f]))
         } # end for f
     } # end if is na
+
+    # if foot_nhrs is different from trajec_nhrs, subset trajec
+    if ( args$foot.nhrs != min(wgt.output$particle$time) /60 ) {
+        cat('before_footprint_xstilt(): subset particles for calculating footprint\n')
+        wgt.output$particle <- wgt.output$particle %>% arrange(abs(time)) %>% 
+                               filter(abs(time) <= abs(args$foot.nhrs) * 60) 
+    }   # end if
 
     cat('before_footprint_xstilt(): END OF FUNCTION, start to calculate foot...\n')
     return(wgt.output) # return weighted output

@@ -65,6 +65,7 @@ run.xstilt <- function(namelist){
   # footprint with diff resolution, can be NA or numbers
   xres2 <- namelist$foot.info$xres2
   yres2 <- namelist$foot.info$yres2
+  foot.nhrs <- namelist$foot.info$foot.nhrs 
 
   hnf_plume      <- namelist$hnf_plume
   smooth_factor  <- namelist$smooth_factor
@@ -141,7 +142,8 @@ run.xstilt <- function(namelist){
   slurm         <- namelist$slurm
   n_cores       <- namelist$n_cores
   n_nodes       <- namelist$n_nodes
-
+  jobname       <- namelist$jobname
+  
   # Startup messages -----------------------------------------------------------
   message('Initializing STILT')
   message('Number of receptors: ', nrow(receptors))
@@ -176,11 +178,12 @@ run.xstilt <- function(namelist){
     if (!file.exists(met_loc)) invisible(file.symlink(met_directory, met_loc))
   } else met_loc <- met_directory
 
-  output <- stilt_apply(FUN = simulation_step,
+  output <- xstilt_apply(FUN = simulation_step,
                         slurm = slurm, 
                         slurm_options = slurm_options,
                         n_cores = n_cores,
                         n_nodes = n_nodes,
+                        jobname = jobname, 
                         before_footprint = list(before_footprint),
                         before_trajec = list(before_trajec),
                         conage = conage,
@@ -279,6 +282,7 @@ run.xstilt <- function(namelist){
                         ct.ver = namelist$ct.ver, 
                         ctflux.path = namelist$ctflux.path, 
                         ctmole.path = namelist$ctmole.path, 
-                        xres2 = xres2, 
-                        yres2 = yres2)
+                        xres2 = list(xres2), 
+                        yres2 = list(yres2), 
+                        foot.nhrs = foot.nhrs)
 }

@@ -9,7 +9,7 @@
 get.lon.lat <- function(site, dlon, dlat, city.loc = NULL) {
 
   # spatial domains placing receptors and city center, help select OCO-2 data
-  library(ggmap); library(rworldmap); library(sp)
+  library(ggmap); library(rworldmap); library(sp); library(lutz)
 
   # location name to lon, lat coordinates
   if (is.null(city.loc)) 
@@ -28,9 +28,12 @@ get.lon.lat <- function(site, dlon, dlat, city.loc = NULL) {
   # use 'over' to get indices of the Polygons object containing each point
   indices <- over(pointsSP, countriesSP)
 
+  # get time.zone 
+  tz <- tz_lookup_coords(city.loc$lat, city.loc$lon)
+
   # convert indices from factors to characters
   lon.lat <- data.frame(cityid = site, citylon = city.loc$lon, 
-                        citylat = city.loc$lat, 
+                        citylat = city.loc$lat, tz = tz, 
                         countryid = as.character(indices$ADMIN), 
                         regid = as.character(indices$continent), 
                         iso3 = as.character(indices$ISO3),

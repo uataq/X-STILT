@@ -52,7 +52,8 @@ get.wgt.funcv4 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
     oco2.ak.norm <- oco2.info$ak.norm
 	oco2.zsfc    <- oco2.info$oco2.grdhgt
 	oco2.psfc    <- max(oco2.pres)
-
+	if (is.na(oco2.zsfc)) stop('get.wgt.funcv4(): observed surface height is NA, please check...\n')
+	
 	#### ------ CONVERT STILT release levels from heights to pressures ----- ####
 	# interpolate starting pressure based on starting hgts, by looking at press
 	# and altitude of particles at the first timestep back
@@ -71,7 +72,7 @@ get.wgt.funcv4 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 	# --------- fit nonlinear regression to pressure - altitude relation ----- #
 	# inferred from trajec, DW, 08/30/2019 
 	# P = Psfc * exp (g/RT * (Zsfc - Z)), fit nonlinear regression to P and Z,
-	# since T_avg is unknown here 
+	# since T_avg is unknown here
 	nls.model <- stats::nls(traj.pres ~ oco2.psfc * exp(a * traj.delt.zagl), 
 	                        start = list(a = 1E-4))
 	a <- coef(nls.model)[[1]]
