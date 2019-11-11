@@ -40,8 +40,8 @@ run.forward.trajec <- function(site, site.lon, site.lat, timestr,
   # for more info, please see get.uverr.r
   #lon.lat  <- get.lon.lat(site = site, dlon = 5, dlat = 5)  # near fields wind error
   lon.lat <- data.frame(citylon = site.lon, citylat = site.lat, 
-                        minlon = site.lon - 10, maxlon = site.lon + 10, 
-                        minlat = site.lat - 10, maxlat = site.lat + 10)
+                        minlon = site.lon - 5, maxlon = site.lon + 5, 
+                        minlat = site.lat - 5, maxlat = site.lat + 5)
 
   met.files <- find.all.metfiles(timestr, dtime, met.format, met.path, nhrs)
   hor.err <- get.uverr(run_hor_err, site, timestr, xstilt_wd, overwrite,
