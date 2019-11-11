@@ -12,9 +12,9 @@
 # add surface wind from ASOS, DW, see cal.met.wind.asos(), 09/19/2018 
 # minor bug occur when writing table into a txt file, DW, 12/04/2018
 
-cal.met.wind <- function(filename, met, met.path, met.format, met.files = NULL,
-                         workdir, err.path, site, timestr, overwrite = F, 
-                         raob.path = NULL, nhrs = -120, raob.format = 'fsl'){
+cal.met.wind <- function(filename, met, met.path, met.format, workdir, err.path, 
+                         site, timestr, overwrite = F, raob.path = NULL, 
+                         nhrs = -120, raob.format = 'fsl'){
 
   # loop over each time period
   if (overwrite == T | !file.exists(filename)){

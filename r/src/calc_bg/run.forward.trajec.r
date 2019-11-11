@@ -43,11 +43,9 @@ run.forward.trajec <- function(site, site.lon, site.lat, timestr,
                         minlon = site.lon - 5, maxlon = site.lon + 5, 
                         minlat = site.lat - 5, maxlat = site.lat + 5)
 
-  met.files <- find.all.metfiles(timestr, dtime, met.format, met.path, nhrs)
   hor.err <- get.uverr(run_hor_err, site, timestr, xstilt_wd, overwrite,
                        raob.path, raob.format, nhrs, met, met.path, met.format, 
-                       met.files, lon.lat, agl = c(0, 100), err.path, nfTF = T, 
-                       siguverr = siguverr)
+                       lon.lat, agl = c(0, 100), err.path, nfTF = T, siguverr)
 
   ## get vertical transport error component if run_ver_err = T
   pbl.err <- get.zierr(run_ver_err, nhrs.zisf = 24, const.zisf = zisf)
@@ -83,6 +81,7 @@ run.forward.trajec <- function(site, site.lon, site.lat, timestr,
     # the updated Trajecmulti() and fortran codes will randomly place receptors
     # according to dxyp
     cat('run.forward.trajec(): Generating forward trajec...\n')
+    met.files <- find.all.metfiles(timestr, dtime, met.format, met.path, nhrs)
     Trajecmulti(yr = date.df$yr - 2000, mon = date.df$mon, day = date.df$day, 
                 hr = date.df$hr, mn  = date.df$min, outname = ident, 
                 numpar = numpar, lat = date.df$lat, lon = date.df$lon,

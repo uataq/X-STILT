@@ -11,9 +11,8 @@
 # fix wd err, if wd.err is closed to -360 or 360, cycle it, DW, 08/31/2018
 # add surface wind from ASOS, DW, 09/19/2018 
 
-cal.met.wind.asos <- function(filename, met, met.path, met.format, 
-                              met.files = NULL, workdir, site, timestr, 
-                              overwrite = F, asos.file, nhrs = -120){
+cal.met.wind.asos <- function(filename, met, met.path, met.format, workdir, 
+                              site, timestr, overwrite = F, asos.file, nhrs = -120){
 
   # loop over each time period
   if (overwrite == T | !file.exists(filename)){
@@ -22,24 +21,22 @@ cal.met.wind.asos <- function(filename, met, met.path, met.format,
     asos <- read.table(asos.file, header = T, sep = ',', stringsAsFactors = F) 
     asos <- asos %>% 
         mutate(date = as.POSIXct(valid, format = '%Y-%m-%d %H:%M', tz = 'UTC'), 
-            timestr = as.numeric(format(date, '%Y%m%d%H')), 
-            temp.asos = as.numeric(tmpc),
-            wd.asos = as.numeric(drct),  # degree from true north
-            ws.asos = as.numeric(sknt) * 0.514, # convert knots to m/s
-            u.asos = sin((wd.asos - 180) * pi/180) * ws.asos,
-            v.asos = cos((wd.asos - 180) * pi/180) * ws.asos) %>% 
+                timestr = as.numeric(format(date, '%Y%m%d%H')), 
+                temp.asos = as.numeric(tmpc),
+                wd.asos = as.numeric(drct),  # degree from true north
+                ws.asos = as.numeric(sknt) * 0.514, # convert knots to m/s
+                u.asos = sin((wd.asos - 180) * pi/180) * ws.asos,
+                v.asos = cos((wd.asos - 180) * pi/180) * ws.asos) %>% 
         dplyr::select(station, lon, lat, date, timestr, temp.asos, 
-                    wd.asos, ws.asos, u.asos, v.asos) %>% na.omit()
+                      wd.asos, ws.asos, u.asos, v.asos) %>% na.omit()
 
     # only interpolate model wind for OCO-2 overpasses 
     recp.date <- as.POSIXct(timestr, format = '%Y%m%d%H', tz = 'UTC')
     end.date <- recp.date + nhrs * 60 * 60
-    asos <- asos %>% 
-      filter(date >= min(end.date, recp.date), date <= max(end.date, recp.date))
+    asos <- asos %>% filter(date >= min(end.date, recp.date), date <= max(end.date, recp.date))
     asos.hgt <- 612 # 612 m for two ASOS surface stations
-    asos <- asos %>% 
-      mutate(met.grdhgt = ifelse(station == 'OERK', 605.1306, 537.8216), 
-             agl = asos.hgt - met.grdhgt)
+    asos <- asos %>% mutate(met.grdhgt = ifelse(station == 'OERK', 605.1306, 537.8216), 
+                            agl = asos.hgt - met.grdhgt)
 
     # compute unique receptors (time, lat, lon)
     recpstr <- paste(asos$timestr, asos$lat, asos$lon, asos$agl)
@@ -78,7 +75,6 @@ cal.met.wind.asos <- function(filename, met, met.path, met.format,
       sel.asos <- asos[i, ]
 
       # if no postive AGL
-      source('r/dependencies.r') # source all functions
       int.info <- get.ground.hgt(varsiwant = var2, met_loc = met.path,
                                  met_file_format = met.format, n_hours = 1, 
                                  receptor = receptor[i,], rundir = rundir, 
