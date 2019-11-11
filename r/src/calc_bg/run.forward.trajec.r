@@ -104,8 +104,7 @@ run.forward.trajec <- function(site, site.lon, site.lat, timestr,
                 zcoruverr = hor.err$zcoruverr, 
                 horcoruverr = hor.err$horcoruverr,
                 hymodelc.exe = './hymodelc.aer', # use the AER version of hymodelc
-                setup.list = list(DELT = delt, VEGHT = 0.5)) %>%
-    invisible()
+                setup.list = list(DELT = delt, VEGHT = 0.5)) %>% invisible()
   } else {
     cat('run.forward.trajec(): do nothing, check run_trajec...\n')
   } # end if run_trajec
@@ -157,7 +156,7 @@ find.all.metfiles <- function(timestr, dtime, met.format, met.path, nhrs) {
                                             met_file_format = met.format,
                                             n_hours = nhrs, met_loc = met.path))
   met.files <- basename(unique(met.files))
-  if (length(met.files) == 0) {cat('No meteo fields found...please check'); return()}
+  if (length(met.files) == 0) {cat('find.all.metfiles(): No meteo fields found...please check'); return()}
 
   return(met.files)
 } # end of find.all.met.files

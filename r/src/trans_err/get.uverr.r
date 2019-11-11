@@ -73,7 +73,13 @@ get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
       # call get.SIGUVERR() to interpolate most near-field wind errors
       err.stat <- get.siguverr(met.raob, nfTF, forwardTF, lon.lat, nhrs, agl, 
                                recp.time = timestr)
-      if (!is.null(err.stat)) siguverr <- err.stat$siguverr
+      if (is.null(err.stat)) { 
+        cat('get.uverr(): no raob data found, use default value\n')
+        err.stat$siguverr <- siguverr
+      } else {
+        siguverr <- err.stat$siguverr
+      } # end if
+
     }  # end if file.exists
 
     cat(paste('SIGUVERR:', signif(siguverr, 3), 'm/s..\n'))
