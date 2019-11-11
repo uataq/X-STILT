@@ -39,11 +39,13 @@ get.siguverr <- function(met.raob, nfTF = F, forwardTF = F, lon.lat = NULL,
 
       # expanding time ranges
       uni.time <- unique(met.raob$time)
-      for (l in 1:length(uni.time)) {
+      for (l in 1 : length(uni.time)) {
         nf <- met.raob %>% filter(time >= uni.time[l],
-            lon >= (lon.lat$minlon - 1), lon <= (lon.lat$minlon + 1),
-            lat >= (lon.lat$minlat - 1), lat <= (lon.lat$minlat + 1))
-        if (nrow(nf) == 0) {nf <- NA; next}
+                                  lon >= (lon.lat$minlon - 1), 
+                                  lon <= (lon.lat$minlon + 1),
+                                  lat >= (lon.lat$minlat - 1), 
+                                  lat <= (lon.lat$minlat + 1))
+        if (nrow(nf) == 0) { nf <- NA; next }
       } # end loop l
 
       # expanding horizontal lat lon ranges

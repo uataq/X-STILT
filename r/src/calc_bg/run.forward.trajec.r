@@ -39,12 +39,15 @@ run.forward.trajec <- function(site, site.lon, site.lat, timestr,
   # and prescribe a horizontal wind error, e.g., siguverr = 3 (with unit of m/s)
   # for more info, please see get.uverr.r
   #lon.lat  <- get.lon.lat(site = site, dlon = 5, dlat = 5)  # near fields wind error
-  lon.lat <- data.frame(minlon = site.lon - 5, maxlon = site.lon + 5, 
-                        minlat = site.lat - 5, maxlat = site.lat + 5)
+  lon.lat <- data.frame(citylon = site.lon, citylat = site.lat, 
+                        minlon = site.lon - 10, maxlon = site.lon + 10, 
+                        minlat = site.lat - 10, maxlat = site.lat + 10)
+
+  met.files <- find.all.metfiles(timestr, dtime, met.format, met.path, nhrs)
   hor.err <- get.uverr(run_hor_err, site, timestr, xstilt_wd, overwrite,
-                       raob.path, raob.format, nhrs, met, met.path, 
-                       met.format, met.files, lon.lat, agl = c(0, 100), 
-                       nfTF = T, siguverr = siguverr, err.path = err.path)
+                       raob.path, raob.format, nhrs, met, met.path, met.format, 
+                       met.files, lon.lat, agl = c(0, 100), err.path, nfTF = T, 
+                       siguverr = siguverr)
 
   ## get vertical transport error component if run_ver_err = T
   pbl.err <- get.zierr(run_ver_err, nhrs.zisf = 24, const.zisf = zisf)
@@ -76,8 +79,6 @@ run.forward.trajec <- function(site, site.lon, site.lat, timestr,
     varstrajec <- c('time', 'index', 'lat', 'lon', 'agl', 'grdht', 'foot',
                     'sampt', 'dmass', 'zi', 'pres')  # trajec output variables
 
-    metfiles <- find.all.metfiles(timestr, dtime, met.format, met.path, nhrs)
-
     #### try box receptors/sources, DW, 11/08/2017
     # the updated Trajecmulti() and fortran codes will randomly place receptors
     # according to dxyp
@@ -93,7 +94,7 @@ run.forward.trajec <- function(site, site.lon, site.lat, timestr,
                 metd = c('fnl', 'awrf'), 
                 outpath = output.path, 
                 overwrite = run_trajec,
-                metfile = metfiles, 
+                metfile = met.files, 
                 metlib = paste0(met.path, '/'),
                 doublefiles = T, 
                 rundir = dirname(output.path), 
@@ -151,13 +152,13 @@ find.all.metfiles <- function(timestr, dtime, met.format, met.path, nhrs) {
   recp.date <- as.POSIXlt(as.character(timestr), format = '%Y%m%d%H', tz = 'UTC')
   rel.date <- recp.date + dtime * 60 * 60  # in second
 
-  metfiles <- NULL
+  met.files <- NULL
   for (r in 1:length(rel.date))
-    metfiles <- c(metfiles, find_met_files(t_start = rel.date[r],
+    met.files <- c(met.files, find_met_files(t_start = rel.date[r],
                                             met_file_format = met.format,
                                             n_hours = nhrs, met_loc = met.path))
-  metfiles <- basename(unique(metfiles))
-  if (length(metfiles) == 0) {cat('No meteo fields found...please check'); return()}
+  met.files <- basename(unique(met.files))
+  if (length(met.files) == 0) {cat('No meteo fields found...please check'); return()}
 
-  return(metfiles)
-} # end of find.all.metfiles
+  return(met.files)
+} # end of find.all.met.files

@@ -13,14 +13,14 @@
 get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
                       raob.path = NULL, raob.format = c('fsl', 'ncdf'), 
                       nhrs = -120, met = c('gdas1', 'gdas0p5', 'hrrr')[2], 
-                      met.path, met.format, lon.lat, agl, err.path, nfTF = F, 
-                      siguverr = NULL, TLuverr = NULL, zcoruverr = NULL, 
+                      met.path, met.format, met.files, lon.lat, agl, err.path, 
+                      nfTF = F, siguverr = NULL, TLuverr = NULL, zcoruverr = NULL, 
                       horcoruverr = NULL) {
   
   forwardTF <- ifelse(nhrs > 0, TRUE, FALSE)
   
   if (run_hor_err) {
-    cat('+++ horizontal wind error component +++\n')
+    cat('get.uverr(): +++ horizontal wind error component +++\n')
 
     # intput correlation lengthscale (in meter) and timescales (in mins)
     # correlation timescale, horizontal and vertical lengthscales
@@ -75,7 +75,7 @@ get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
                                recp.time = timestr)
       if (!is.null(err.stat)) siguverr <- err.stat$siguverr
     }  # end if file.exists
-  
+
     cat(paste('SIGUVERR:', signif(siguverr, 3), 'm/s..\n'))
 
     err.stat$TLuverr   <- TLuverr
