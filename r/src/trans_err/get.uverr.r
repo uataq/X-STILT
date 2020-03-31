@@ -25,9 +25,9 @@ get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
     # intput correlation lengthscale (in meter) and timescales (in mins)
     # correlation timescale, horizontal and vertical lengthscales
     if (met == 'gdas0p5') {
-      TLuverr <- 1 * 60
-      zcoruverr <- 600
-      horcoruverr <- 40
+      TLuverr <- 1 * 60   # in mins
+      zcoruverr <- 600    # in m
+      horcoruverr <- 40   # in km
 
     } else if (met == 'gdas1') {
       TLuverr <- 2.4 * 60
@@ -39,11 +39,16 @@ get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
       zcoruverr <- 600
       horcoruverr <- 40
 
+    } else if (met == 'hrrr') {
+      TLuverr <- 1 * 60
+      zcoruverr <- 100
+      horcoruverr <- 5
+
     } else {
-      cat ('get.uverr(): NO default values found...
-            Please input the time, horizontal and vertical 
-            wind error covariance (TLuverr, horcoruverr, zcoruverr) 
-            for your met fields...\n')
+      cat ('get.uverr(): NO default values found for your met fields...
+            Please calculate and insert the time, horizontal and vertical 
+            correlation scales (i.e., TLuverr, horcoruverr, zcoruverr), 
+            see Wu et al. [2018] and Lin & Gerbig [2005]...\n')
     } # end if met
     
     # grab modeled winds, *** if no file found, this takes a long time to run

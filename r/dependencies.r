@@ -21,8 +21,8 @@ if (!'lib.loc' %in% ls())
 
 # add few other packages for OCO-2/XSTILT, DW, 05/23/2018
 load_libs('dplyr', 'ncdf4', 'parallel', 'raster', 'readr', 'rslurm', 'uataq',
-          'ggplot2', 'Hmisc', 'ggmap', 'geosphere', 'reshape2', 'PBSmapping',
-          'stringr', 'MASS', 'ggpubr', 'rasterVis',
+          'ggplot2', 'ggmap', 'geosphere', 'reshape2', 'PBSmapping', 'stringr', 
+          'MASS', 'ggpubr', 'rasterVis', 'rworldmap', 'lutz',
           lib.loc = lib.loc)
 
 ### Load permute fortran dll for footprint matrix permutation

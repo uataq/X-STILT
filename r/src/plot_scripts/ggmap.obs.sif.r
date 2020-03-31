@@ -56,4 +56,5 @@ ggmap.obs.sif <- function(site, timestr, sif.path, lon.lat, workdir,
   print(picfile)
   ggsave(c2, filename = picfile, width = 12, height = 13)
 
+  return(c2)
 }

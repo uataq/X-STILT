@@ -34,7 +34,7 @@ calc.bg.forward.trajec <- function(trajpath, site, timestr, agl, dtime, numpar,
   # call grab.oco2() to read in observations and compute overpass time
   # lon.lat used for grabbing OCO2 should be wider, e.g., by 2 deg +
   lon.lat <- get.lon.lat(site, dlat = 2.5, dlon = 2.5)
-  obs <- grab.oco2(oco2.path, timestr, lon.lat, oco2.ver) %>% filter(qf == 0)
+  obs <- grab.oco2(oco2.path, timestr, lon.lat, oco2.ver) #%>% filter(qf == 0)
   if (nrow(obs) == 0) {
     cat('*** NO observed data with QF = 0 for this event...returning NA ***\n')
     return()
@@ -304,12 +304,15 @@ calc.bg.forward.trajec <- function(trajpath, site, timestr, agl, dtime, numpar,
       l1 <- ggplot() + theme_bw() +
             geom_ribbon(data = bg.dat, aes(x, ymin = ymin, ymax = ymax),
                         colour = 'limegreen', fill = 'limegreen', alpha = 0.3) + 
-            geom_point(data = obs, aes(lat, xco2, fill = as.factor(2)),
-                      colour = 'white', shape = 24, size = 3) + 
-            geom_point(data = pol.obs, aes(lat, xco2, fill = as.factor(4)),
-                      colour = 'white', shape = 24, size = 3) + 
-            geom_line(data = bg.dat, 
-                      aes(x, y, colour = as.factor(6), linetype = as.factor(6)), 
+            geom_point(data = obs, aes(lat, xco2, fill = as.factor(1)),
+                       colour = 'white', shape = 24, size = 3) + 
+            geom_point(data = obs %>% filter(qf == 0), aes(lat, xco2, fill = as.factor(2)),
+                       colour = 'white', shape = 24, size = 3) + 
+            geom_point(data = pol.obs, aes(lat, xco2, fill = as.factor(3)),
+                       colour = 'white', shape = 24, size = 3) + 
+            geom_point(data = pol.obs %>% filter(qf == 0), aes(lat, xco2, fill = as.factor(4)),
+                       colour = 'white', shape = 24, size = 3) + 
+            geom_line(data = bg.dat, aes(x, y, colour = as.factor(6), linetype = as.factor(6)), 
                       size = 1.1)
 
       # add smooth spline, make sure clean.obs has data, DW, 10/30/2018
@@ -338,16 +341,19 @@ calc.bg.forward.trajec <- function(trajpath, site, timestr, agl, dtime, numpar,
       col.val <- c('1' = 'gray80', '2' = 'black', '3' = 'pink', 
                    '4' = 'brown', '5' = 'deepskyblue', '6' = 'darkgreen')
       lt.val <- c('6' = 4, '5' = 1)
+      #title.l <- paste('Demostration of overpass-specific background [ppm] for',
+      #                 site, 'on', timestr)
       title.l <- paste('Demostration of overpass-specific background [ppm] for',
-                       site, 'on', timestr)
+                       site, 'on 29 December 2014')
 
       l2 <- l1 + scale_fill_manual(name = NULL, values = fill.val, labels = lab) + 
                  scale_colour_manual(name = NULL, values = col.val, labels = lab) + 
                  scale_linetype_manual(name = NULL, values = lt.val, labels = lab) +
-                 labs(x = 'LATITUDE [deg]', y = 'OBS with QF = 0 [ppm]', title = title.l) + 
+                 labs(x = 'LATITUDE [deg]', y = 'OBS XCO2 [ppm]', title = title.l) + 
                  scale_x_continuous(breaks = seq(-90, 90, 0.4), 
                                     labels = seq(-90, 90, 0.4), 
-                                    limits = c(lon.lat$minlat, lon.lat$maxlat)) + 
+                                    #limits = c(lon.lat$minlat, lon.lat$maxlat)) + 
+                                    limits = c(23, 26)) + 
                  scale_y_continuous(breaks = seq(min.y, max.y, 2), 
                                     labels = seq(min.y, max.y, 2), 
                                     limits = c(min.y, max.y))
@@ -357,7 +363,7 @@ calc.bg.forward.trajec <- function(trajpath, site, timestr, agl, dtime, numpar,
                        legend.key.height = unit(0.5, 'cm'), 
                        legend.text = element_text(size = font.size),
                        legend.key = element_blank(), 
-                       panel.grid.minor=element_blank(),
+                       panel.grid.minor = element_blank(),
                        axis.title.y = element_text(size = font.size, angle = 90), 
                        axis.title.x = element_text(size = font.size, angle = 0), 
                        axis.text = element_text(size = font.size), 
@@ -365,6 +371,8 @@ calc.bg.forward.trajec <- function(trajpath, site, timestr, agl, dtime, numpar,
                        title = element_text(size = font.size)) + 
                 guides(fill = guide_legend(nrow = 2, byrow = F),
                        colour = guide_legend(nrow = 2, byrow = TRUE))
+      
+      ggsave(l3, filename = 'Figure5b.pdf', width = 12, height = 7)
 
       # merge map of forward plume and latitude series, DW, 10/30/2018
       p5 <- ggarrange(plotlist = list(p4, l3), heights = c(3, 2), nrow = 2, 

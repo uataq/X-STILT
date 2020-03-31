@@ -19,10 +19,9 @@
 ####### ####### ####### ####### ####### ####### ####### ####### ####### #######
 
 ggplot.map <- function(map = c('black','ggmap'), maptype = 'roadmap', 
-                       shape.file = 'TM_WORLD_BORDERS-0.3.shp',
-                       shape.path = '/uufs/chpc.utah.edu/common/home/lin-group5/wde/world_shapefile',
+                       shape.file = './TM_WORLD_BORDERS-0.3.shp', 
                        minlat, maxlat, minlon, maxlon, land.col = 'black',
-                       land.outline = 'gray30', us.land.outline = 'gray90',
+                       land.outline = 'gray30', us.land.outline = 'gray30',
                        ocean.col = 'lightsteelblue2', ocean.outline = 'grey', 
                        center.lat, center.lon, zoom = 8, color = c('color', 'bw')[1]){
 
@@ -34,18 +33,16 @@ ggplot.map <- function(map = c('black','ggmap'), maptype = 'roadmap',
     library(ggplot2); library(maptools); gpclibPermit(); library(reshape); library(maps)
 
     usstates <- map_data('state')
-
-    shapefile <- file.path(shape.path, shape.file)
-    worldmap <- readShapeSpatial(shapefile)
+    worldmap <- readShapeSpatial(shape.file)
     worldmap <- fortify(worldmap)
 
     # plot 2D map first
     latlimits <- c(minlat, maxlat)
     lonlimits <- c(minlon, maxlon)
 
-    ticks  <- c(0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100)
-    seplat <- ticks[findInterval((maxlat-minlat)/5, ticks)]
-    seplon <- ticks[findInterval((maxlon-minlon)/5, ticks)]
+    ticks  <- c(0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 20, 50, 100)
+    seplat <- ticks[findInterval((maxlat-minlat)/7, ticks)]
+    seplon <- ticks[findInterval((maxlon-minlon)/7, ticks)]
 
     latrange <- seq(minlat, maxlat, seplat)
     lonrange <- seq(minlon, maxlon, seplon)
@@ -53,12 +50,10 @@ ggplot.map <- function(map = c('black','ggmap'), maptype = 'roadmap',
     ylabels <- paste0(latrange, 'ºN')
     xlabels <- paste0(lonrange, 'ºE')
 
-    if (unique(lonrange < 0) | length(unique(lonrange < 0)) == 2) {
-      xlabels <- paste0(lonrange, 'ºE')
-      xlabels[lonrange < 0] <- paste0(abs(lonrange[lonrange < 0]), 'ºW')
-    }
+    xlabels[lonrange < 0] <- paste0(abs(lonrange[lonrange < 0]), 'ºW')
+    ylabels[latrange < 0] <- paste0(abs(latrange[latrange < 0]), 'ºS')
 
-    m1 <- ggplot() + 
+    m1 <- ggplot() + labs(x = 'LONGITUDE', y = 'LATITUDE') +
           geom_polygon(data = worldmap, aes(x = long, y = lat, group = group), fill = land.col) +
           geom_path(data = usstates, aes(x = long, y = lat, group = group), colour = us.land.outline) +
           geom_path(data = worldmap, aes(x = long, y = lat, group = group), colour = land.outline) +

@@ -6,7 +6,8 @@
 
 ggmap.obs.xco2 <- function(site, timestr, oco2.ver, oco2.path, lon.lat, workdir,
                            plotdir = file.path(workdir, 'plot'), zoom = 8, 
-                           qfTF = F, box.dlat = 0.5, box.dlon = 0.5, size = 0.8){
+                           qfTF = F, box.dlat = 0.5, box.dlon = 0.5, size = 0.8, 
+                           font.size = rel(0.9)){
 
   library(ggmap); library(ggplot2); library(ggpubr)
   obs.all <- grab.oco2(ocopath = oco2.path, timestr, lon.lat, oco2.ver)
@@ -17,7 +18,7 @@ ggmap.obs.xco2 <- function(site, timestr, oco2.ver, oco2.path, lon.lat, workdir,
     return('ggmap.obs.xco2(): NOT enough screened data within lon.lat, skip it...\n') 
   
   # plot google map
-  alpha <- 1; font.size <- rel(0.9); col <- def.col()
+  alpha <- 1; col <- def.col()
   m1 <- ggplot.map(map = 'ggmap', zoom = zoom, center.lat = lon.lat$citylat,
                    center.lon = lon.lat$citylon)[[1]]
 
@@ -54,7 +55,7 @@ ggmap.obs.xco2 <- function(site, timestr, oco2.ver, oco2.path, lon.lat, workdir,
                    legend.text = element_text(size = font.size),
                    legend.key = element_blank(), 
                    legend.key.height = unit(0.5, 'cm'),
-                   legend.key.width = unit(2, 'cm'),
+                   legend.key.width = unit(1.3, 'cm'),
                    axis.title.y = element_text(size = font.size, angle = 90),
                    axis.title.x = element_text(size = font.size, angle = 0),
                    axis.text = element_text(size = font.size),
@@ -64,12 +65,12 @@ ggmap.obs.xco2 <- function(site, timestr, oco2.ver, oco2.path, lon.lat, workdir,
   # plot on latitude-series
   l1 <- ggplot() + theme_bw() + labs(y = 'OCO-2 XCO2 [ppm]', x = 'LATITUDE')
   if (qfTF) {
-    l1 <- l1 + geom_point(data = qf.obs, aes(lat, xco2), size = 3, 
+    l1 <- l1 + geom_point(data = qf.obs, aes(lat, xco2), size = size + 0.5, 
                           colour = 'black', shape = 17)
   } else {
     l1 <- l1 + geom_point(data = obs.all, aes(lat, xco2), colour = 'gray70', 
-                          shape = 17, size = 3) + 
-               geom_point(data = qf.obs, aes(lat, xco2), size = 3, 
+                          shape = 17, size = size + 0.5) + 
+               geom_point(data = qf.obs, aes(lat, xco2), size = size + 0.5, 
                           colour = 'black', shape = 17)
   }  # end if qfTF
 
@@ -81,4 +82,6 @@ ggmap.obs.xco2 <- function(site, timestr, oco2.ver, oco2.path, lon.lat, workdir,
   picfile <- file.path(plotdir, picname)
   print(picfile)
   ggsave(merge.plot, filename = picfile, width = 11, height = 15)
+
+  return(merge.plot)
 }

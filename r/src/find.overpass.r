@@ -13,7 +13,7 @@
 # update for v9 data, DW, 10/19/2018 
 # drop the scientific notation for sounding ID, DR, DW, 09/04/2019
 
-find.overpass <- function(date.range, lon.lat, oco2.ver = c('b7rb','b8r', 'b9r'),
+find.overpass <- function(date.range, lon.lat, oco2.ver = c('b7rb','b8r', 'b9r')[3],
                           oco2.path, urbanTF = F, dlon = 0.5, dlat = 0.5){
 
   library(geosphere); library(ncdf4); library(dplyr)

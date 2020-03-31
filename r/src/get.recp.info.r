@@ -19,8 +19,15 @@ get.recp.info <- function(timestr, oco2.ver, oco2.path, lon.lat, selTF, recp.ind
   if (nrow(oco2) == 0) cat('No sounding found over this overpass for this region\n')
   
   # filter by quality flag too, more receptors when XCO2 is high
-  if (data.filter[1] == 'QF') sel.oco2 <- oco2 %>% filter(qf <= data.filter[2])
-  if (data.filter[1] == 'WL') sel.oco2 <- oco2 %>% filter(wl <= data.filter[2])
+  if (is.null(data.filter)) { # no data filtering, use all OCO data
+    sel.oco2 <- oco2    
+  } else if (data.filter[1] == 'QF') {
+    sel.oco2 <- oco2 %>% filter(qf <= data.filter[2])
+  } else if (data.filter[1] == 'WL') {
+    sel.oco2 <- oco2 %>% filter(wl <= data.filter[2])
+  } else {
+    cat('get.recp.info(): Incorrect @param "data.filter"... please check\n')
+  } # end if
 
   # round lat, lon for each sounding, fix bug, DW, 07/31/2018
   sel.oco2 <- sel.oco2 %>% mutate(lat = signif(lat, 6), lon = signif(lon, 7))
@@ -74,11 +81,8 @@ get.recp.info <- function(timestr, oco2.ver, oco2.path, lon.lat, selTF, recp.ind
     sel.oco2$find.lat <- signif(sel.oco2$lat, max(nchar(recp.info$recp.lat)) - 1)
     sel.oco2$find.lon <- signif(sel.oco2$lon, max(nchar(recp.info$recp.lon)) - 1)
     recp.info <- recp.info %>% dplyr::select('lati' = 'recp.lat', 'long' = 'recp.lon') %>%
-                               left_join(sel.oco2, by = c('lati' = 'find.lat', 
-                                                          'long' = 'find.lon')) %>%
-                               mutate(run_times_utc = as.POSIXct(substr(id, 1, 14), 
-                                                                 '%Y%m%d%H%M%S',
-                                                                  tz = 'UTC'))
+                 left_join(sel.oco2, by = c('lati' = 'find.lat', 'long' = 'find.lon')) %>%
+                 mutate(run_times_utc = as.POSIXct(substr(id, 1, 14), '%Y%m%d%H%M%S', tz = 'UTC'))
 
   } else {
 
@@ -97,14 +101,14 @@ get.recp.info <- function(timestr, oco2.ver, oco2.path, lon.lat, selTF, recp.ind
 
     # compute simulation timing, yyyy-mm-dd HH:MM:SS (UTC), aka 'receptors' info
     # that are used for each simulation and match Ben's code
-    recp.info <- recp.info %>%
-      mutate(run_times_utc = as.POSIXct(substr(id, 1, 14), '%Y%m%d%H%M%S',
-                                        tz = 'UTC'))
+    recp.info <- recp.info %>% mutate(run_times_utc = as.POSIXct(substr(id, 1, 14), '%Y%m%d%H%M%S',
+                                                                 tz = 'UTC'))
+
   } # end if trajec file existed
 
   recp.info <- recp.info[order(recp.info$lat), ]
-  recp.info <- recp.info %>%
-    dplyr::select('run_time' = 'run_times_utc', 'lati' = 'lat', 'long' = 'lon')
+  recp.info <- recp.info %>% dplyr::select('run_time' = 'run_times_utc', 
+                                           'lati' = 'lat', 'long' = 'lon')
 
   # subset receptor data frame or find the nearest lat..
   if (!is.null(recp.num)) recp.info <- recp.info[min(recp.num):max(recp.num), ]

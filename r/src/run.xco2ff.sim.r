@@ -48,11 +48,11 @@ run.xco2ff.sim <- function(site = 'Riyadh', timestr = '2014100920', vname = '201
   }
   
   if (length(foot.file) == 0) {
-    cat('run.xco2ff.sim(): NO footprint found...please check by-id...\n')
+    stop('run.xco2ff.sim(): NO footprint found...please check by-id...\n')
     return()
   }
 
-  tmp.foot  <- raster(foot.file[1])
+  tmp.foot  <- stack(foot.file[1])
   foot.extent <- extent(tmp.foot)
 
   # call tif2nc.odiacv2() to subset and get emiss file name
@@ -91,6 +91,7 @@ run.xco2ff.sim <- function(site = 'Riyadh', timestr = '2014100920', vname = '201
                                         
   # plot emissions
   if (plotTF) {
+
     emiss <- raster(emiss.file)
     emiss.df <- raster::as.data.frame(emiss, xy = T)
     colnames(emiss.df) <- list('lon', 'lat', 'emiss')
@@ -149,7 +150,8 @@ run.xco2ff.sim <- function(site = 'Riyadh', timestr = '2014100920', vname = '201
   for (r in 1:nrow(receptor)) {
 
     # read in footprint
-    foot.dat <- raster(foot.file[r])
+    foot.dat <- stack(foot.file[r])
+    if (nlayers(foot.dat) > 1) foot.dat <- sum(foot.dat)
     #crs(foot.dat) <- '+proj=longlat'
 
     # NOW, foot and emiss should have the same dimension,
@@ -179,10 +181,8 @@ run.xco2ff.sim <- function(site = 'Riyadh', timestr = '2014100920', vname = '201
       '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0'
     
     longname <- 'XCO2 enhancemnets due to ODIAC emission'; varname <- 'XCO2'
-    if (run_emiss_err) {
-      longname <- 'XCO2 error due to ODIAC emission error'
-      varname <- 'XCO2 error'
-    } 
+    if (run_emiss_err) 
+      longname <- 'XCO2 error due to ODIAC emission error'; varname <- 'XCO2 error'
 
     # write raster in nc file
     writeRaster(xco2.ff.sp, outfile, overwrite = TRUE, format = 'CDF',

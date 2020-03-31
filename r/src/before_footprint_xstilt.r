@@ -62,6 +62,13 @@ before_footprint_xstilt <- function() {
                                        r_run_time, r_lati, r_long, r_zagl)
     } # end if run_hor_err
 
+    # if foot_nhrs is different from trajec_nhrs, subset trajec
+    if ( args$foot.nhrs < min(wgt.output$particle$time) / 60 ) {
+        cat('before_footprint_xstilt(): subset particles for calculating footprint\n')
+        wgt.output$particle <- wgt.output$particle %>% arrange(abs(time)) %>% 
+                               filter(abs(time) <= abs(args$foot.nhrs) * 60) 
+    }   # end if
+
     # we would like to generate footprint with different resolutions, if needed
     # DW, 02/11/2019 
     xres2 <- unlist(args$xres2)
@@ -86,14 +93,7 @@ before_footprint_xstilt <- function() {
                                    yres = as.numeric(yres2[f]))
         } # end for f
     } # end if is na
-
-    # if foot_nhrs is different from trajec_nhrs, subset trajec
-    if ( args$foot.nhrs != min(wgt.output$particle$time) /60 ) {
-        cat('before_footprint_xstilt(): subset particles for calculating footprint\n')
-        wgt.output$particle <- wgt.output$particle %>% arrange(abs(time)) %>% 
-                               filter(abs(time) <= abs(args$foot.nhrs) * 60) 
-    }   # end if
-
+#stop()
     cat('before_footprint_xstilt(): END OF FUNCTION, start to calculate foot...\n')
     return(wgt.output) # return weighted output
 }

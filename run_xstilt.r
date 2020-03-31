@@ -70,7 +70,7 @@ source('r/dependencies.r') # source all functions
 # Please insert your API for the use of ggplot and ggmap
 api.key <- ''
 register_google(key = api.key)
-
+project <- ''   # name your project
 
 #------------------------------ STEP 1 --------------------------------------- #
 ### 1) input dlat, dlon to get spatial domain around city center
@@ -85,7 +85,7 @@ oco2.ver    <- c('b7rb', 'b8r', 'b9r')[3]           # OCO-2 version
 oco2.path   <- file.path(input.path, paste0('OCO-2/L2/OCO2_lite_', oco2.ver))
 sif.path    <- file.path(input.path, 'OCO-2/L2/OCO2_lite_SIF_b8r')
 raob.path   <- file.path(input.path, 'RAOB', site)  # NOAA radiosonde
-odiac.vname <- c('2016', '2017', '2018')[3]         # ODIAC version
+odiac.vname <- c('2016', '2017', '2018', '2019')[4]         # ODIAC version
 tiff.path   <- file.path(input.path, 'ODIAC', paste0('ODIAC', odiac.vname))  
 
 ## path for storing output or anything related to trans err
@@ -346,8 +346,8 @@ if (run_trajec | run_foot) {
                    met.path = met.path, nhrs = nhrs, n_cores = n_cores,
                    n_nodes = n_nodes, numpar = numpar, outdir = outdir, 
                    oco2.path = oco2.path, overwrite_wgttraj = overwrite_wgttraj,
-                   pbl.err = pbl.err, projection = projection, pwf.wgt = pwf.wgt, 
-                   recp.info = recp.info, run_foot = run_foot, 
+                   pbl.err = pbl.err, project = project, projection = projection,
+                   pwf.wgt = pwf.wgt, recp.info = recp.info, run_foot = run_foot, 
                    run_hor_err = run_hor_err, run_trajec = run_trajec, 
                    slurm = slurm, slurm_options = slurm_options, 
                    smooth_factor = smooth_factor, time_integrate = time_integrate, 
