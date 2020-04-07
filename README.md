@@ -8,17 +8,18 @@ We have merged column features with STILT-R version 2 (see github repo on https:
 # X-STILT Features
 
 ## Table of Contents
-- [**Prerequisites including input datasets**](#pre)
-- [**Obtaining Column Footprint**](#obtain)
-- [**Determining background XCO<sub>2</sub> value**](#determine)
-- [**Estimating horizontal and vertical transport errors**](#estimate)
-- [**Potential atmospheric inversion on XCO<sub>2</sub>**](#potential)
-- [**Specific for your desired cities or space-based sensors**](#specifc)
-- [**Example Figures for an overpass over Riyadh**](#example)
+- [**Prerequisites**](#prerequisites)
+- [**Obtain column footprint**](#obtain-column-footprint)
+- [**Determine background XCO<sub>2</sub>**](#determine-background-xco2)
+- [**Estimate horizontal and vertical transport errors**](#estimate-horizontal-and-vertical-transport-errors)
+- [**Atmospheric inversion on XCO<sub>2</sub>**](#atmospheric-inversion-on-xco2)
+- [**Specific for your desired cities or space-based sensors**](#specific-for-your-desired-cities-or-space-based-sensors)
+- [**Example figures of column footprints and XCO<sub>2.ff</sub>**](#example-figures-of-column-footprints-and-xco2ff)
 - [**Reference**](#ref)
 
+
 <!-- toc -->
-Prerequisites including input data
+Prerequisites
 ============
 0. [Automatically install and load R packages](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L65-L68) required for X-STILT subroutines as stated in [dependencies](https://github.com/uataq/X-STILT/blob/master/r/dependencies.r). 
 
@@ -37,7 +38,7 @@ Prerequisites including input data
 
 
 
-Obtaining Column Footprint
+Obtain column footprint
 ============
 *Column Footprint* [ppm / (umol m<sup>-2</sup> s<sup>-1</sup>)] are the source-receptor sensivities or essentially the Jacobian Matrics between concentration (enhancements) and fluxes (for a given source/sink). Users can start with `run_xstilt.r` for model and parameter initializations.
 
@@ -60,19 +61,20 @@ Obtaining Column Footprint
 
 
 
-Determining background XCO<sub>2</sub> value
+Determine background XCO<sub>2</sub>
 ============
-Start with main script of `compute_bg_XCO<sub>2</sub>.r`. [M3 is the overpass specific background [ppm]](https://github.com/uataq/X-STILT/blob/master/compute_bg_XCO<sub>2</sub>.r#L90-L181) by releasing air parcels in a forward fashion from a city and determining urban plume and background region using 2D kernel density. Please refer to details described in [Sect. 2.3 in Wu et al. (2018)](https://www.geosci-model-dev.net/11/4843/2018/#section2).
+Start with main script of `compute_bg_xco2.r`. [M3 is the overpass specific background [ppm]](https://github.com/uataq/X-STILT/blob/master/compute_bg_XCO<sub>2</sub>.r#L90-L181) by releasing air parcels in a forward fashion from a city and determining urban plume and background region using 2D kernel density. Please refer to details described in [Sect. 2.3 in Wu et al. (2018)](https://www.geosci-model-dev.net/11/4843/2018/#section2).
 
 
-Estimating horizontal and vertical transport errors
+
+Estimate horizontal and vertical transport errors
 ============
 Instead of using model ensembles for estimating errors, X-STILT propagates real-world random u-v- wind errors (with correlation length scale and timescale) into errors in XCO<sub>2</sub>. The fundamental approach is proposed and documented in [Lin and Gerbig, 2005](https://agupubs.onlinelibrary.wiley.com/doi/epdf/10.1029/2004GL021127), which is now extended to column CO2. We calculate and propagate XCO<sub>2</sub> errors from release levels, to receptor locations, and finally to overpasses. 
 
 Briefly speaking, users need to first generate another set of trajectories with wind error statistics by turning on `run_hor_err`. Once trajectories with wind errors have been generated, one need to turn on `run_sim` to let X-STILT calculate the errors in XCO<sub>2</sub> based on two sets of trajectories (with/without wind errors). Hard to explain all the steps here, but feel free to contact Dien (dien.wu@utah.edu) if you’re interested in carrying out error estimates. Please also refer to details described in [Sect. 2.6 in Wu et al. (2018)](https://www.geosci-model-dev.net/11/4843/2018/#section2).
 
 
-Potential atmospheric inversion on XCO<sub>2</sub>
+Atmospheric inversion on XCO<sub>2</sub>
 ============
 As discussed in [Sect. 4.2 in Wu et al. (2018)](https://www.geosci-model-dev.net/11/4843/2018/#section4), we could come up the posterior scaling factor for anthropogenic emissions based on 5 overpasses over Riyadh, via a simple Bayesian Inversion. We treated the entire city as a whole and solve for one scaling factor, given biases in near-field wind direction. So, we did not solve for posterior emissions for every grid cell within a city. Codes are not included in this repo. 
 
