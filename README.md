@@ -15,7 +15,7 @@ We have merged column features with STILT-R version 2 (see github repo on https:
 - [**Atmospheric inversion on XCO<sub>2</sub>**](#atmospheric-inversion-on-xco2)
 - [**Specific for your desired cities or space-based sensors**](#specific-for-your-desired-cities-or-space-based-sensors)
 - [**Example figures of column footprints and XCO<sub>2.ff</sub>**](#example-figures-of-column-footprints-and-xco2ff)
-- [**Reference**](#ref)
+- [**Reference**](#reference)
 
 
 <!-- toc -->
@@ -37,19 +37,23 @@ Prerequisites
    * Bottom-up emission inventories ensemble [FFDAS](http://ffdas.rc.nau.edu/index.html) and [EDGAR](https://edgar.jrc.ec.europa.eu/). 
 
 
-
 Obtain column footprint
 ============
-*Column Footprint* [ppm / (umol m<sup>-2</sup> s<sup>-1</sup>)] are the source-receptor sensivities or essentially the Jacobian Matrics between concentration (enhancements) and fluxes (for a given source/sink). Users can start with `run_xstilt.r` for model and parameter initializations.
+*Column Footprinta* [ppm / (umol m<sup>-2</sup> s<sup>-1</sup>)] are the source-receptor sensivities or essentially the Jacobian Matrics between concentration (enhancements) and fluxes (for a given source/sink). Users can start with `run_xstilt.r` for model and parameter initializations.
 
-1. Select one OCO-2 overpass. By defaul, [STEP 1](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L106-L111) searches for all overpasses that have soundings falling into a larger spatial domain (i.e., [2 deg x 3 deg](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L78)) around your city as well as a smaller urban domain (i.e., [1 deg x 1 deg](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L102-L104)). Thus, users can modify the spatial domain based on their city sizes. [This part of the code](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L123-L126) will generate maps of observed XCO<sub>2</sub> and SIF if ```plotTF == T```.
+1. Select one OCO-2 overpass. By default, [STEP 1](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L106-L111) searches for all overpasses that have soundings falling into a larger spatial domain (i.e., [2 deg x 3 deg](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L78)) around your city as well as a smaller urban domain (i.e., [1 deg x 1 deg](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L102-L104)). Thus, users can modify the spatial domain based on their city sizes. [This part of the code](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L123-L126) will generate maps of observed XCO<sub>2</sub> and SIF if ```plotTF == T```.
 
-2. Indicate the kind of simulation users would like to start in [STEP 2](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L135-L166). One needs to modify logical flags which included:
-   * `run_trajec = T or run_foot = T`: Backward trajectories + vertically weighted column footprints; 
-   * `run_hor_err = T`: Horizontal transport error (one needs to calculate wind error statistics first); 
-   * `run_ver_err = T`: Vertical transport error via scaling mixed layer height;
-   * `run_sim = T`: Simulate FFCO2 XCO<sub>2</sub> enhancements (requires footprint), remember to turn off `run_trajec` and `run_foot`;
-   * `run_emiss_err = T`: Prior emission error (requires footprint).
+2. Indicate the kind of simulation users would like to carry out in [STEP 2](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L135-L166). One needs to modify logical flags which included:
+
+   >* `run_trajec = T or run_foot = T`: Backward trajectories + vertically weighted column footprints; 
+
+   >* `run_hor_err = T`: Horizontal transport error analysis (one needs to calculate wind error statistics first, e.g., by comparing modeled winds with observed winds from NOAA RAOB, see [STEP 4](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L237-L241) for more info); 
+
+   >* `run_ver_err = T`: Vertical transport error analysis (via scaling mixed layer height up and down with scaling factors stated in [STEP 4](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L253-L256));
+
+   >* `run_sim = T`: Simulate FFCO2 XCO<sub>2</sub> enhancements (requires footprint), remember to turn off `run_trajec` and `run_foot`;
+
+   >* `run_emiss_err = T`: Prior emission error analysis (requires footprint).
 
 3. Modify parameters for placing column receptors (e.g., max height and vertical spacing between two vertical levels in meters, # of particles per level, receptor locations). By default, X-STILT will choose more receptors within the urban enhanced latitude range, see [STEP 3](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L201-L212).
 
@@ -92,7 +96,7 @@ If the user would like to use X-STILT for other column measurements besides OCO-
                     oco2.foot = footprint, oco2.xco2 = XCO2, 
                     oco2.xco2.uncert = xco2.uncert)
    ```
-   We are also working towards a more flexible version of X-STILT that could potentially work with other sensors. 
+   We are also working towards a more flexible version of X-STILT that could potentially work with other sensors. Stay tuned. ;)
 
 
 Example figures of column footprints and XCO<sub>2.ff</sub>
