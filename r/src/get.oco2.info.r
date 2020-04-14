@@ -17,6 +17,7 @@ get.oco2.info <- function(oco2.path, receptor, diff.td = 1E-4){
   # grabbing OCO-2 info
   timestr   <- strftime(receptor$run_time, tz = 'UTC', format = '%Y%m%d%H')
   oco2.file <- list.files(path = oco2.path, pattern = substr(timestr, 3, 8))
+  if (length(oco2.file) == 0) stop('No OCO-2 file found for this timestr\n')
   oco2.dat  <- nc_open(file.path(oco2.path, oco2.file))
 
   # grabbing OCO-2 levels, lat, lon

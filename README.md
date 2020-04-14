@@ -61,7 +61,7 @@ Obtain column footprint
 
 5. Modify footprint information in [STEP 5](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L272-L320), e.g., horizontal resolution and spatial extent. 
 
-6. STEP 6 will finally run trajec or footprints via parallel computing.
+6. Start running trajec or footprints via parallel computing in [STEP 6](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L322-L360).
 
 
 
