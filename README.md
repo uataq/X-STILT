@@ -23,7 +23,7 @@ Prerequisites
 ============
 0. [Automatically install and load R packages](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L65-L68) required for X-STILT subroutines as stated in [dependencies](https://github.com/uataq/X-STILT/blob/master/r/dependencies.r). 
 
-1. Download [OCO-2 Level 2 Lite files](https://disc.gsfc.nasa.gov/datasets/OCO2_L2_Lite_FP_9r/summary) and modify `oco2.path`; X-STILT will read in averaging kernels and pressure weighting functions from OCO-2 lite files to perform vertical weighting to footprint values for air parcels that releases from different altitudes and then provide the vertically compressed column footprints. See changes listed in ++ if using other column sensors. 
+1. Download [OCO-2 Level 2 Lite files](https://disc.gsfc.nasa.gov/datasets/OCO2_L2_Lite_FP_9r/summary) and modify `oco2.path`; X-STILT will read in averaging kernels and pressure weighting functions from OCO-2 lite files to perform vertical weighting to footprint values for air parcels that releases from different altitudes and then provide the vertically compressed column footprints. See [this section](#specific-for-your-desired-cities-or-space-based-sensors) if you desired to use other column sensors. 
 
 2. Download [1 km ODIAC files in tif format](http://db.cger.nies.go.jp/dataset/ODIAC/DL_odiac2019.html) and modify `tiff.path`. ODIAC is the main emission product we adopted to estimate anthropogenic XCO<sub>2</sub> concentrations in ppm. 
 
@@ -39,7 +39,7 @@ Prerequisites
 
 Obtain column footprint
 ============
-*Column Footprinta* [ppm / (umol m<sup>-2</sup> s<sup>-1</sup>)] are the source-receptor sensivities or essentially the Jacobian Matrics between concentration (enhancements) and fluxes (for a given source/sink). Users can start with `run_xstilt.r` for model and parameter initializations.
+*Column Footprints* [ppm / (umol m<sup>-2</sup> s<sup>-1</sup>)] are the source-receptor sensivities or essentially the Jacobian Matrics between concentration (enhancements) and fluxes (for a given source/sink). Users can start with `run_xstilt.r` for model and parameter initializations.
 
 1. Select one OCO-2 overpass. By default, [STEP 1](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L106-L111) searches for all overpasses that have soundings falling into a larger spatial domain (i.e., [2 deg x 3 deg](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L78)) around your city as well as a smaller urban domain (i.e., [1 deg x 1 deg](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L102-L104)). Thus, users can modify the spatial domain based on their city sizes. [This part of the code](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L123-L126) will generate maps of observed XCO<sub>2</sub> and SIF if ```plotTF == T```.
 
