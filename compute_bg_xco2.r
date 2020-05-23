@@ -22,7 +22,7 @@ xstilt_wd <- file.path(homedir, 'lin-group7/wde/X-STILT') #current dir
 setwd(xstilt_wd)   # move to working directory
 source('r/dependencies.r') # source all functions
 
-# insert your API for the use of ggplot and ggmap
+# insert your google API for the use of ggplot and ggmap
 api.key <- ''
 register_google(key = api.key)
 
@@ -169,9 +169,9 @@ if (method == 'M3') {
     for (tt in 1: length(all.timestr)) {  ### loop over each overpass
       tmp.bg <- calc.bg.forward.trajec(trajpath = traj.path, site, 
                                        timestr = all.timestr[tt], agl, dtime, 
-                                       numpar, dxyp, oco2.path, oco2.ver, met, 
-                                       zoom = 8, api.key, td = 0.05, 
-                                       bg.dlat = 0.5, perc = 0.2, clean.side[tt])
+                                       numpar, dxyp, oco2.path, oco2.ver, qfTF = T, 
+                                       met, zoom = 8, td = 0.05, bg.dlat = 0.5, 
+                                       perc = 0.2, clean.side[tt], api.key)
       bg.info <- rbind(bg.info, tmp.bg)
     }
    

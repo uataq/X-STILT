@@ -2,8 +2,9 @@
 
 X-STILT is an atmospheric transport model that deals with vertically integrated column CO2 and potentially other trace gases. Scripts and subroutines for X-STILT, modified from the Stochastic Time-Inverted Lagrangian Transport (STILT) model [*Lin et al*., 2003](https://doi.org/10.1029/2002JD003161) and STILT-R version 2 [*Fasoli et al*., 2018](https://doi.org/10.5194/gmd-11-2813-2018). Required datasets and methodologies are described in [*Wu et al*., 2018](https://doi.org/10.5194/gmd-11-4843-2018). 
 
+We have merged column features with STILT-R version 2 (see github repo on https://uataq.github.io/stilt/) with improved model efficiency and more realistic "footprint" values. Since STILT-R version 2 now serves as a submodule of X-STILT repo, you will need to *"git clone --recursive"* the entire package with submodule. 
 
-We have merged column features with STILT-R version 2 (see github repo on https://uataq.github.io/stilt/) with improved model efficiency and more realistic "footprint" values. X-STILT model developments are ongoing towards a more flexible model framework that can be more easily applied to other column measurements. Contributions are welcomed and highly appreciated. Please contact Dien Wu (Dien.Wu@utah.edu) if you have any issues with the code. Thank you.
+X-STILT model developments are ongoing towards a more flexible model framework that can be more easily applied to other column measurements. Contributions are welcomed and highly appreciated. Please contact Dien Wu (Dien.Wu@utah.edu) if you have any issues with the code. Thank you.
 
 # X-STILT Features
 
@@ -21,7 +22,8 @@ We have merged column features with STILT-R version 2 (see github repo on https:
 <!-- toc -->
 Prerequisites
 ============
-0. [Automatically install and load R packages](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L65-L68) required for X-STILT subroutines as stated in [dependencies](https://github.com/uataq/X-STILT/blob/master/r/dependencies.r). 
+0. [Automatically install and load R packages](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L65-L68) required for X-STILT subroutines as stated in [dependencies](https://github.com/uataq/X-STILT/blob/master/r/dependencies.r). An additional step is to compile the permute DLL for footprint kernel aggregation used on STILT v2. Go to XSTILT/stilt and
+>* R CMD SHLIB r/src/permute.f90
 
 1. Download [OCO-2 Level 2 Lite files](https://disc.gsfc.nasa.gov/datasets/OCO2_L2_Lite_FP_9r/summary) and modify `oco2.path`; X-STILT will read in averaging kernels and pressure weighting functions from OCO-2 lite files to perform vertical weighting to footprint values for air parcels that releases from different altitudes and then provide the vertically compressed column footprints. See [this section](#specific-for-your-desired-cities-or-space-based-sensors) if you desired to use other column sensors. 
 
@@ -87,7 +89,7 @@ Specific for your desired cities or space-based sensors
 ============
 As discussed in [Sect. 4.3 in Wu et al. (2018)](https://www.geosci-model-dev.net/11/4843/2018/#section4), X-STILT can be applied to other column measurements and other species. One could simply change `site` in the main scripts for modeling other cities besides Riyadh. 
 
-If the user would like to use X-STILT for other column measurements besides OCO-2 (e.g., TCCON, GOSAT, or TROPOMI), one needs to create a new subroutine for grabbing the averaging kernel profile (`ap`) and pressure weighting functions (`pwf`) for every pressure level (`pres`) as well as surface pressure (`psfc`) for each receptor location (indicated by `find.lat` and `find.lon`). The current subroutine for grabbing OCO-2 info is [get.oco2.info.r](https://github.com/uataq/X-STILT/blob/master/r/src/get.oco2.info.r). Please form your results in the same fashion as `all.info` and keep the list names as before to not break any subroutines downstream:
+If the user would like to use X-STILT for other column measurements besides OCO-2 (e.g., TCCON, GOSAT, or TROPOMI), one needs to create a new subroutine for grabbing the normalized averaging kernel profile (`ak.norm`), pressure weighting functions (`pwf`), and apriori profiles (`ap`) for every pressure level (`pres`) as well as surface pressure (`psfc`) for each receptor location (indicated by `find.lat` and `find.lon`). The current subroutine for grabbing OCO-2 info is [get.oco2.info.r](https://github.com/uataq/X-STILT/blob/master/r/src/get.oco2.info.r). Please form your results in the same fashion as `all.info` and keep the list names as before to not break any subroutines downstream:
    ```
    all.info <- list(oco2.id = find.id, oco2.lat = find.lat,
                     oco2.lon = find.lon, ak.norm = ak.norm, 

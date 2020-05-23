@@ -24,27 +24,26 @@ find.overpass <- function(date.range, lon.lat, oco2.ver = c('b7rb','b8r', 'b9r')
   # get rid of some characters
   file.info <- gsub('oco2_LtCO2_', '', all.file)
   file.info <- gsub('.nc4', '', file.info)
-  file.info <- data.frame(matrix(unlist(strsplit(file.info, '_')), ncol = 3,
-                                 byrow = T), stringsAsFactors = F)
-  colnames(file.info) <- c('timestr', 'ver', 'type')
+  file.info <- strsplit.to.df(file.info)
+  #file.info <- data.frame(matrix(unlist(strsplit(file.info, '_')), ncol = 3,
+  #                               byrow = T), stringsAsFactors = F)
+  colnames(file.info)[1] <- 'timestr'
   all.timestr <- file.info$timestr
 
   # for b8 or b9
-  if (oco2.ver != 'b7rb') {
-    SEL.day <- all.timestr >= substr(date.range[1], 3, 8) &
-               all.timestr <= substr(date.range[2], 3, 8)
-    oco2.file <- all.file[SEL.day]
-    timestr <- paste0('20', substr(oco2.file, 12, 17))
-
-  } else if (oco2.ver == 'b7rb') {
-
+  if (oco2.ver == 'b7rb' | oco2.ver == 'b10') {
     all.timestr[nchar(all.timestr) == 6] <-
       paste0('20', all.timestr[nchar(all.timestr) == 6])
 
     oco2.file <- all.file[all.timestr >= date.range[1] & all.timestr <= date.range[2]]
     timestr <- all.timestr[all.timestr >= date.range[1] & all.timestr <= date.range[2]]
-  } # end if oco2.ver
 
+  } else if (oco2.ver != 'b7rb') {
+    SEL.day <- all.timestr >= substr(date.range[1], 3, 8) &
+               all.timestr <= substr(date.range[2], 3, 8)
+    oco2.file <- all.file[SEL.day]
+    timestr <- paste0('20', substr(oco2.file, 12, 17))
+  } 
 
   # loop over each overpass
   result <- NULL
@@ -69,7 +68,7 @@ find.overpass <- function(date.range, lon.lat, oco2.ver = c('b7rb','b8r', 'b9r')
                       stringsAsFactors = F) 
     
     # Warn level being removed for lite v9 data, DW, 10/15/2018 
-    if (oco2.ver != 'b9r') {
+    if (oco2.ver %in% c('b8r', 'b7rb')) {
       wl <- ncvar_get(dat, 'warn_level')
       obs <- obs %>% mutate(wl = wl)
     } # end if not v9
@@ -107,20 +106,22 @@ find.overpass <- function(date.range, lon.lat, oco2.ver = c('b7rb','b8r', 'b9r')
                           tot.urban.count = as.numeric(tot.urban.count), 
                           qf.urban.count = as.numeric(qf.urban.count),
                           stringsAsFactors = F)
-        if (oco2.ver != 'b9r') 
+        if (oco2.ver %in% c('b8r', 'b7rb')) 
           tmp <- cbind(tmp, wl.count = as.numeric(wl.count), 
                             wl.urban.count = as.numeric(wl.urban.count))
+      
       } else {
         tmp <- data.frame(timestr = as.numeric(uni.timestr), 
                           tot.count = as.numeric(tot.count),
                           qf.count = as.numeric(qf.count), stringsAsFactors = F)
-        if (oco2.ver != 'b9r') tmp <- cbind(tmp, wl.count = as.numeric(wl.count))
+        
+        if (oco2.ver %in% c('b8r', 'b7rb')) 
+          tmp <- cbind(tmp, wl.count = as.numeric(wl.count))
       } # end if urbanTF
 
       result <- rbind(result, tmp)
-    } else {
-      next  # if no data, jump to next file
-    } # end if tot.count
+    } else next  # if no data, jump to next file
+     # end if tot.count
 
   }  # end for f
 

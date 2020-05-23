@@ -24,7 +24,7 @@ grab.oco2 <- function(ocopath, timestr, lon.lat, oco2.ver = 'b9r'){
   xco2.obs.uncert <- ncvar_get(ocodat, 'xco2_uncertainty')
 
   # Warn level being removed for lite v9 data, DW, 10/15/2018 
-  if (oco2.ver != 'b9r') wl <- ncvar_get(ocodat, 'warn_level')
+  if (oco2.ver %in% c('b7rb', 'b8r')) wl <- ncvar_get(ocodat, 'warn_level')
   qf    <- ncvar_get(ocodat, 'xco2_quality_flag')
   foot  <- ncvar_get(ocodat, 'Sounding/footprint')
   psurf <- ncvar_get(ocodat, 'Retrieval/psurf')  # hpa
@@ -82,7 +82,7 @@ grab.oco2 <- function(ocopath, timestr, lon.lat, oco2.ver = 'b9r'){
                         xco2.uncert = as.numeric(xco2.obs.uncert),
                         mode = as.character(mode), sza, oza, saa, oaa, ga, 
                         air.mass, stringsAsFactors = F)
-  if (oco2.ver != 'b9r') obs.all <- cbind(obs.all, wl = as.numeric(wl))
+  if (oco2.ver %in% c('b7rb', 'b8r')) obs.all <- cbind(obs.all, wl = as.numeric(wl))
 
   # select regions, lon.lat: c(minlon, maxlon, minlat, maxlat)
   obs <- obs.all %>% filter(lat >= lon.lat$minlat & lat <= lon.lat$maxlat &

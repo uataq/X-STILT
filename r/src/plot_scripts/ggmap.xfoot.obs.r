@@ -9,30 +9,29 @@
 ggmap.xfoot.obs <- function(mm, site, oco2.ver, oco2.path, timestr, recp.lon, 
                             recp.lat, foot, min.foot.sig = 1E-8, 
                             max.foot.sig = 1E-2, qfTF = T, title = NULL, 
-                            picname, storeTF = T, width = 9, height = 9, 
-                            leg.pos = 'bottom', facet.nrow = 1, 
+                            picname, storeTF = T, width = 11, height = 7, 
+                            leg.pos = 'bottom', scale.coord = 1.2, facet.nrow = 1, 
                             foot.unit = 'ppm/(umol/m2/s)', font.size = rel(0.9)){
 
   col <- def.col()
-  m1 <- mm[[1]] + theme_bw() + coord_equal(1.15)
+  m1 <- mm[[1]] + theme_bw() + coord_equal(scale.coord)
 
   # grab observations using map lat/lon
-  map.ext <- data.frame(minlon = min(mm[[1]]$data$lon),
-                        maxlon = max(mm[[1]]$data$lon),
-                        minlat = min(mm[[1]]$data$lat),
-                        maxlat = max(mm[[1]]$data$lat))
+  map.ext <- data.frame(minlon = min(m1$data$lon), maxlon = max(m1$data$lon),
+                        minlat = min(m1$data$lat), 
+                        maxlat = max(m1$data$lat))
 
   if (!is.null(oco2.path)) {
     cat('Reading OCO-2 data according to the spatial domain of ggmap...\n')
     obs <- grab.oco2(ocopath = oco2.path, timestr, lon.lat = map.ext, oco2.ver)
-    qf.obs <- obs %>% filter(qf == 0)
+    if (qfTF) obs <- obs %>% filter(qf == 0)
   }
 
   # select footprints using map.ext
   sel.foot <- foot %>% filter(lon >= map.ext$minlon & lon <= map.ext$maxlon &
                               lat >= map.ext$minlat & lat <= map.ext$maxlat &
                               foot >= min.foot.sig)
-  p1 <- m1 + labs(title = title, x = 'LONGITUDE [E]', y = 'LATITUDE [N]')
+  p1 <- m1 + labs(x = 'LONGITUDE [E]', y = 'LATITUDE [N]')
 
   # if there is 1+ receptors
   if ('fac' %in% colnames(sel.foot)){
@@ -58,16 +57,9 @@ ggmap.xfoot.obs <- function(mm, site, oco2.ver, oco2.path, timestr, recp.lon,
 
   # plot observed XCO2, add footprint raster layer
   if (!is.null(oco2.path)) {
-    if (qfTF) {
-      p1 <- p1 + geom_point(data = qf.obs, aes(lon, lat, colour = xco2), size = 0.4)
-      min.y <- floor(min(qf.obs$xco2, na.rm = T))
-      max.y <- ceiling(max(qf.obs$xco2, na.rm = T))
-
-    } else {
       p1 <- p1 + geom_point(data = obs, aes(lon, lat, colour = xco2), size = 0.4)
       min.y <- floor(min(obs$xco2, na.rm = T))
       max.y <- ceiling(max(obs$xco2, na.rm = T))
-    }  # end if qfTF 
   }
 
   lab <- 10 ^ seq(-20, 3, 1)
@@ -78,11 +70,10 @@ ggmap.xfoot.obs <- function(mm, site, oco2.ver, oco2.path, timestr, recp.lon,
                                   trans = 'log10', colours = col, 
                                   breaks = lab,labels = lab)
 
-  if ('fac' %in% colnames(sel.foot)){
+  if ('fac' %in% colnames(sel.foot))
     if (length(unique(sel.foot$fac)) > 1)
       p2 <- p2 + facet_wrap(~ fac, nrow = facet.nrow) +
                  theme(strip.text = element_text(size = font.size))
-  }
 
   p3 <- p2 + theme(legend.position = leg.pos,
                    legend.text = element_text(size = font.size),
@@ -103,11 +94,29 @@ ggmap.xfoot.obs <- function(mm, site, oco2.ver, oco2.path, timestr, recp.lon,
                guides(colour = guide_colourbar(order = 2))
   }
 
-  if (leg.pos == 'bottom') p4 <- p3 + guides(fill = guide_legend(order = 1, nrow = 2, byrow = T))
-  if (leg.pos == 'right') p4 <- p3 + guides(fill = guide_legend(order = 1, ncol = 1))
+  if (leg.pos %in% c('bottom', 'top')) 
+    p4 <- p3 + guides(fill = guide_legend(order = 1, nrow = 2, byrow = T))
+  if (leg.pos %in% c('left', 'right')) 
+    p4 <- p3 + guides(fill = guide_legend(order = 1, ncol = 1))
 
+
+  l1 <- ggplot() + theme_bw() + labs(x = 'XCO2', y = 'LATITUDE') + 
+        geom_point(data = obs, aes(xco2, lat), size = 1.6, shape = 17) + 
+        ylim(c(map.ext$minlat + 0.1, map.ext$maxlat - 0.1))
+
+  #p1.cy <- ggplot_gtable(ggplot_build(p4))
+  #l1.cy <- ggplot_gtable(ggplot_build(l1))
+  #l1.cy$heights <- p1.cy$heights
+  #pp <- gridExtra::grid.arrange(p1.cy, l1.cy, ncol = 2, widths = c(3, 1))
+  
+  pp <- ggarrange(p4, l1, ncol = 2, widths = c(3, 1))#, common.legend = T)
+  if (leg.pos %in% c('bottom', 'top'))
+    pp <- ggarrange(p4, l1, ncol = 2, widths = c(3, 1), common.legend = T)
+
+  if (!is.null(title)) pp <- annotate_figure(pp, top = title)
+  if (storeTF) ggsave(pp, file = picname, width = width, height = height, dpi = 300)
+ 
   print(picname)
-  if (storeTF) ggsave(p4, file = picname, width = width, height = height, dpi = 300)
 
-  return(p4)
+  return(pp)
 }

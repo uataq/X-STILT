@@ -81,7 +81,7 @@ ggmap.obs.xco2 <- function(site, timestr, oco2.ver, oco2.path, lon.lat, workdir,
   picname <- paste0('ggmap_xco2_', site, '_', timestr, '.png')
   picfile <- file.path(plotdir, picname)
   print(picfile)
-  ggsave(merge.plot, filename = picfile, width = 11, height = 15)
+  ggsave(merge.plot, filename = picfile, width = 9, height = 12)
 
   return(merge.plot)
 }

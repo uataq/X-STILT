@@ -63,7 +63,6 @@ ggplot.map <- function(map = c('black','ggmap'), maptype = 'roadmap',
           theme(panel.background = element_rect(fill = ocean.col, colour = ocean.outline),
                 panel.grid.major = element_line(colour = NA),
                 panel.grid.minor = element_blank(),
-                axis.ticks = element_blank(),
                 axis.text.x = element_text(size = 12, vjust = 0),
                 axis.text.y = element_text(size = 12, hjust = 1.2))
 

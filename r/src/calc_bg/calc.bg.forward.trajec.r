@@ -24,17 +24,19 @@
 #   DW, 10/30/2018 
 
 calc.bg.forward.trajec <- function(trajpath, site, timestr, agl, dtime, numpar, 
-                                   dxyp, oco2.path, oco2.ver, met, zoom = 7, 
-                                   api.key, td = 0.05, bg.dlat = 0.5, perc = 0.2, 
+                                   dxyp, oco2.path, oco2.ver, qfTF = T, met, 
+                                   zoom = 7, td = 0.05, bg.dlat = 0.5, perc = 0.2, 
                                    clean.side = c('north', 'south', 'both')[3], 
-                                   font.size = rel(1.2)){
+                                   api.key, font.size = rel(1.2)){
   
   register_google(key = api.key)
   
   # call grab.oco2() to read in observations and compute overpass time
   # lon.lat used for grabbing OCO2 should be wider, e.g., by 2 deg +
   lon.lat <- get.lon.lat(site, dlat = 2.5, dlon = 2.5)
-  obs <- grab.oco2(oco2.path, timestr, lon.lat, oco2.ver) #%>% filter(qf == 0)
+  obs <- grab.oco2(oco2.path, timestr, lon.lat, oco2.ver) 
+  if (qfTF) obs <- obs %>% filter(qf == 0)
+
   if (nrow(obs) == 0) {
     cat('*** NO observed data with QF = 0 for this event...returning NA ***\n')
     return()
@@ -68,6 +70,7 @@ calc.bg.forward.trajec <- function(trajpath, site, timestr, agl, dtime, numpar,
     trajdat <- rbind(trajdat, tmp.trajdat)
   } # end for f
 
+
   # before subsetting trajec, grab box receptor
   recp.trajdat <- trajdat %>% filter(time == min(time))
   llon <- c(min(recp.trajdat$lon), max(recp.trajdat$lon))
@@ -86,13 +89,10 @@ calc.bg.forward.trajec <- function(trajpath, site, timestr, agl, dtime, numpar,
   sel.trajdat <- trajdat %>% mutate(datestr = min.datestr + time * 60) %>%
                              filter(datestr >= min.xtime & datestr <= max.xtime)
 
+
   # load map
   mm <- ggplot.map(map = 'ggmap', center.lon = unique(info$recp.lon),
                    center.lat = unique(info$recp.lat), zoom = zoom)
-
-  # draw receptor box
-  m1 <- mm[[1]] + geom_polygon(data = box.recp, aes(lon, lat), linetype = 3, 
-                               fill = 'gray30', alpha = 0.5)
 
   ### calculate 2D kernel density and Normalized by the max density
   cat('calc.bg.forward.trajec(): calculating kernel density...\n')
@@ -101,35 +101,38 @@ calc.bg.forward.trajec <- function(trajpath, site, timestr, agl, dtime, numpar,
                       prob = as.vector(dens$z)) %>% 
            mutate(norm.prob = prob / max(prob))
 
-  # plot kernel density on map
+  # plot kernel density on map and draw receptor box
   lab.norm <- c(td, seq(0, 1, 0.1)[-1])
-  p1 <- m1 + geom_contour(data = densf, aes(x = lon, y = lat, z = norm.prob,
-                          colour = ..level..), breaks = lab.norm, size = 1.3) +
-             scale_colour_gradient(name = 'Normalized\nKernel\nDensity',
-                                   low = 'lightblue', high = 'purple', 
-                                   breaks = lab.norm, labels = lab.norm,
-                                   limits = c(0, max(lab.norm)))
+  p1 <- mm[[1]] + 
+        geom_contour(data = densf, aes(lon, lat, z = norm.prob, colour = ..level..), 
+                     breaks = lab.norm, size = 1.3) +
+        scale_colour_gradient(name = 'Normalized\nKernel\nDensity',
+                              low = 'lightblue', high = 'purple', 
+                              breaks = lab.norm, labels = lab.norm,
+                              limits = c(0, max(lab.norm)))
 
   ### get plotting info, i.e., different kernel density levels
-  kd.info <- ggplot_build(p1)$data[[5]]
+  kd.info <- ggplot_build(p1)$data[[4]]
   uni.level <- unique(kd.info$level)
 
   # assign density levels to each selected particle
   sel.trajdat <- sel.trajdat %>% mutate(dens.level = 0)
   for (u in 1:length(uni.level)) {
-    tmp.kd <- kd.info %>% filter(level == uni.level[u])
-    tmp.index <- point.in.polygon(sel.trajdat$lon, sel.trajdat$lat,
-                                  tmp.kd$x, tmp.kd$y)
-    sel.trajdat[tmp.index > 0, 'dens.level'] <- uni.level[u]
+      tmp.kd <- kd.info %>% filter(level == uni.level[u])
+      tmp.index <- sp::point.in.polygon(sel.trajdat$lon, sel.trajdat$lat,
+                                        tmp.kd$x, tmp.kd$y)
+      sel.trajdat[tmp.index > 0, 'dens.level'] <- uni.level[u]
   } # end for u
 
   p1 <- p1 + geom_point(data = sel.trajdat, aes(lon, lat, colour = dens.level),
-                        size = 0.2, alpha = 0.5)
+                        size = 0.2, alpha = 0.4) + 
+             geom_polygon(data = box.recp, aes(lon, lat), 
+                          linetype = 3, fill = NA, color = 'black')
 
   # add observed soundings
   max.y <- ceiling(max(obs$xco2)); min.y <- floor(min(obs$xco2))
 
-  # only plot SCREENED data, QF == 0
+  # only plot SCREENED data, QF == 0, if qfTF = T
   p2 <- p1 + geom_point(data = obs, aes(lon, lat, fill = xco2), shape = 21, 
                         colour = 'gray90') +
              scale_fill_gradientn(colours = def.col(), name = 'XCO2',
@@ -148,20 +151,20 @@ calc.bg.forward.trajec <- function(trajpath, site, timestr, agl, dtime, numpar,
 
   # select the polygon we need, bug fixed, DW, 08/21/2018
   if (length(which(abs.dy > td)) > 0 | length(which(abs.dx > td)) > 0){
-    cutoff.yindx <- which(abs.dy > td)
-    cutoff.xindx <- which(abs.dx > td)
+      cutoff.yindx <- which(abs.dy > td)
+      cutoff.xindx <- which(abs.dx > td)
 
-    y.vec <- c(1, cutoff.yindx, nrow(bound.traj)); dy.indx <- diff(y.vec)
-    x.vec <- c(1, cutoff.xindx, nrow(bound.traj)); dx.indx <- diff(x.vec)
+      y.vec <- c(1, cutoff.yindx, nrow(bound.traj)); dy.indx <- diff(y.vec)
+      x.vec <- c(1, cutoff.xindx, nrow(bound.traj)); dx.indx <- diff(x.vec)
 
-    # now select polygons
-    plg.yindx <- which(dy.indx == max(dy.indx))  # polygon index
-    plg.xindx <- which(dx.indx == max(dx.indx))  # polygon index
-    plg.xy <- intersect(
-      seq(y.vec[plg.yindx], y.vec[plg.yindx + 1], 1),
-      seq(x.vec[plg.xindx], x.vec[plg.xindx + 1], 1)
-    )
-    bound.traj <- bound.traj[plg.xy, ]
+      # now select polygons
+      plg.yindx <- which(dy.indx == max(dy.indx))  # polygon index
+      plg.xindx <- which(dx.indx == max(dx.indx))  # polygon index
+      plg.xy <- intersect(
+        seq(y.vec[plg.yindx], y.vec[plg.yindx + 1], 1),
+        seq(x.vec[plg.xindx], x.vec[plg.xindx + 1], 1)
+      )
+      bound.traj <- bound.traj[plg.xy, ]
   }  # end if
 
   # add bounrdary of city plume
@@ -304,12 +307,12 @@ calc.bg.forward.trajec <- function(trajpath, site, timestr, agl, dtime, numpar,
       l1 <- ggplot() + theme_bw() +
             geom_ribbon(data = bg.dat, aes(x, ymin = ymin, ymax = ymax),
                         colour = 'limegreen', fill = 'limegreen', alpha = 0.3) + 
-            geom_point(data = obs, aes(lat, xco2, fill = as.factor(1)),
-                       colour = 'white', shape = 24, size = 3) + 
+            #geom_point(data = obs, aes(lat, xco2, fill = as.factor(1)),
+            #           colour = 'white', shape = 24, size = 3) + 
             geom_point(data = obs %>% filter(qf == 0), aes(lat, xco2, fill = as.factor(2)),
                        colour = 'white', shape = 24, size = 3) + 
-            geom_point(data = pol.obs, aes(lat, xco2, fill = as.factor(3)),
-                       colour = 'white', shape = 24, size = 3) + 
+            #geom_point(data = pol.obs, aes(lat, xco2, fill = as.factor(3)),
+            #           colour = 'white', shape = 24, size = 3) + 
             geom_point(data = pol.obs %>% filter(qf == 0), aes(lat, xco2, fill = as.factor(4)),
                        colour = 'white', shape = 24, size = 3) + 
             geom_line(data = bg.dat, aes(x, y, colour = as.factor(6), linetype = as.factor(6)), 
@@ -330,8 +333,7 @@ calc.bg.forward.trajec <- function(trajpath, site, timestr, agl, dtime, numpar,
                       aes(lat, xco2, colour = as.factor(5), linetype = as.factor(5)), 
                       size = 1.3, se = F)
 
-      lab <- c('1' = 'All OBS', '2' = 'Screened OBS (QF=0)', 
-               '3' = 'All enhanced OBS', 
+      lab <- c('1' = 'All OBS', '2' = 'Screened OBS (QF=0)', '3' = 'All enhanced OBS', 
                '4' = 'Screened enhanced OBS (QF=0)', 
                '5' = 'Smooth splines of screened OBS\nover backgorund range',
                '6' = 'Final overpass-specific background')
@@ -341,10 +343,8 @@ calc.bg.forward.trajec <- function(trajpath, site, timestr, agl, dtime, numpar,
       col.val <- c('1' = 'gray80', '2' = 'black', '3' = 'pink', 
                    '4' = 'brown', '5' = 'deepskyblue', '6' = 'darkgreen')
       lt.val <- c('6' = 4, '5' = 1)
-      #title.l <- paste('Demostration of overpass-specific background [ppm] for',
-      #                 site, 'on', timestr)
       title.l <- paste('Demostration of overpass-specific background [ppm] for',
-                       site, 'on 29 December 2014')
+                       site, 'on', timestr)
 
       l2 <- l1 + scale_fill_manual(name = NULL, values = fill.val, labels = lab) + 
                  scale_colour_manual(name = NULL, values = col.val, labels = lab) + 
@@ -352,8 +352,8 @@ calc.bg.forward.trajec <- function(trajpath, site, timestr, agl, dtime, numpar,
                  labs(x = 'LATITUDE [deg]', y = 'OBS XCO2 [ppm]', title = title.l) + 
                  scale_x_continuous(breaks = seq(-90, 90, 0.4), 
                                     labels = seq(-90, 90, 0.4), 
-                                    #limits = c(lon.lat$minlat, lon.lat$maxlat)) + 
-                                    limits = c(23, 26)) + 
+                                    limits = c(lon.lat$minlat, lon.lat$maxlat)) + 
+                                    #limits = c(23, 26)) + 
                  scale_y_continuous(breaks = seq(min.y, max.y, 2), 
                                     labels = seq(min.y, max.y, 2), 
                                     limits = c(min.y, max.y))
@@ -371,8 +371,6 @@ calc.bg.forward.trajec <- function(trajpath, site, timestr, agl, dtime, numpar,
                        title = element_text(size = font.size)) + 
                 guides(fill = guide_legend(nrow = 2, byrow = F),
                        colour = guide_legend(nrow = 2, byrow = TRUE))
-      
-      ggsave(l3, filename = 'Figure5b.pdf', width = 12, height = 7)
 
       # merge map of forward plume and latitude series, DW, 10/30/2018
       p5 <- ggarrange(plotlist = list(p4, l3), heights = c(3, 2), nrow = 2, 
