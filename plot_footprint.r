@@ -2,6 +2,7 @@
 
 homedir <- '/uufs/chpc.utah.edu/common/home'
 xstilt_wd <- file.path(homedir, 'lin-group7/wde/X-STILT') # current dir
+source(file.path(xstilt_wd, 'r/dependencies.r'))
 register_google(key = '')
 
 # choose the site
@@ -27,8 +28,8 @@ recp.info <- strsplit.to.df(basename(foot.fns))
 # **** choose which footprint file to plot
 indx <- 35  
 foot.rt  <- raster(foot.fns[indx])
-recp.lat <- recp.info$V3[indx]
-recp.lon <- recp.info$V2[indx]
+recp.lat <- as.numeric(recp.info$V3[indx])
+recp.lon <- as.numeric(recp.info$V2[indx])
 
 # convert footprint from rasterLayer to data frame and rename it
 foot <- as.data.frame(foot.rt, xy = T); colnames(foot) <- c('lon', 'lat', 'foot')
@@ -36,7 +37,7 @@ picname <- file.path(store.path, paste0('footprint_', site, '_', timestr,
                                         '_', recp.lat, '_', recp.lon, '.png'))
 
 # load map and plot footprint
-mm <- ggplot.map(map = 'ggmap', maptype = 'roadmap', center.lat = recp.lat
+mm <- ggplot.map(map = 'ggmap', maptype = 'roadmap', center.lat = recp.lat,
                  center.lon = recp.lon, zoom = 8)
 
 # ggmap.xfoot.obs will automatically store figures in store.path 
