@@ -24,7 +24,7 @@ run.xstilt <- function(namelist){
   # if NA, meaning no weighting nor OCO2 files for regular simualtions
   ak.wgt    <- namelist$ak.wgt     # whether weighted foot by averaging kernel
   pwf.wgt   <- namelist$pwf.wgt    # whether weighted foot by pres weighting
-  oco2.path <- namelist$oco2.path
+  oco.path <- namelist$oco.path
   
   # Model control
   rm_dat     <- T
@@ -272,7 +272,7 @@ run.xstilt <- function(namelist){
 
   # pass additional variables to stilt_apply and then to simulation_step() 
   # needed for before_*_xstilt() for X-STILT, DW, 02/11/2019
-                        oco2.path = oco2.path, 
+                        oco.path = oco.path, 
                         ak.wgt = ak.wgt, 
                         pwf.wgt = pwf.wgt, 
                         overwrite_wgttraj = namelist$overwrite_wgttraj, 

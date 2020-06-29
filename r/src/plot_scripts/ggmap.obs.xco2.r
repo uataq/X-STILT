@@ -1,16 +1,18 @@
-# script to plot observed XCO2 on map, DW
+# function to plot observed XCO2 on map, DW
+
 # add section to plot observed XCO2 with quality flag on latitude series, 07/03/2018
-# use grab.oco2 to read observations, DW, 08/07/2018
+# use grab.oco() to read observations, DW, 08/07/2018
 # update for v9 lite data, QF filtering controled by qfTF, DW, 10/19/2018
 # skip the overpass, if data is not enough, DW, 04/21/2019 
+# update script for OCO-3 data with an additional variable called oco.sensor, DW, 06/28/2020 
 
-ggmap.obs.xco2 <- function(site, timestr, oco2.ver, oco2.path, lon.lat, workdir,
-                           plotdir = file.path(workdir, 'plot'), zoom = 8, 
-                           qfTF = F, box.dlat = 0.5, box.dlon = 0.5, size = 0.8, 
-                           font.size = rel(0.9)){
+ggmap.obs.xco2 <- function(site, timestr, oco.sensor = c('OCO-2', 'OCO-3')[2], 
+                           oco.ver, oco.path, lon.lat, workdir, 
+                           plotdir = file.path(workdir, 'plot'), zoom = 8, qfTF = F, 
+                           box.dlat = 0.5, box.dlon = 0.5, size = 0.8, font.size = rel(0.9)){
 
   library(ggmap); library(ggplot2); library(ggpubr)
-  obs.all <- grab.oco2(ocopath = oco2.path, timestr, lon.lat, oco2.ver)
+  obs.all <- grab.oco(oco.path, timestr, lon.lat, oco.ver)
   qf.obs <- obs.all %>% filter(qf == 0)
 
   # at least need two valid soundings
@@ -34,11 +36,11 @@ ggmap.obs.xco2 <- function(site, timestr, oco2.ver, oco2.path, lon.lat, workdir,
   }  # end if qfTF
 
   c1 <- c1 + theme_bw() + 
-    scale_colour_gradientn(name = 'OCO-2 XCO2 [ppm]', colours = col,
+    scale_colour_gradientn(name = paste(oco.sensor, 'XCO2 [ppm]'), colours = col,
                            limits = c(max(390, min.y), max.y), 
                            breaks = seq(380, 420, 2), labels = seq(380, 420, 2)) +
     labs(x = 'LONGITUDE', y = 'LATITUDE') +
-    labs(title = paste('OCO-2 XCO2 [ppm] for', site, 'on', timestr))
+    labs(title = paste(oco.sensor, 'XCO2 [ppm] for', site, 'on', timestr))
 
   # draw a rectangle around the city
   d <- data.frame(x = c(lon.lat$citylon - box.dlon, 
@@ -63,7 +65,7 @@ ggmap.obs.xco2 <- function(site, timestr, oco2.ver, oco2.path, lon.lat, workdir,
                    title = element_text(size = font.size))
 
   # plot on latitude-series
-  l1 <- ggplot() + theme_bw() + labs(y = 'OCO-2 XCO2 [ppm]', x = 'LATITUDE')
+  l1 <- ggplot() + theme_bw() + labs(y = paste(oco.sensor, 'XCO2 [ppm]'), x = 'LATITUDE')
   if (qfTF) {
     l1 <- l1 + geom_point(data = qf.obs, aes(lat, xco2), size = size + 0.5, 
                           colour = 'black', shape = 17)

@@ -1,16 +1,15 @@
-#' subroutines for weight trajec before calculating footprint
-#' @author: Dien Wu, 01/18/2019
-
+#' function for weight trajec before calculating footprint, Dien Wu, 01/18/2019
 #' @param output will be grabbed from simulation_step() automatically
 #                with lists of '$file', '$receptor' and '$particle'
 #' @param rundir where to store the weighted trajec, in 'by-id' directory
 #' @param args a list of all the customized variables 
 #'             (args is defined in simulation_step), no need to define it here
-#'      @param oco2.path path for OCO-2 data, needed to frab AK, PW vertical profiles
-#'      @param ak.wgt logical flag for AK weighting, T or F 
-#'      @param pwf.wgt logical flag for PW weighting, T or F 
+#' @param oco.path path for OCO-2/3 data, needed to frab AK, PW vertical profiles
+#' @param ak.wgt logical flag for AK weighting, T or F 
+#' @param pwf.wgt logical flag for PW weighting, T or F 
 
-#' allow for generating footprint with various horizontal resolutions, DW, 02/11/2019 
+# allow for generating footprint with various horizontal resolutions, DW, 02/11/2019 
+# minor update for using OCO-3 data, i.e., change variable names, DW, 06/28/2020
 
 before_footprint_xstilt <- function() {
 
@@ -23,23 +22,21 @@ before_footprint_xstilt <- function() {
         
     } else {
        
-        # get OCO-2 profile first according to lat/lon of receptor, 
+        # get OCO-2/3 profile first according to lat/lon of receptor, 
         # return a list
-        oco2.info <- get.oco2.info(oco2.path = args$oco2.path, 
-                                   receptor = output$receptor)
+        oco.info <- get.oco.info(oco.path = args$oco.path, receptor = output$receptor)
 
-        if (is.null(oco2.info)) {
+        if (is.null(oco.info)) {
             warning('before_footprint_xstilt(): 
-                     NO OCO-2 info found for this receptor lat/lon\n'); return()
+                     NO OCO info found for this receptor lat/lon\n'); return()
         } # end if is.null
 
         # Weight footprint: call wgt.trajec.footv3() to weight trajec-level
         # footprint before calculating gridded footprint, DW, 06/01/2018
-        cat('before_footprint_xstilt(): 
-             weight trajec-level foot using OCO-2 profiles for X-STILT...\n')
+        cat("before_footprint_xstilt(): 
+             weight trajec-level foot using OCO's profiles for X-STILT...\n")
         output$file <- wgt.file         # overwrite filename
-        wgt.output  <- wgt.trajec.footv3(output = output, 
-                                         oco2.info = oco2.info,
+        wgt.output  <- wgt.trajec.footv3(output = output, oco.info = oco.info,
                                          ak.wgt = args$ak.wgt, 
                                          pwf.wgt = args$pwf.wgt)
     }  # end if file.exists()
@@ -93,7 +90,7 @@ before_footprint_xstilt <- function() {
                                    yres = as.numeric(yres2[f]))
         } # end for f
     } # end if is na
-#stop()
+    #stop()
     cat('before_footprint_xstilt(): END OF FUNCTION, start to calculate foot...\n')
     return(wgt.output) # return weighted output
 }

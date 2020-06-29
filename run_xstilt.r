@@ -56,21 +56,25 @@
 #' ---------------------------------------------------------------------------
 #' 
 #' allows for generating footprint with multiple reslutions at a time, 
-#'    see `foot.res2` and `before_footprint_xstilt.r` for more info, 
-#'    DW, 02/11/2019
+#'    see `foot.res2` and `before_footprint_xstilt.r` for more info, DW, 02/11/2019
+#' update all scripts for OCO-3 sensors, DW, 06/29/2020
+
+
+# test STILT-HYSPLIT 
+#Rscript -e "uataq::stilt_init('X-STILT', branch = 'hysplit-merge')" 
 
 
 #### source all functions and load all libraries
 # CHANGE working directory ***
-homedir <- '/uufs/chpc.utah.edu/common/home'
-workdir <- file.path(homedir, 'lin-group7/wde/X-STILT') # current dir
+homedir <- '/central/home/dienwu'
+workdir <- file.path(homedir, 'X-STILT') # current dir
 setwd(workdir)   # move to working directory
 source('r/dependencies.r') # source all functions
 
 # Please insert your API for the use of ggplot and ggmap
 api.key <- ''
 register_google(key = api.key)
-project <- ''   # name your project
+project <- 'OCO-3'   # name your project
 
 #------------------------------ STEP 1 --------------------------------------- #
 ### 1) input dlat, dlon to get spatial domain around city center
@@ -79,54 +83,48 @@ lon.lat <- get.lon.lat(site = site, dlon = 1, dlat = 1.5)
 
 
 ### 2) required paths for input datasets
-# e.g., OCO2 XCO2, SIF, NOAA RAOB, ODAIC emission (1km tiff files)
-input.path  <- file.path(homedir, 'lin-group7/wde/input_data')
-oco2.ver    <- c('b7rb', 'b8r', 'b9r')[3]           # OCO-2 version
-oco2.path   <- file.path(input.path, paste0('OCO-2/L2/OCO2_lite_', oco2.ver))
-sif.path    <- file.path(input.path, 'OCO-2/L2/OCO2_lite_SIF_b8r')
+# e.g., OCO-2/3 XCO2, SIF, NOAA RAOB, ODAIC emission (1km tiff files)
+input.path  <- '/central/groups/POW'
+oco.sensor  <- c('OCO-2', 'OCO-3')[2]
+oco.ver     <- c('V7rb', 'V8r', 'V9r', 'VEarlyR')[4]   # retrieval algo version
+oco.path    <- file.path(input.path, oco.sensor, paste0('L2_Lite_FP_', oco.ver))
+sif.path    <- file.path(input.path, oco.sensor, 'L2_Lite_SIF_V8r')
 raob.path   <- file.path(input.path, 'RAOB', site)  # NOAA radiosonde
 odiac.vname <- c('2016', '2017', '2018', '2019')[4]         # ODIAC version
 tiff.path   <- file.path(input.path, 'ODIAC', paste0('ODIAC', odiac.vname))  
 
+
 ## path for storing output or anything related to trans err
-store.path <- file.path(homedir, 'lin-group7/wde/output', site)
+store.path <- file.path(homedir, 'output', site)
 err.path   <- file.path(store.path, 'wind_err')  
 dir.create(store.path, showWarnings = F, recursive = T)
 dir.create(err.path, showWarnings = F, recursive = T)
 
-
 ### 3) call get.site.track() to get lon.lat and OCO2 overpasses info
-# txt.path, path for storing output from 'get.site.track()'
-txt.path <- file.path(input.path, 'OCO-2/overpass_city') 
-
 # whether to search for overpasses over urban region,
 # defined as city.lat +/- dlat, city.lon +/- dlon
 urbanTF <- T; dlon.urban <- 0.5; dlat.urban <- 0.5
 
 # rmTF = T, for removing overpasses during hemispheric growing seasons
-oco2.track <- get.site.track(site, oco2.ver, oco2.path, searchTF = T, 
-                             date.range = c('20140101', '20191231'), 
-                             thred.count.per.deg = 100, lon.lat, 
-                             urbanTF, dlon.urban, dlat.urban, 
-                             thred.count.per.deg.urban = 50, txt.path, rmTF = F)
+oco.track <- get.site.track(site, oco.sensor, oco.ver, oco.path, searchTF = F, 
+                            date.range = c('20140101', '20201231'), 
+                            thred.count.per.deg = 100, lon.lat, 
+                            urbanTF, dlon.urban, dlat.urban, 
+                            thred.count.per.deg.urban = 50, rmTF = F)
 
-# one can further subset 'oco2.track' based on sounding # or data quality
+# one can further subset 'oco.track' based on sounding # or data quality
 # over entire lon.lat domain or near city center
-# see columns 'qf.count' or 'wl.count' in 'oco2.track'
-oco2.track <- oco2.track %>% filter(qf.urban.count > 50)
-
-
-### 4) finally narrow down and get timestr
-all.timestr <- oco2.track$timestr         # v7, Riyadh
-print(all.timestr)
+# see columns 'qf.count' or 'wl.count' in 'oco.track'
+oco.track   <- oco.track %>% filter(qf.urban.count > 50)
+all.timestr <- oco.track$timestr; print(all.timestr)
 
 # whether to plot them on maps, plotTF = T/F,
 # this helps you choose which overpass to simulate, see 'tt' below
-ggmap.obs.info(plotTF = F, site, store.path, all.timestr, oco2.ver, oco2.path, 
-               lon.lat, workdir, dlat.urban, dlon.urban)
+ggmap.obs.info(plotTF = F, site, store.path, all.timestr, oco.sensor, oco.ver, 
+               oco.path, lon.lat, workdir, dlat.urban, dlon.urban)
 
 ### 5) *** NOW choose the timestr that you'd like to work on...
-tt <- 5
+tt <- 9
 timestr <- all.timestr[tt]
 cat(paste('Working on:', timestr, 'for city/region:', site, '...\n\n'))
 cat('Done with choosing cities & overpasses...\n')
@@ -136,7 +134,7 @@ cat('Done with choosing cities & overpasses...\n')
 # T:rerun hymodelc, even if particle location object found
 # F:re-use previously calculated particle location object
 run_trajec <- T     # whether to generate trajec; runs start in STEP 6
-run_foot   <- T     # whether to generate footprint; runs start STEP 6
+run_foot   <- F     # whether to generate footprint; runs start STEP 6
 if (run_trajec) cat('Need to generate trajec...\n')
 if (run_foot)   cat('Need to generate footprint...\n\n')
 
@@ -151,19 +149,26 @@ run_emiss_err <- F  # T: get XCO2 error due to prior emiss err, see STEP 4 and 8
 run_sim       <- F  # T: do analysis with existing trajec/foot, see STEP 8
 
 delt <- 2           # fixed timestep [min]; set = 0 for dynamic timestep
-nhrs <- -72         # number of hours backward (-) or forward (+)
-
-# path to grab or store trajec, foot and potential trans err stat DW, 07/31/2018
-# ourput directory for storing traj with default convention;
-# store traj with wind err in a separate directory if run_hor_err = T
-outdir <- file.path(store.path, paste('out', timestr, site, sep = '_'))
-if (run_hor_err) outdir <- file.path(err.path, 
-                                     paste('out_err', timestr, site, sep = '_'))
+nhrs <- -24         # number of hours backward (-) or forward (+)
 
 # change to Ben's definitions,  see validate_varsiwant()
 varstrajec <- c('time', 'indx', 'lati', 'long', 'zagl', 'zsfc', 'foot', 'samt',
                 'dmas', 'mlht', 'temp', 'pres', 'sigw', 'tlgr', 'dens')
-cat('Done with setting flags...\n')
+
+# path for the ARL format of meteo fields
+# simulation_step() will find corresponding files
+met        <- c('gdas0p5', 'gfs0p25')[2]    # choose met fields
+met.path   <- file.path(homedir, met)       # path of met fields
+met.format <- '%Y%m%d'                      # met file name convention
+met.num    <- 1                             # min number of files needed
+
+# path to grab or store trajec, foot and potential trans err stat DW, 07/31/2018
+# ourput directory for storing traj with default convention;
+# store traj with wind err in a separate directory if run_hor_err = T
+outdir <- file.path(store.path, paste('out', timestr, met, sep = '_'))
+if (run_hor_err) outdir <- file.path(err.path, paste('out_err_', timestr, '_', met))
+
+cat('Done with basis settings...\n')
 
 
 #------------------------------ STEP 3 --------------------------------------- #
@@ -195,7 +200,7 @@ if (columnTF) {
 
 ### 2) place denser receptors within lat range with high XCO2
 # whether to select receptors; or simulate all soundings
-selTF <- T  
+selTF <- F  
 if (selTF) {
   
   # lat range in deg N for placing denser receptors, required for backward run
@@ -218,23 +223,16 @@ find.lat <- NULL     # for debug or test, model one sounding
 
 
 ### 3) select satellite soundings, plotTF for whether plotting OCO-2 observed XCO2
-recp.info <- get.recp.info(timestr, oco2.ver, oco2.path, lon.lat, selTF, 
-                           recp.indx, recp.num, find.lat, agl, plotTF = F, 
-                           trajpath = file.path(outdir, 'by-id'), run_trajec)
+recp.info <- get.recp.info(timestr, oco.ver, oco.path, lon.lat, selTF, 
+                           recp.indx, recp.num, find.lat, agl, run_trajec, 
+                           trajpath = file.path(outdir, 'by-id'))
 nrecp <- nrow(recp.info)
 cat(paste('Done with receptor setup...total', nrecp, 'receptors..\n'))
 
 
 #------------------------------ STEP 4 --------------------------------------- #
-### 1) path for the ARL format of WRF and GDAS
-# simulation_step() will find corresponding met files
-met        <- 'gdas0p5'                             # choose met fields
-met.path   <- file.path(homedir, 'u0947337', met)  # path of met fields
-met.format <- paste0('%Y%m%d_', met)           # met file name convention
-met.num    <- 1                                # min number of met files needed
-
-
-### 2) get horizontal transport error component if run_hor_err = T
+# Error analysis
+# 1) get horizontal transport error component if run_hor_err = T
 # path for outputting wind error stats
 hor.err  <- get.uverr(run_hor_err, site, timestr, workdir, overwrite = F,
                       raob.path, raob.format = 'fsl', nhrs, met, met.path, 
@@ -250,7 +248,7 @@ if (run_hor_err) {
 } else { ct.ver <- NA; ctflux.path <- NA; ctmole.path <- NA }
 
 
-### 3) get vertical transport error component if run_ver_err = T
+# 2) get vertical transport error component if run_ver_err = T
 # set zisf = 1 if run_ver_err = F
 zisf <- c(0.6, 0.8, 1.0, 1.2, 1.4)[3]; if (!run_ver_err) zisf <- 1.0
 pbl.err <- get.zierr(run_ver_err, nhrs.zisf = 24, const.zisf = zisf)
@@ -259,14 +257,13 @@ pbl.err <- get.zierr(run_ver_err, nhrs.zisf = 24, const.zisf = zisf)
 ### 4) if calculating XCO2 error due to emiss error, need EDGAR and FFDAS files
 # rearrange by DW, 10/21/2018
 if (run_emiss_err) { 
-  edgar.file <- file.path(homedir,
-    'lin-group2/group_data/EDGAR/CO2_2000-2008/v42_CO2_2008_TOT.0.1x0.1.nc')
-  ffdas.path <- file.path(input.path, 'anthro_inventories/FFDAS')
-  ffdas.file <- list.files(path = ffdas.path, pattern = 'totals')
+  edgar.file <- file.path(input.path, 'EDGAR/CO2_2000-2008/v42_CO2_2008_TOT.0.1x0.1.nc')
+  ffdas.path <- file.path(input.path, 'FFDAS')
+  ffdas.file <- list.files(ffdas.path, 'totals')
   ffdas.file <- file.path(ffdas.path, ffdas.file[grep('2008', ffdas.file)])
 } else { edgar.file = NA; ffdas.file = NA }  # end if run_emiss_err
 
-cat('Done with choosing met & inputting parameters for error estimates...\n')
+cat('Done with inserting parameters for error estimates...\n')
 
 
 #------------------------------ STEP 5 --------------------------------------- #
@@ -326,14 +323,15 @@ if (run_trajec | run_foot) {
   ## use SLURM for parallel simulation settings
   # avoid using < 10 cores per node when running trans error stat (run_hor_err) 
   # along with calculating 2D foot together (run_foot), *** memory limits
-  n_nodes  <- 8
-  n_cores  <- ceiling(nrecp / n_nodes)
+  n_nodes  <- 1
+  n_cores  <- 1
 
   # time allowed for running hymodelc before forced terminations
   timeout  <- 4 * 60 * 60  # in sec
   job.time <- '04:00:00'    # total job time
-  slurm    <- n_nodes > 0
-  slurm_options <- list(time = job.time, account = 'lin-kp', partition = 'lin-kp')
+  #slurm    <- n_nodes > 0
+  slurm <- F
+  slurm_options <- list(time = job.time, account = 'POW', partition = 'POW')
   jobname <- paste0('XSTILT_', site, '_', timestr)
 
   # create a namelist including all variables
@@ -345,7 +343,7 @@ if (run_trajec | run_foot) {
                    met = met, met.format = met.format, met.num = met.num, 
                    met.path = met.path, nhrs = nhrs, n_cores = n_cores,
                    n_nodes = n_nodes, numpar = numpar, outdir = outdir, 
-                   oco2.path = oco2.path, overwrite_wgttraj = overwrite_wgttraj,
+                   oco.path = oco.path, overwrite_wgttraj = overwrite_wgttraj,
                    pbl.err = pbl.err, project = project, projection = projection,
                    pwf.wgt = pwf.wgt, recp.info = recp.info, run_foot = run_foot, 
                    run_hor_err = run_hor_err, run_trajec = run_trajec, 
@@ -356,7 +354,7 @@ if (run_trajec | run_foot) {
 
   # call run.xstilt() to start running trajec and foot
   run.xstilt(namelist)  # see more variables defined in run.xstilt()
-  q('no')
+  #q('no')
 } # end if run trajec or foot
 
 
@@ -385,7 +383,7 @@ if (!run_trajec & !run_foot & run_sim) {
     cat('Start simulations of XCO2.ff or its error due to emiss err...\n')
     receptor <- run.xco2ff.sim(site, timestr, vname = odiac.vname, tiff.path, 
                                outdir, foot.res, workdir, store.path, nhrs, dpar,
-                               smooth_factor, zisf, oco2.ver, met, lon.lat, 
+                               smooth_factor, zisf, oco.ver, met, lon.lat, 
                                run_emiss_err, edgar.file, ffdas.file, 
                                plotTF = F, writeTF = T)
     if (is.null(receptor)) stop('No results calculated, check run.xco2ff.sim()\n')

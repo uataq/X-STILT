@@ -1,8 +1,9 @@
 # subroutine to plot OCO-2 info for each selected overpass, DW, 01/25/2019
 
 ggmap.obs.info <- function(plotTF, site, store.path = NULL, all.timestr = NULL, 
-                           oco2.ver = NULL, oco2.path = NULL, lon.lat = NULL, 
-                           workdir = NULL, dlat.urban = NULL, dlon.urban = NULL) {
+                           oco.sensor = NULL, oco.ver = NULL, oco.path = NULL, 
+                           lon.lat = NULL, workdir = NULL, 
+                           dlat.urban = NULL, dlon.urban = NULL) {
 
     if (plotTF) {
 
@@ -13,17 +14,18 @@ ggmap.obs.info <- function(plotTF, site, store.path = NULL, all.timestr = NULL,
         # qfTF = T for only plotting data with QF = 0
         for (t in 1 : length(all.timestr)) {
 
-            x1 <- ggmap.obs.xco2(site, all.timestr[t], oco2.ver, oco2.path, 
+            x1 <- ggmap.obs.xco2(site, all.timestr[t], oco.sensor, oco.ver, oco.path, 
                                  lon.lat, workdir, plotdir, zoom = 8, qfTF = T, 
                                  box.dlat = dlat.urban, box.dlon = dlon.urban)
 
-            s1 <- ggmap.obs.sif(site, all.timestr[t], sif.path, lon.lat, workdir, 
-                                plotdir, zoom = 8, box.dlon = dlon.urban, 
-                                box.dlat = dlat.urban)
+            s1 <- ggmap.obs.sif(site, all.timestr[t], oco.sensor, sif.path, 
+                                lon.lat, workdir, plotdir, zoom = 8, 
+                                box.dlon = dlon.urban, box.dlat = dlat.urban)
         } # end for t
 
     } else {
-        cat('ggmap.obs.info(): NO need to plot OCO-2 data as plotTF = F..\n')
+        cat(paste('ggmap.obs.info(): NO need to plot', oco.sensor, 
+                  'data as plotTF = F..\n'))
     } # end if plotTF
 
 }

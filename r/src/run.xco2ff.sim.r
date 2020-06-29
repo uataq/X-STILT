@@ -23,12 +23,13 @@
 #' remove foot.path, use full path as foot.file, DW, 07/26/2018
 #' fix a minor bug in interpreting footprint filename, DW, 10/11/2018 
 #' accommodate the diff in foot.nc filename, using two versions, DW, 01/25/2019
+# minor update for using OCO-3 data, i.e., change variable names, DW, 06/28/2020
+# simplify txtfile name, DW, 06/28/2020 
 
 run.xco2ff.sim <- function(site = 'Riyadh', timestr = '2014100920', vname = '2018', 
-                           tiff.path, outdir, foot.res, workdir, store.path, 
-                           nhrs, dpar, smooth_factor, zisf, oco2.ver, met, 
-                           lon.lat, run_emiss_err, edgar.file = NA, 
-                           ffdas.file = NA, plotTF = F, writeTF = T){
+                           tiff.path, outdir, foot.res, workdir, store.path, nhrs, 
+                           oco.sensor, oco.ver, met, lon.lat, run_emiss_err, 
+                           edgar.file = NA, ffdas.file = NA, plotTF = F, writeTF = T){
 
   # grab footprint files and get footprint domain
   foot.path <- file.path(outdir, 'by-id')
@@ -43,9 +44,7 @@ run.xco2ff.sim <- function(site = 'Riyadh', timestr = '2014100920', vname = '201
   # DW, 01/25/2019
   if (length(foot.indx) > 0) {
     foot.file <- foot.files[foot.indx]
-  } else {
-    foot.file <- foot.files
-  }
+  } else foot.file <- foot.files
   
   if (length(foot.file) == 0) {
     stop('run.xco2ff.sim(): NO footprint found...please check by-id...\n')
@@ -62,11 +61,9 @@ run.xco2ff.sim <- function(site = 'Riyadh', timestr = '2014100920', vname = '201
                                tiff.path, gzTF = F)
 
   # txt file name for outputting model results
-  txtfile <- file.path(store.path, paste0(timestr, '_', site, '_XCO2ff_', 
-                                          abs(nhrs), 'hrs_', dpar, 'dpar_sf', 
-                                          smooth_factor, '_zisf', zisf, '_', 
-                                          oco2.ver, '_', met, '_odiac', vname, 
-                                          '.txt'))
+  txtfile <- file.path(store.path, paste0(timestr, '_', site, '_XCO2ff_', abs(nhrs), 
+                                          'hrs_', oco.sensor, oco.ver, '_', met, 
+                                          '_odiac', vname, '.txt'))
   
   # add emission error file with absolute emission uncertainty and txtfile
   if (run_emiss_err) {
@@ -83,10 +80,8 @@ run.xco2ff.sim <- function(site = 'Riyadh', timestr = '2014100920', vname = '201
 
     # txt file name for outputting model results
     txtfile <- file.path(store.path, paste0(timestr, '_', site, '_XCO2ff_emiss_err_', 
-                                            abs(nhrs), 'hrs_', dpar, 'dpar_sf', 
-                                            smooth_factor, '_zisf', zisf, '_', 
-                                            oco2.ver, '_', met, '_odiac', vname, 
-                                            '.txt'))
+                                            abs(nhrs), 'hrs_', oco.sensor, oco.ver, 
+                                            '_', met, '_odiac', vname, '.txt'))
   }  # end if run_emiss_err
                                         
   # plot emissions

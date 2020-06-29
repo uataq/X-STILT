@@ -22,8 +22,7 @@ X-STILT model developments are ongoing towards a more flexible model framework t
 <!-- toc -->
 Prerequisites
 ============
-0. [Automatically install and load R packages](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L65-L68) required for X-STILT subroutines as stated in [dependencies](https://github.com/uataq/X-STILT/blob/master/r/dependencies.r). An additional step is to compile the permute DLL for footprint kernel aggregation used on STILT v2. Go to XSTILT/stilt and
->* R CMD SHLIB r/src/permute.f90
+0. [Compile fortran scripts for STILT-HYSPLIT and permute](). 
 
 1. Download [OCO-2 Level 2 Lite files](https://disc.gsfc.nasa.gov/datasets/OCO2_L2_Lite_FP_9r/summary) and modify `oco2.path`; X-STILT will read in averaging kernels and pressure weighting functions from OCO-2 lite files to perform vertical weighting to footprint values for air parcels that releases from different altitudes and then provide the vertically compressed column footprints. See [this section](#specific-for-your-desired-cities-or-space-based-sensors) if you desired to use other column sensors. 
 

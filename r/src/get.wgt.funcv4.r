@@ -28,14 +28,13 @@
 # because modeled Psurf/air column differs from retrieved Psurf/air column
 # DW, 08/30/2019 
 
+# minor update for using OCO-3 data, i.e., change variable names, DW, 06/28/2020
 
-get.wgt.funcv4 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
+get.wgt.funcv4 <- function(output, oco.info, ak.wgt = T, pwf.wgt = T){
 
 	if (ak.wgt) {
-		cat("Turn on weighting OCO-2 simulation using averaging kernel...\n")
-	} else {
-		cat("NO averaging kernel weighting, set ak to 1...\n")
-	}
+		cat('Turn on weighting OCO-2 simulation using averaging kernel...\n')
+	} else cat('NO averaging kernel weighting, set ak to 1...\n') 
 
     # grab trajectory and receptor info
     receptor  <- output$receptor
@@ -46,13 +45,13 @@ get.wgt.funcv4 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 
     # grab OCO-2 profiles
 	# e.g., press weighting function, pressures, normalized AK, a priori
-	oco2.ap      <- oco2.info$ap
-	oco2.pwf     <- oco2.info$pwf
-	oco2.pres    <- oco2.info$pres
-    oco2.ak.norm <- oco2.info$ak.norm
-	oco2.zsfc    <- oco2.info$oco2.grdhgt
-	oco2.psfc    <- max(oco2.pres)
-	if (is.na(oco2.zsfc)) stop('get.wgt.funcv4(): observed surface height is NA, please check...\n')
+	oco.ap      <- oco.info$ap
+	oco.pwf     <- oco.info$pwf
+	oco.pres    <- oco.info$pres
+    oco.ak.norm <- oco.info$ak.norm
+	oco.zsfc    <- oco.info$oco.grdhgt
+	oco.psfc    <- max(oco.pres)
+	if (is.na(oco.zsfc)) stop('get.wgt.funcv4(): observed surface height is NA, please check...\n')
 	
 	#### ------ CONVERT STILT release levels from heights to pressures ----- ####
 	# interpolate starting pressure based on starting hgts, by looking at press
@@ -67,13 +66,13 @@ get.wgt.funcv4 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 	traj.pres <- sel.traj$pres				 	  # pressure for each particle
 
 	# Z_sfc - Z_trajec, use OCO-2 surface altitude to calculate the correct AGL
-	traj.delt.zagl <- oco2.zsfc - traj.zasl	  # Z0 - Z_traj; negative values
+	traj.delt.zagl <- oco.zsfc - traj.zasl	  # Z0 - Z_traj; negative values
 
 	# --------- fit nonlinear regression to pressure - altitude relation ----- #
 	# inferred from trajec, DW, 08/30/2019 
 	# P = Psfc * exp (g/RT * (Zsfc - Z)), fit nonlinear regression to P and Z,
 	# since T_avg is unknown here
-	nls.model <- stats::nls(traj.pres ~ oco2.psfc * exp(a * traj.delt.zagl), 
+	nls.model <- stats::nls(traj.pres ~ oco.psfc * exp(a * traj.delt.zagl), 
 	                        start = list(a = 1E-4))
 	a <- coef(nls.model)[[1]]
 
@@ -82,7 +81,7 @@ get.wgt.funcv4 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 
 	# predict on new data, new AGL for receptor levels
 	recp.delt.zagl <- -r_zagl	# Z0 - Z, negative values
-	recp.pres <- oco2.psfc * exp(a * recp.delt.zagl)
+	recp.pres <- oco.psfc * exp(a * recp.delt.zagl)
 
 	# check if modeled pressures are interpolated correctly.
 	#plot(abs(x), y, ylim = c(1013, 0), xlim = c(0, 7000))
@@ -96,37 +95,37 @@ get.wgt.funcv4 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 	# pressure levels. Thus, flipped profiles (now from level 1 to 20) will be
 	# from sfc to TOA now...
 
-	oco2.nlev <- length(oco2.pres)
-	oco2.pres <- oco2.pres[length(oco2.pres):1]	# flip pressure levels
-	attributes(oco2.pres)$names <-
-	        attributes(oco2.pres)$names[length(attributes(oco2.pres)$names):1]
+	oco.nlev <- length(oco.pres)
+	oco.pres <- oco.pres[length(oco.pres):1]	# flip pressure levels
+	attributes(oco.pres)$names <-
+	        attributes(oco.pres)$names[length(attributes(oco.pres)$names):1]
 
 	# flip 20 levels (--> from sfc to TOA) and assign names
-	oco2.ak.norm <- oco2.ak.norm[length(oco2.ak.norm):1]
-	oco2.ap  <- oco2.ap[length(oco2.ap):1]
-	oco2.pwf <- oco2.pwf[length(oco2.pwf):1]
+	oco.ak.norm <- oco.ak.norm[length(oco.ak.norm):1]
+	oco.ap  <- oco.ap[length(oco.ap):1]
+	oco.pwf <- oco.pwf[length(oco.pwf):1]
 
-    attributes(oco2.ap)$names      <- oco2.pres
-    attributes(oco2.pwf)$names     <- oco2.pres
-	attributes(oco2.ak.norm)$names <- oco2.pres
+    attributes(oco.ap)$names      <- oco.pres
+    attributes(oco.pwf)$names     <- oco.pres
+	attributes(oco.ak.norm)$names <- oco.pres
 
 	# for debug--
-	# plot(oco2.pwf, oco2.pres, ylim = c(1013, 0))
+	# plot(oco.pwf, oco.pres, ylim = c(1013, 0))
 
 	## determine the separate level from STILT to OCO-2, using pressure
 	# for model levels, keep OCO2 levels with zero AK above the max STILT level
 	# for levels above model levels, use OCO2 prof
 	min.recp.pres <- min(recp.pres)
-	upper.index <- oco2.pres <  min.recp.pres	  # return T/F
-	lower.index <- oco2.pres >= min.recp.pres
+	upper.index <- oco.pres <  min.recp.pres	  # return T/F
+	lower.index <- oco.pres >= min.recp.pres
 
 
 	### -------------------  FOR a combined pressure prof ----------------- ###
-	upper.oco2.pres <- oco2.pres[upper.index]
-	lower.oco2.pres <- oco2.pres[lower.index]
+	upper.oco.pres <- oco.pres[upper.index]
+	lower.oco.pres <- oco.pres[lower.index]
 
 	# combine LOWER STILT levels and UPPER OCO-2 levels
-	combine.pres <- c(recp.pres, upper.oco2.pres)
+	combine.pres <- c(recp.pres, upper.oco.pres)
 	combine.nlev <- length(combine.pres)
 
 
@@ -134,11 +133,11 @@ get.wgt.funcv4 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 	# interpolate AK for STILT levels if ak.wgt is TRUE;
 	# OR assign all AK as 1 if ak.wgt is FALSE
 	if (ak.wgt) {
-	  lower.ak.norm <- approx(x = oco2.pres, y = oco2.ak.norm, xout = recp.pres,
+	  lower.ak.norm <- approx(x = oco.pres, y = oco.ak.norm, xout = recp.pres,
 			                  rule = 2)$y
 
 	  # AK=0 for upper levels --> keep original OCO2 AK profiles, DW, 04/06/2017
-	  upper.ak.norm   <- oco2.ak.norm[upper.index]
+	  upper.ak.norm   <- oco.ak.norm[upper.index]
 	  combine.ak.norm <- c(lower.ak.norm, upper.ak.norm)
 
 	} else {
@@ -151,8 +150,8 @@ get.wgt.funcv4 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 	### ------------------- FOR a combined a priori CO2 prof -------------- ###
 	# interpolate for lower STILT levels
 	# remain the upper OCO-2 apriori profiles for UPPER levels
-	lower.ap   <- approx(x = oco2.pres, y = oco2.ap, xout = recp.pres, rule = 2)$y
-	upper.ap   <- oco2.ap[upper.index]
+	lower.ap   <- approx(x = oco.pres, y = oco.ap, xout = recp.pres, rule = 2)$y
+	upper.ap   <- oco.ap[upper.index]
 	combine.ap <- c(lower.ap, upper.ap)
 	attributes(combine.ap)$names <- combine.pres
 
@@ -166,7 +165,7 @@ get.wgt.funcv4 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 	# 1st layer to interpolate, no weird curve now, DW 09/20/2017
 
 	# get interpolated PWF before scaling:
-	lower.stilt.pwf.before <- approx(x = oco2.pres[-1], y = oco2.pwf[-1],
+	lower.stilt.pwf.before <- approx(x = oco.pres[-1], y = oco.pwf[-1],
 		                             xout = recp.pres[-1], rule = 2)$y
 
 	# for debug--
@@ -175,7 +174,7 @@ get.wgt.funcv4 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 	## Step 2) Calculate dP for STILT levels as well as LOWER/OCO-2 levels
 	# diff in pres have one value less than the LEVELS
 	lower.stilt.dp <- abs(diff(recp.pres))	        # for LOWER/STILT levels
-	lower.oco2.dp  <- abs(diff(lower.oco2.pres))	  # for LOWER/OCO levels
+	lower.oco.dp  <- abs(diff(lower.oco.pres))	  # for LOWER/OCO levels
 
 	# DW 11/20/2016 --
 	# !!! also, remember to calculate dp for the interface bwtween upper OCO2
@@ -184,14 +183,14 @@ get.wgt.funcv4 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 
 	# get modeled and original OCO-2 dp ratios for the 'interface'
 	intf.stilt.dp <- abs(diff(combine.pres))[recp.nlev]
-	intf.oco2.dp <- lower.oco2.pres[length(lower.oco2.pres)] - upper.oco2.pres[1]
+	intf.oco.dp <- lower.oco.pres[length(lower.oco.pres)] - upper.oco.pres[1]
 
-	## Step 3) Interpolate dp.oco2.lower onto STILT levels using pres (EXCEPT the
+	## Step 3) Interpolate dp.oco.lower onto STILT levels using pres (EXCEPT the
 	# bottom level, first element) + pres diff at LOWER OCO level
 
 	# bug found, approx needs at least two non-NA values to interpolate
 	# it occurred when we have low MAXAGL for bootstrapping
-	lower.oco2.dp.stilt <- approx(x = lower.oco2.pres[-1], y = lower.oco2.dp,
+	lower.oco.dp.stilt <- approx(x = lower.oco.pres[-1], y = lower.oco.dp,
 		                          xout = recp.pres[-1], rule = 2)$y
 
 	## Step 4) As PWF is a function of pressure difference, larger dp, larger
@@ -200,12 +199,12 @@ get.wgt.funcv4 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 	# simulating/measuring the DRY AIR PROPERTIES
 
 	# Thus, calculate the ratio of dp at STILT levels over interpolated OCO levels
-	dp.ratio <- lower.stilt.dp/lower.oco2.dp.stilt   	 # dp for LOWER/STILT levels
+	dp.ratio <- lower.stilt.dp/lower.oco.dp.stilt   	 # dp for LOWER/STILT levels
 
 	# Bug fixed, DW 11/20/2016--
 	# always assign new PWF to one upper level
 	# !!!! we need to add one dp.ratio for the 1st OCO level above the interface
-	intf.dp.ratio <- intf.stilt.dp/intf.oco2.dp
+	intf.dp.ratio <- intf.stilt.dp/intf.oco.dp
 
 	## Step 5) Scale interpolated PWF for STILT levels by multiplying 'dp' ratio
 	# remember to leave alone the very bottom STILT level
@@ -213,7 +212,7 @@ get.wgt.funcv4 <- function(output, oco2.info, ak.wgt = T, pwf.wgt = T){
 	attributes(lower.pwf)$names <- recp.pres[-1]
 
 	## Step 6) Remain original OCO-2 PWF for UPPER OCO-2 levels
-	upper.pwf <- oco2.pwf[upper.index]
+	upper.pwf <- oco.pwf[upper.index]
 
 	# Bug fixed, DW, 11/20/2016--
 	## Step 6.5) Replace 'pwf' for the lowest UPPER OCO2 level, calculate based on

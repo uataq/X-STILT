@@ -10,60 +10,27 @@
 # add run_trajec, if run_trajec == T, always recalculate 'recp.info', 
 #   rather than grab from exising trajec, DW, 10/30/2018
 
-get.recp.info <- function(timestr, oco2.ver, oco2.path, lon.lat, selTF, recp.indx,
-                          recp.num, find.lat, agl, plotTF = F, trajpath = NULL, 
-                          run_trajec, stilt.ver = 2, data.filter = c('QF', 0)){
+get.recp.info <- function(timestr, oco.ver, oco.path, lon.lat, selTF, recp.indx,
+                          recp.num, find.lat, agl, run_trajec, trajpath = NULL, 
+                          data.filter = c('QF', 0)){
 
   # ------------------- Step 1. READ IN OCO-2 LITE FILES ------------------- #
-  oco2 <- grab.oco2(oco2.path, timestr, lon.lat, oco2.ver)
-  if (nrow(oco2) == 0) cat('No sounding found over this overpass for this region\n')
+  oco.dat <- grab.oco(oco.path, timestr, lon.lat, oco.ver)
+  if (nrow(oco.dat) == 0) cat('No sounding found over this overpass for this region\n')
   
   # filter by quality flag too, more receptors when XCO2 is high
   if (is.null(data.filter)) { # no data filtering, use all OCO data
-    sel.oco2 <- oco2    
+    sel.dat <- oco.dat    
   } else if (data.filter[1] == 'QF') {
-    sel.oco2 <- oco2 %>% filter(qf <= data.filter[2])
+    sel.dat <- oco.dat %>% filter(qf <= data.filter[2])
   } else if (data.filter[1] == 'WL') {
-    sel.oco2 <- oco2 %>% filter(wl <= data.filter[2])
+    sel.dat <- oco.dat %>% filter(wl <= data.filter[2])
   } else {
     cat('get.recp.info(): Incorrect @param "data.filter"... please check\n')
   } # end if
 
   # round lat, lon for each sounding, fix bug, DW, 07/31/2018
-  sel.oco2 <- sel.oco2 %>% mutate(lat = signif(lat, 6), lon = signif(lon, 7))
-
-  # whether plotting XCO2 from OCO-2
-  if (plotTF) {
-    zoom <- 8
-    font.size <- rel(1.0)
-    col <- def.col()
-    col.range <- seq(380, 420, 2)
-    m1 <- ggplot.map(map = 'ggmap', center.lat = lon.lat$citylat,
-                     center.lon = lon.lat$citylon, zoom = zoom)[[1]] + theme_bw()
-
-    # add observed XCO2
-    c1 <- m1 + geom_point(data = sel.oco2, aes(lon, lat, colour = xco2)) + 
-               labs(x = 'LONGITUDE [degE]', y = 'LATITUDE [degN]', 
-                    title = paste('OCO-2 XCO2 [ppm] for', site, 'on',
-                                  substr(timestr, 1, 8))) + 
-               scale_colour_gradientn(name = 'OCO-2 XCO2 [ppm]',
-                                      colours = col, breaks = col.range, 
-                                      labels = col.range)
-
-    # add themes
-    c2 <- c1 + theme(legend.position = 'bottom',
-                      legend.text = element_text(size = font.size),
-                      legend.key = element_blank(), 
-                      legend.key.height = unit(0.5, 'cm'),
-                      legend.key.width = unit(3, 'cm'),
-                      axis.title.y = element_text(size = font.size, angle = 90),
-                      axis.title.x = element_text(size = font.size, angle = 0),
-                      axis.text = element_text(size = font.size),
-                      axis.ticks = element_line(size = font.size),
-                      title = element_text(size = font.size))
-    picname <- paste0('ggmap_xco2_', site,'_', substr(timestr, 1, 8), '.png')
-    ggsave(c2, filename = picname, width = 6, height = 6)
-  }  # end if plotTF
+  sel.dat <- sel.dat %>% mutate(lat = signif(lat, 6), lon = signif(lon, 7))
 
   # ------------------- Step 2. SET UP the STILT receptors ----------------- #
   # if generate trajec with horizontal error component,
@@ -75,13 +42,13 @@ get.recp.info <- function(timestr, oco2.ver, oco2.path, lon.lat, selTF, recp.ind
 
     # if trajec data exists
     trajname  <- basename(trajfile)
-    recp.info <- ident.to.info(ident = trajname, stilt.ver = stilt.ver)
+    recp.info <- ident.to.info(ident = trajname, stilt.ver = 2)
 
     # get overpass time by merging with observed XCO2 and compute run_time
-    sel.oco2$find.lat <- signif(sel.oco2$lat, max(nchar(recp.info$recp.lat)) - 1)
-    sel.oco2$find.lon <- signif(sel.oco2$lon, max(nchar(recp.info$recp.lon)) - 1)
+    sel.dat$find.lat <- signif(sel.dat$lat, max(nchar(recp.info$recp.lat)) - 1)
+    sel.dat$find.lon <- signif(sel.dat$lon, max(nchar(recp.info$recp.lon)) - 1)
     recp.info <- recp.info %>% dplyr::select('lati' = 'recp.lat', 'long' = 'recp.lon') %>%
-                 left_join(sel.oco2, by = c('lati' = 'find.lat', 'long' = 'find.lon')) %>%
+                 left_join(sel.dat, by = c('lati' = 'find.lat', 'long' = 'find.lon')) %>%
                  mutate(run_times_utc = as.POSIXct(substr(id, 1, 14), '%Y%m%d%H%M%S', tz = 'UTC'))
 
   } else {
@@ -89,14 +56,14 @@ get.recp.info <- function(timestr, oco2.ver, oco2.path, lon.lat, selTF, recp.ind
     ### if generate trajec without error component
     if(selTF){
       # select lat, lon based on OCO-2 soundings and data quality
-      sel.lat  <- sel.oco2$lat
+      sel.lat  <- sel.dat$lat
       sort.lat <- sort(sel.lat)
       recp.lat <- sort.lat[findInterval(recp.indx, sort.lat)]
       match.index <- unique(match(recp.lat, sel.lat))
-      recp.info <- sel.oco2[match.index, ]
+      recp.info <- sel.dat[match.index, ]
 
     }else{   # if no requirement, simulate all soundings, no selection
-      recp.info <- sel.oco2
+      recp.info <- sel.dat
     }  # end if selTF
 
     # compute simulation timing, yyyy-mm-dd HH:MM:SS (UTC), aka 'receptors' info
