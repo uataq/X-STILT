@@ -9,7 +9,8 @@
 grab.oco <- function(oco.path, timestr, lon.lat, oco.ver = 'b9r'){
 
   library(ncdf4)
-  oco.file <- list.files(pattern = substr(timestr, 3, 8), path = oco.path)
+
+  oco.file <- list.files(oco.path, paste0('_', substr(timestr, 3, 8), '_'))
   if (length(oco.file) == 0) {
     cat('NO OCO files found...please check..\n'); return()
   }

@@ -30,7 +30,7 @@ ggplot.map <- function(map = c('black','ggmap'), maptype = 'roadmap',
 
     # load map, from https://susanejohnston.wordpress.com/
     # 2012/07/03/creating-a-large-scale-map-using-ggplot2-a-step-by-step-guide/
-    library(ggplot2); library(maptools); gpclibPermit(); library(reshape); library(maps)
+    library(ggplot2); library(maptools); gpclibPermit(); library(maps)
 
     usstates <- map_data('state')
     worldmap <- readShapeSpatial(shape.file)

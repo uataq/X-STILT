@@ -15,12 +15,11 @@
 
 run.forward.trajec <- function(site, site.lon, site.lat, timestr, 
                                run_trajec = T, run_hor_err = F, run_ver_err = F, 
-                               
-                               agl, delt, dtime, dxyp, dzp = 0, numpar,
-                               nhrs, xstilt_wd, output.path, 
+                               xstilt_wd, traj.path, box.len, dtime.from, 
+                               dtime.to, dtime.sep, nhrs, delt, agl, numpar, 
                                
                                # met fields
-                               met, met.format, met.path, met.num = 1, 
+                               met, met.res, met.format, met.path, met.num = 1, 
 
                                # horizontal and vertial trans error input
                                raob.path, raob.format = 'fsl', siguverr = NULL, 
@@ -30,7 +29,6 @@ run.forward.trajec <- function(site, site.lon, site.lat, timestr,
   
   setwd(xstilt_wd); source('r/dependencies.r', local = T) # source all functions
   cat(paste('\n\n## ----- Working on', site, 'on', timestr, '----- ##\n'))
-  if (is.list(dtime)) dtime <- dtime[[1]]
 
   #------------------------------ STEP 3 --------------------------------- #
   ## get horizontal transport error component if run_hor_err = T
@@ -43,7 +41,7 @@ run.forward.trajec <- function(site, site.lon, site.lat, timestr,
                         minlon = site.lon - 5, maxlon = site.lon + 5, 
                         minlat = site.lat - 5, maxlat = site.lat + 5)
 
-  hor.err <- get.uverr(run_hor_err, site, timestr, xstilt_wd, overwrite,
+  hor.err <- get.uverr(run_hor_err, site, timestr, xstilt_wd, overwrite, 
                        raob.path, raob.format, nhrs, met, met.path, met.format, 
                        lon.lat, agl = c(0, 100), err.path, nfTF = T, siguverr)
 
@@ -51,26 +49,29 @@ run.forward.trajec <- function(site, site.lon, site.lat, timestr,
   pbl.err <- get.zierr(run_ver_err, nhrs.zisf = 24, const.zisf = zisf)
   cat('run.forward.trajec(): Done with choosing met & inputting wind errors...\n')
 
+  # determine dxpy using the desired box size and grid length of met fields, 
+  # since final box length = 2 * dxyp * met.res, DW, 06/30/2020
+  dxyp <- box.len / met.res / 2   
+
   # reformat trajec info that fits Trajecmulti.r
-  results <- convert.timestr2ident(timestr, dtime, site.lon, site.lat, agl, 
-                                   numpar, dxyp)
-  ident <- results$ident
+  dtime <- seq(dtime.from, dtime.to, dtime.sep)     # vector in hours
+  results <- convert.timestr2ident(timestr, dtime, site.lon, site.lat, agl, numpar, dxyp)
+  ident   <- results$ident
   date.df <- results$date.df
 
   # create out_forward dir for generating forward trajec
-  rundirname <- paste0('out_forward_', timestr, '_', site)
-  output.path <- file.path(output.path, rundirname)
-  
+  traj.path <- file.path(traj.path, paste0('out_forward_', timestr, '_', site))
+
   # if running trajec
   if (run_trajec) {
 
     # delete previous directories and then create new one
-    system(paste0('rm -rf ', output.path), ignore.stderr = T)
-    dir.create(output.path, showWarnings = FALSE, recursive = T)
+    system(paste0('rm -rf ', traj.path), ignore.stderr = T)
+    dir.create(traj.path, showWarnings = FALSE, recursive = T)
 
     # linking AER_NOAA_branch's hymodelc and other executables to outpath
     exes <- list.files(file.path(xstilt_wd, 'exe'))
-    file.symlink(file.path(xstilt_wd, 'exe', exes), output.path)
+    file.symlink(file.path(xstilt_wd, 'exe', exes), traj.path)
     
     # if using multiple receptors, or box of receptors or sources, turn it on,
     # then call updated Trajecmulti() instead of Trajec()
@@ -82,22 +83,23 @@ run.forward.trajec <- function(site, site.lon, site.lat, timestr,
     # according to dxyp
     cat('run.forward.trajec(): Generating forward trajec...\n')
     met.files <- find.all.metfiles(timestr, dtime, met.format, met.path, nhrs)
+    
     Trajecmulti(yr = date.df$yr - 2000, mon = date.df$mon, day = date.df$day, 
                 hr = date.df$hr, mn  = date.df$min, outname = ident, 
                 numpar = numpar, lat = date.df$lat, lon = date.df$lon,
                 dxyp = rep(dxyp, nrow(date.df)), 
-                dzp  = rep(dzp, nrow(date.df)),
+                dzp  = rep(0, nrow(date.df)),
                 agl  = rep(agl, nrow(date.df)), 
                 nhrs = rep(nhrs, nrow(date.df)),
                 nummodel = timestr, 
                 metd = c('fnl', 'awrf'), 
-                outpath = output.path, 
+                outpath = traj.path, 
                 overwrite = run_trajec,
                 metfile = met.files, 
                 metlib = paste0(met.path, '/'),
                 doublefiles = T, 
-                rundir = dirname(output.path), 
-                rundirname = basename(output.path), 
+                rundir = dirname(traj.path), 
+                rundirname = basename(traj.path), 
                 varsout = varstrajec, 
                 siguverr = hor.err$siguverr, 
                 TLuverr = hor.err$TLuverr, 
@@ -105,6 +107,7 @@ run.forward.trajec <- function(site, site.lon, site.lat, timestr,
                 horcoruverr = hor.err$horcoruverr,
                 hymodelc.exe = './hymodelc.aer', # use the AER version of hymodelc
                 setup.list = list(DELT = delt, VEGHT = 0.5)) %>% invisible()
+  
   } else {
     cat('run.forward.trajec(): do nothing, check run_trajec...\n')
   } # end if run_trajec

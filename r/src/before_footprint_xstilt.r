@@ -10,36 +10,34 @@
 
 # allow for generating footprint with various horizontal resolutions, DW, 02/11/2019 
 # minor update for using OCO-3 data, i.e., change variable names, DW, 06/28/2020
+# stop generating a new "wgttraj.rds", merge two columns of footprint in one file
+#    to reduce the storage, DW, 07/03/2020 
 
 before_footprint_xstilt <- function() {
 
-    # check whether weighted trajec exists already, DW, 07/13/2018
-    #rundir <- dirname(output$file)
-    wgt.file <- file.path(rundir, paste0(basename(rundir), '_wgttraj.rds'))
-
-    if (file.exists(wgt.file) & !args$overwrite_wgttraj) {    
-        wgt.output <- readRDS(wgt.file)     # grab from by-id directory
-        
+    # after weighting the foot column, new foot with AK PW weighting is referred to as 'foot', 
+    # the foot before weighting will be changed to 'foot_no_wgt', DW, 07/03/2020
+    if ('foot_before_weight' %in% colnames(output$particle) & 
+        args$overwrite_wgttraj == F) {    
+            
+        cat("before_footprint_xstilt(): 'foot_before_weight' column exists, no need to weight foot...\n")
+    
     } else {
-       
-        # get OCO-2/3 profile first according to lat/lon of receptor, 
-        # return a list
+
+        # get OCO-2/3 profile first according to lat/lon of receptor, return a list
         oco.info <- get.oco.info(oco.path = args$oco.path, receptor = output$receptor)
 
         if (is.null(oco.info)) {
-            warning('before_footprint_xstilt(): 
-                     NO OCO info found for this receptor lat/lon\n'); return()
+            warning('before_footprint_xstilt(): NO OCO info found for this receptor\n')
+            return()
         } # end if is.null
 
         # Weight footprint: call wgt.trajec.footv3() to weight trajec-level
         # footprint before calculating gridded footprint, DW, 06/01/2018
-        cat("before_footprint_xstilt(): 
-             weight trajec-level foot using OCO's profiles for X-STILT...\n")
-        output$file <- wgt.file         # overwrite filename
-        wgt.output  <- wgt.trajec.footv3(output = output, oco.info = oco.info,
-                                         ak.wgt = args$ak.wgt, 
-                                         pwf.wgt = args$pwf.wgt)
-    }  # end if file.exists()
+        cat("before_footprint_xstilt(): weight trajec-level foot using OCO's vertical profiles...\n")
+        output <- wgt.trajec.footv4(output, oco.info, ak.wgt = args$ak.wgt, 
+                                    pwf.wgt = args$pwf.wgt)
+    }   # end if
 
 
     ### if horizontal trans error is turned on, DW, 01/29/2019
@@ -52,7 +50,7 @@ before_footprint_xstilt <- function() {
         stat.file <- cal.trajfoot.stat(workdir = stilt_wd, output = output, 
                                        outdir = output_wd, met = args$met, 
                                        emiss.file = args$emiss.file, 
-                                       combine.prof = wgt.output$wgt.prof, 
+                                       combine.prof = output$wgt.prof, 
                                        ct.ver = args$ct.ver, 
                                        ctflux.path = args$ctflux.path, 
                                        ctmole.path = args$ctmole.path, 
@@ -60,27 +58,26 @@ before_footprint_xstilt <- function() {
     } # end if run_hor_err
 
     # if foot_nhrs is different from trajec_nhrs, subset trajec
-    if ( args$foot.nhrs < min(wgt.output$particle$time) / 60 ) {
+    if ( args$foot.nhrs < min(output$particle$time) / 60 ) {
         cat('before_footprint_xstilt(): subset particles for calculating footprint\n')
-        wgt.output$particle <- wgt.output$particle %>% arrange(abs(time)) %>% 
-                               filter(abs(time) <= abs(args$foot.nhrs) * 60) 
+        output$particle <- output$particle %>% arrange(abs(time)) %>% 
+                           filter(abs(time) <= abs(args$foot.nhrs) * 60) 
     }   # end if
 
     # we would like to generate footprint with different resolutions, if needed
     # DW, 02/11/2019 
-    xres2 <- unlist(args$xres2)
-    yres2 <- unlist(args$yres2)
+    xres2 <- unlist(args$xres2); yres2 <- unlist(args$yres2)
     if ( !(NA %in% xres2) & !(NA %in% yres2) ) {
 
         cat('before_footprint_xstilt(): generate footprint with diff res...\n')
-        for (f in 1: length(xres2)) {
+        for (f in 1 : length(xres2)) {
             foot_file <- file.path(rundir, paste0(basename(rundir), '_', 
                                                   signif(xres2[f], 3), 'x', 
                                                   signif(yres2[f], 3), 
                                                   '_foot.nc'))
             
             # use weighted output for footprint
-            foot <- calc_footprint(wgt.output$particle, output = foot_file,
+            foot <- calc_footprint(p = output$particle, output = foot_file,
                                    r_run_time = r_run_time,
                                    smooth_factor = smooth_factor,
                                    time_integrate = time_integrate,
@@ -90,7 +87,7 @@ before_footprint_xstilt <- function() {
                                    yres = as.numeric(yres2[f]))
         } # end for f
     } # end if is na
-    #stop()
-    cat('before_footprint_xstilt(): END OF FUNCTION, start to calculate foot...\n')
-    return(wgt.output) # return weighted output
+
+    cat('END of before_footprint_xstilt(), start calculating gridded foot...\n')
+    return(output) # return weighted output
 }

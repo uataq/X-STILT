@@ -13,6 +13,7 @@
 # update for v9 data, DW, 10/19/2018 
 # drop the scientific notation for sounding ID, DR, DW, 09/04/2019
 # update for OCO-3 Vearly data, DW, 06/29/2020 
+# remove warn levels, DW, 07/01/2020 
 
 find.overpass <- function(date.range, lon.lat, oco.ver = 'b9r', oco.path, 
                           urbanTF = F, dlon = 0.5, dlat = 0.5){ 
@@ -43,9 +44,10 @@ find.overpass <- function(date.range, lon.lat, oco.ver = 'b9r', oco.path,
     # loop over each overpass
     result <- NULL
     for (f in 1:length(oco.file)) {
-
+      
       if (f %% 25 == 0)
       cat(paste('#-- ', signif(f / length(oco.file), 3) * 100, '% SEARCHED --#\n'))
+      
       dat <- nc_open(file.path(oco.path, oco.file[f]))
 
       ## grabbing OCO-2 levels, lat, lon
@@ -62,21 +64,12 @@ find.overpass <- function(date.range, lon.lat, oco.ver = 'b9r', oco.path,
                         timestr = as.numeric(substr(id, 1, 10)), 
                         stringsAsFactors = F) 
       
-      # Warn level being removed for lite v9 data, DW, 10/15/2018 
-      if (oco.ver %in% c('b8r', 'b7rb')) {
-        wl <- ncvar_get(dat, 'warn_level')
-        obs <- obs %>% mutate(wl = wl)
-      } # end if not v9
-
       obs <- obs %>% filter(lat >= lon.lat$minlat & lat <= lon.lat$maxlat &
                             lon >= lon.lat$minlon & lon <= lon.lat$maxlon) 
 
       # count overpasses
       tot.count <- nrow(obs)
       qf.count  <- nrow(obs %>% filter(qf == 0))
-      if (oco.ver == 'b8r') wl.count <- nrow(obs %>% filter(wl == 0))
-      if (oco.ver == 'b7rb') wl.count <- nrow(obs %>% filter(wl <= 15))
-
       nc_close(dat)
         
       # store results if there are soundings over
@@ -91,8 +84,6 @@ find.overpass <- function(date.range, lon.lat, oco.ver = 'b9r', oco.path,
                                       lat <= (lon.lat$citylat + dlat))
           tot.urban.count <- nrow(urban.dat)
           qf.urban.count  <- nrow(urban.dat %>% filter(qf == 0))
-          if (oco.ver == 'b8r') wl.urban.count <- nrow(urban.dat %>% filter(wl == 0))
-          if (oco.ver == 'b7rb') wl.urban.count <- nrow(urban.dat %>% filter(wl <= 15))
 
           # combine 
           tmp <- data.frame(timestr = as.numeric(uni.timestr), 
@@ -101,17 +92,11 @@ find.overpass <- function(date.range, lon.lat, oco.ver = 'b9r', oco.path,
                             tot.urban.count = as.numeric(tot.urban.count), 
                             qf.urban.count = as.numeric(qf.urban.count),
                             stringsAsFactors = F)
-          if (oco.ver %in% c('b8r', 'b7rb')) 
-            tmp <- cbind(tmp, wl.count = as.numeric(wl.count), 
-                              wl.urban.count = as.numeric(wl.urban.count))
-        
+
         } else {
           tmp <- data.frame(timestr = as.numeric(uni.timestr), 
                             tot.count = as.numeric(tot.count),
                             qf.count = as.numeric(qf.count), stringsAsFactors = F)
-          
-          if (oco.ver %in% c('b8r', 'b7rb')) 
-            tmp <- cbind(tmp, wl.count = as.numeric(wl.count))
         } # end if urbanTF
 
         result <- rbind(result, tmp)

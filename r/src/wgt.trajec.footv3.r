@@ -14,24 +14,40 @@
 # add PW and Ak weighting for trajec with error and fix a bug, DW, 10/21/2018
 # minor bug and typo fixed for weighting trajec with error, DW, 02/21/2019 
 # minor update for using OCO-3 data, i.e., change variable names, DW, 06/28/2020
+# stop generating a new "wgttraj.rds", merge two columns of footprint in one file
+#    to reduce the storage, DW, 07/03/2020 
 
 
 wgt.trajec.footv3 <- function(output, oco.info, ak.wgt = T, pwf.wgt = T){
 
-  # read trajectory before weighting
-  trajdat <- output$particle  # now a data.frame
-  trajdat <- trajdat[order(abs(trajdat$time)), ]    # order by time
+	# read trajectory before weighting
+	trajdat <- output$particle  # now a data.frame
+	trajdat <- trajdat[order(abs(trajdat$time)), ]    # order by time
 
+	# double check to see if 'foot_before_weight' exists, DW, 07/03/2020
+	# if TRUE, it means that footprint has been weighted by AK and PW, 
+	# so, use 'foot_before_weight' as initial footprint ('foot') to redo the weighting
+	if ( 'foot_before_weight' %in% colnames(trajdat) ) {
+		trajdat$foot <- NULL 
+		trajdat <- trajdat %>% dplyr::rename(foot = foot_before_weight)
+	}
+	
 	# add PW and Ak weighting for trajec with error as well, DW, 10/21/2018
 	errTF <- 'particle_error' %in% names(output)
 	if (errTF) {
 		trajdat.err <- output$particle_error 
 		trajdat.err <- trajdat.err[order(abs(trajdat.err$time)), ]
-	}
 
+		if ( 'foot_before_weight' %in% colnames(trajdat.err) ) {
+			trajdat.err$foot <- NULL 
+			trajdat.err <- trajdat.err %>% dplyr::rename(foot = foot_before_weight)
+		}
+	}	# end if errTF
+
+
+	# ------------------------------------------------------------------------ #
 	# HERE, ak.wgt and pwf.wgt is passed on for weighting trajec
-	combine.prof <- get.wgt.funcv4(output = output, oco.info = oco.info,
-		                           ak.wgt = ak.wgt, pwf.wgt = pwf.wgt)
+	combine.prof <- get.wgt.funcv4(output, oco.info, ak.wgt, pwf.wgt)
 
 	### STARTing weighting trajec based on profiles
 	if (ak.wgt == F & pwf.wgt == F) {
@@ -76,7 +92,7 @@ wgt.trajec.footv3 <- function(output, oco.info, ak.wgt = T, pwf.wgt = T){
 		}
 
 		# start weighting for unique release levels
-		for (h in 1:length(uni.xhgt)) {
+		for (h in 1 : length(uni.xhgt)) {
 			hgt.indx <- which(trajdat$xhgt == uni.xhgt[h])
 
 			# need to multiple by number of levels, as trajecfoot()/calc_footprint()
@@ -91,33 +107,25 @@ wgt.trajec.footv3 <- function(output, oco.info, ak.wgt = T, pwf.wgt = T){
 				hgt.indx.err <- which(trajdat.err$xhgt == uni.xhgt[h])
 				trajdat.err$newfoot[hgt.indx.err] <- trajdat.err$foot[hgt.indx.err] * wgt.prof[h] * nlevel
 			}  # end if errTF
-		
 		} # end loop h
 
 	} # end if all flags, ak.wgt & pwf.wgt
 
-	# for testing, store two sets of trajdat
-	# one weighting over AK.norm * PW, newfoot are much smaller than original foot
-	newtraj <- trajdat[, -which(colnames(trajdat) == 'foot')]
-	colnames(newtraj)[colnames(newtraj) == 'newfoot'] <- 'foot'
+	# stop generating a new "wgttraj.rds", merge two columns of footprint in one file
+	#    to reduce the storage, DW, 07/03/2020 
+	# and put 'newtraj' back to 'output'
+	newtraj <- trajdat %>% rename(foot_before_weight = foot, foot = newfoot)
+	output$particle <- newtraj			 # overwrite with weighted trajec
 
   	if (errTF) {
-		newtraj.err <- trajdat.err[, -which(colnames(trajdat.err) == 'foot')]
-		colnames(newtraj.err)[colnames(newtraj.err) == 'newfoot'] <- 'foot'
+		newtraj.err <- trajdat.err %>% rename(foot_before_weight = foot, foot = newfoot)
+		output$particle_error <- newtraj.err
 	}
 
-	# add interpolated profiles in RData files as well, DW, 04/19/2017
-	# put 'newtraj' back to 'output'
-	wgt.output <- output
-	wgt.output$particle <- newtraj # overwrite with weighted trajec
-	if (errTF) wgt.output$particle_error <- newtraj.err
-
-	# add interpolated AK, PW profiles
-	wgt.output$wgt.prof <- combine.prof  
-	wgt.output$file <- gsub('X_traj.rds', 'X_wgttraj.rds', output$file)
-	saveRDS(wgt.output, wgt.output$file)
+	# add interpolated AK and PW profiles, DW, 04/19/2017
+	output$wgt.prof <- combine.prof  
+	saveRDS(output, output$file) 	# overwrite the "X_traj.rds" file
 
 	# return both weighting profiles and weighted trajec
-	return(wgt.output)
-
+	return(output)
 }  # end of subroutine

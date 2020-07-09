@@ -15,23 +15,15 @@ before_trajec_xstilt <- function() {
     # store trajec from 5mAGL in the same copy dir 'rundir' by calling
     # get.ground.height() that calls calc_trajectory() to estimate ground
     # height [m] along w. u-, v- and w- component instantaneous wind
-    # given receptor lat/lon/time/agl=5 (near ground)
-    # remove ziscale and zicontroltf from get.ground.hgt(), DW
-    #rundir <- dirname(output$file)
-    agl <- 5
-    recp.var <- get.ground.hgt(receptor = output$receptor, agl, run_trajec, 
-                               varsiwant, conage, cpack, dxf, dyf, dzf, emisshrs, 
-                               frhmax, frhs, frme, frmr, frts, frvs, hnf_plume, 
-                               hscale, ichem, iconvect, initd, isot, kbls, kblt, 
-                               kdef, khmax, kmix0, kmixd, kmsl, kpuff, krnd, kspl, 
-                               kzmix, maxdim, maxpar, met_file_format, met_loc,
-                               mgmin, ncycl, ndump, ninit, n_hours, outdt, outfrac, 
-                               p10f, qcycle, random, splitf, tkerd, tkern, 
-                               rm_dat, rundir, timeout, tlfrac, tratio, tvmix, 
-                               veght, vscale, w_option, zicontroltf, z_top)
+    # given receptor lat/lon/time/agl = 5 (near ground)
+    recp.var <- get.ground.hgt(receptor = output$receptor, agl = 0, run_trajec, 
+                               namelist, rundir, emisshrs, hnf_plume, 
+                               met_file_format, met_loc, n_hours, rm_dat, 
+                               timeout, w_option, z_top)
                                 
     # paste interpolated info to output$receptor
     output$receptor <- c(output$receptor, recp.var)
-    return(output)
 
+    cat('END of before_trajec_xstilt(), start calculating X-trajectories...\n')
+    return(output)
 }  # end of function

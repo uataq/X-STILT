@@ -14,6 +14,9 @@
 #' update code according to v9 changes, DW, 10/19/2018
 #' remove data filtering, always use QF = 0 for background estimates, DW, 10/31/2018
 #' refaectoring based on new stilt-submodule, DW, 01/25/2019 
+#' bug fixed: determine dxpy using the desired box size and grid length of met fields, 
+#'            *** since the final box size for randomly placing receptors 
+#'                relies on the grid length of the meteo fields!, DW, 06/30/2020
 
 ## source all functions and load all libraries
 # CHANGE working directory ***
@@ -31,7 +34,10 @@ register_google(key = api.key)
 site     <- 'Riyadh'  # insert target city
 lon.lat  <- get.lon.lat(site = site, dlon = 1, dlat = 2)
 site.lon <- lon.lat$citylon; site.lat <- lon.lat$citylat
-oco2.ver <- c('b7rb', 'b8r', 'b9r')[1]  # OCO-2 version
+oco.sensor <- c('OCO-2', 'OCO-3')[2]
+oco.ver    <- c('V7rb', 'V8r', 'V9r', 'VEarlyR')[4]   # retrieval algo version
+oco.path   <- file.path(input.path, oco.sensor, paste0('L2_Lite_FP_', oco.ver))
+
 
 ## choose which background method:
 # M1. Trajec-endpoint (using CarbonTracker)
@@ -44,18 +50,18 @@ method <- c('M1', 'M2H', 'M2S', 'M3')[4]
 input.path  <- file.path(homedir, 'lin-group7/wde/input_data')
 output.path <- file.path(homedir, 'lin-group7/wde/output', site)
 bg.txtfile  <- file.path(output.path, paste0(method, '_bg_', site, '_', 
-                                             oco2.ver, '.txt'))
-oco2.path   <- file.path(input.path, 'OCO-2/L2', paste0('OCO2_lite_', oco2.ver))
+                                             oco.sensor, '_', oco.ver, '.txt'))
+oco.path <- file.path(input.path, oco.sensor, paste0('L2_Lite_FP_', oco.ver))
 
 # path for storing overpass sampling info by 'get,site.track'
 txt.path   <- file.path(input.path, 'OCO-2/overpass_city') 
-oco2.track <- get.site.track(site, oco2.ver, oco2.path, searchTF = F,
-                             date.range = c('20140901', '20181231'), 
-                             thred.count.per.deg = 100, lon.lat = lon.lat, 
-                             urbanTF = T, dlon.urban = 0.5, dlat.urban = 0.5,
-                             thred.count.per.deg.urban = 100, txt.path) %>% 
+oco.track <- get.site.track(site, oco.sensor, oco.ver, oco.path, searchTF = F,
+                            date.range = c('20140901', '20201231'), 
+                            thred.count.per.deg = 100, lon.lat = lon.lat, 
+                            urbanTF = T, dlon.urban = 0.5, dlat.urban = 0.5,
+                            thred.count.per.deg.urban = 100, txt.path) %>% 
               filter(qf.urban.count > 80)
-all.timestr <- oco2.track$timestr; print(all.timestr)
+all.timestr <- oco.track$timestr; print(all.timestr)
 
 
 # ----------------------------- M1 Trajec endpoint  ------------------------- #
@@ -113,47 +119,58 @@ if (method == 'M3') {
 
   # set zisf = 1 if run_ver_err = F
   zisf <- c(0.6, 0.8, 1.0, 1.2, 1.4)[3]; if (!run_ver_err) zisf <- 1.0       
-  
-  # release particles from a box (dxyp x dxyp) around the city center
-  dxyp  <- 0.4               # degree around city center
-  nhrs  <- 12                # forward run, nhrs should always be positive
 
-  # release FROM # hrs (e.g., -10) before overpass time, 
-  # TO overpass time (e.g., 0), with every 0.5 hour release
-  dtime <- seq(-10, 0, 0.5)  # time windows to release particles continuously
-  
-  ### release particles from fixed levels, recort particles for every 2mins
+  # release particles from a box around the city center
+  # dxyp: if > 0, randomized horizontal release locations for this receptor 
+  #       (xp +/- dxyp, yp +/- dxyp instead of xp, yp) in units of x, y-grid lengths
+  # So final box length = 2 * dxyp * met.res, DW, 06/30/2020
+
+  # specify your desired box length in degree
+  # default box.len = 0.5 meaning 0.5 deg x 0.5 deg box around city center
+  box.len <- 0.5   
+
+  # time window for continuously release particles       
+  dtime.from <- -10     # FROM 10 hours before the satellite overpass time (-10)
+  dtime.to   <- 0       # TO the satellite overpass time (dtime.to = 0) 
+  dtime.sep  <- 0.5     # WITH 30 mins interval (dtime.sep = 0.5 hr)
+
+  # numbers of hours before terminating the generation of forward-time particles, 
+  # forward run, nhrs should always be positive, default is 12 hours 
+  nhrs  <- 12                
+
+  # release particles from fixed levels, recort particles for every 2mins
   delt   <- 2          # in mins
   agl    <- 10         # in mAGL
-  numpar <- 1000       # particle # per each time window
-  cat(paste('\n\nDone with receptor setup...\n'))
+  numpar <- 10         # particle # per each time window
 
-  #------------------------------ STEP 2 --------------------------------- #
   # path for the ARL format of WRF and GDAS
   # simulation_step() will find corresponding met files
-  met.indx   <- 2
-  met        <- c('hrrr', 'gdas0p5', 'edas40', 'wrf')[met.indx]
-  met.path   <- file.path(homedir, 'u0947337', met)
-  met.num    <- 1     # min number of met files needed
-  met.format <- c('%Y%m%d.%Hz.hrrra', '%Y%m%d_gdas0p5', 'edas.%Y%m', '%Y%m%d')[met.indx]
-  
-  #------------------------------ STEP 4 -------------------------------- #
+  indx       <- 1
+  met        <- c('gfs0p25', 'edas40')[indx]
+  met.res    <- c(0.25, 0.4)[indx]   # horizontal grid spacing approximately in degree
+  met.format <- c('%Y%m%d', '%Y%m')[indx]
+  met.path   <- file.path(homedir, met) 
+  met.num    <- 1               # min number of met files needed
+
+  cat(paste('\n\nDone with settings with receptor and meteo fields...\n'))
+
+  #------------------------------ STEP 3 -------------------------------- #
   # !!! need to add makefile for AER_NOAA_branch in fortran ;
   # link two hymodelcs in exe directory
   # parallel running, DW, 11/06/2019
   n_nodes <- 1
   n_cores <- ceiling(length(all.timestr) / n_nodes)
-  slurm_options <- list(time = '04:00:00', account = 'lin-kp', partition = 'lin-kp')
-  
+  slurm_options <- list(time = '04:00:00', account = 'pow', partition = 'any')
+
   if (run_trajec) {
-    dtime <- list(dtime)
-    xstilt_apply(FUN = run.forward.trajec, slurm = T, slurm_options, n_nodes, 
-                 n_cores, jobname = paste0('XSTILT_forward_', site), 
-                 site, site.lon, site.lat, timestr = all.timestr, 
-                 run_trajec, run_hor_err, run_ver_err, agl, delt, dtime, 
-                 dxyp, dzp = 0, numpar, nhrs, xstilt_wd, output.path = traj.path, 
-                 met, met.format, met.path, met.num, raob.path, 
-                 raob.format = 'fsl', siguverr, err.path, nhrs.zisf = 24, zisf)
+
+    xstilt_apply(FUN = run.forward.trajec, slurm = T, slurm_options, n_nodes, n_cores, 
+                jobname = paste0('XSTILT_forward_', site), site, site.lon, site.lat, 
+                timestr = all.timestr, run_trajec, run_hor_err, run_ver_err, 
+                xstilt_wd, traj.path, box.len, dtime.from, dtime.to, dtime.sep, 
+                nhrs, delt, agl, numpar, met, met.res, met.format, met.path, 
+                met.num, raob.path, raob.format = 'fsl', siguverr, err.path, 
+                nhrs.zisf = 24, zisf)
     q('no')
   }
 
@@ -169,7 +186,7 @@ if (method == 'M3') {
     for (tt in 1: length(all.timestr)) {  ### loop over each overpass
       tmp.bg <- calc.bg.forward.trajec(trajpath = traj.path, site, 
                                        timestr = all.timestr[tt], agl, dtime, 
-                                       numpar, dxyp, oco2.path, oco2.ver, qfTF = T, 
+                                       numpar, dxyp, oco.path, oco.ver, qfTF = T, 
                                        met, zoom = 8, td = 0.05, bg.dlat = 0.5, 
                                        perc = 0.2, clean.side[tt], api.key)
       bg.info <- rbind(bg.info, tmp.bg)

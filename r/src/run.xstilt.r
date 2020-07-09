@@ -1,16 +1,21 @@
 # STILT R Executable
 # For documentation, see https://uataq.github.io/stilt/
 # Ben Fasoli
+# edited by Dien Wu for X-STILT
+
 
 # preserve original 'run_stilt.r' and modify 'run_stilt.r' as a subroutine
 # add ziscale, DW, 07/25/2018
 # add two before_* functions for getting ground height and AK PW weighting, DW, 01/24/2019
 # allows for generate footprints with different resolutions, DW, 02/11/2019 
+# add additional variables due to changes in simulation_step()'s argument, DW, 07/02/2020
+# add/remove variables as migrating to STILT-HYSPLIT, DW, 07/03/2020 
+
 
 run.xstilt <- function(namelist){
 
   # User inputs ----------------------------------------------------------------
-  stilt_wd  <- namelist$workdir
+  stilt_wd  <- namelist$xstilt_wd
   output_wd <- namelist$outdir
   lib.loc   <- .libPaths()[1]
   receptors <- namelist$recp.info
@@ -22,8 +27,8 @@ run.xstilt <- function(namelist){
 
   # modification for OCO-2 column simulations, DW, 05/24/2018
   # if NA, meaning no weighting nor OCO2 files for regular simualtions
-  ak.wgt    <- namelist$ak.wgt     # whether weighted foot by averaging kernel
-  pwf.wgt   <- namelist$pwf.wgt    # whether weighted foot by pres weighting
+  ak.wgt   <- namelist$ak.wgt     # whether weighted foot by averaging kernel
+  pwf.wgt  <- namelist$pwf.wgt    # whether weighted foot by pres weighting
   oco.path <- namelist$oco.path
   
   # Model control
@@ -34,12 +39,9 @@ run.xstilt <- function(namelist){
   n_hours    <- namelist$nhrs
   numpar     <- namelist$numpar
   varsiwant  <- namelist$varstrajec
-  if (length(varsiwant) == 0) {
-    varsiwant  <- c('time', 'indx', 'long', 'lati', 'zagl', 'sigw', 'tlgr',
-                    'zsfc', 'icdx', 'temp', 'samt', 'foot', 'shtf', 'tcld',
-                    'dmas', 'dens', 'rhfr', 'sphu', 'solw', 'lcld', 'zloc',
-                    'dswf', 'wout', 'mlht', 'rain', 'crai', 'pres')
-  }
+  if (length(varsiwant) == 0)
+    varsiwant  <- c('time', 'indx', 'long', 'lati', 'zagl', 'zsfc', 'foot', 
+                    'mlht', 'dens', 'samt', 'sigw', 'tlgr', 'temp', 'pres')
 
   # Transport error and PBL error input variables
   horcoruverr <- namelist$hor.err$horcoruverr
@@ -66,63 +68,85 @@ run.xstilt <- function(namelist){
   xres2 <- namelist$foot.info$xres2
   yres2 <- namelist$foot.info$yres2
   foot.nhrs <- namelist$foot.info$foot.nhrs 
-
   hnf_plume      <- namelist$hnf_plume
   smooth_factor  <- namelist$smooth_factor
   time_integrate <- namelist$time_integrate
   projection     <- namelist$projection 
 
-  # Transport and dispersion settings
+  # Transport and dispersion settings, use default setting in STILT-R v2
+  capemin     <- -1
+  cmass       <- 0
   conage      <- 48
   cpack       <- 1
   delt        <- namelist$delt
   dxf         <- 1
   dyf         <- 1
-  dzf         <- 0.1
+  dzf         <- 0.01
+  efile       <- ''
   emisshrs    <- 0.01
   frhmax      <- 3
   frhs        <- 1
   frme        <- 0.1
   frmr        <- 0
   frts        <- 0.1
-  frvs        <- 0.1
+  frvs        <- 0.01
   hscale      <- 10800
-  ichem       <- 0
-  iconvect    <- 0
+  ichem       <- 8
+  idsp        <- 2
   initd       <- 0
-  isot        <- 0
+  k10m        <- 1
+  kagl        <- 1
   kbls        <- 1
-  kblt        <- 1
-  kdef        <- 1
+  kblt        <- 5
+  kdef        <- 0
+  khinp       <- 0
   khmax       <- 9999
   kmix0       <- 250
   kmixd       <- 3
   kmsl        <- 0
   kpuff       <- 0
+  krand       <- 4
   krnd        <- 6
   kspl        <- 1
-  kzmix       <- 1
+  kwet        <- 1
+  kzmix       <- 0
   maxdim      <- 1
-  maxpar      <- min(100000, numpar)
-  mgmin       <- 2000
+  maxpar      <- numpar
+  mgmin       <- 10
+  mhrs        <- 9999
+  nbptyp      <- 1
   ncycl       <- 0
   ndump       <- 0
   ninit       <- 1
+  nstr        <- 0
   nturb       <- 0
+  nver        <- 0
   outdt       <- 0
-  outfrac     <- 0.9
   p10f        <- 1
+  pinbc       <- ''
+  pinpf       <- ''
+  poutf       <- ''
   qcycle      <- 0
-  random      <- 1
+  rhb         <- 80
+  rht         <- 60
   splitf      <- 1
   tkerd       <- 0.18
   tkern       <- 0.18
   tlfrac      <- 0.1
-  tratio      <- 0.9
+  tout        <- 0
+  tratio      <- 0.75
   tvmix       <- 1
   veght       <- 0.5
   vscale      <- 200
+  vscaleu     <- 200
+  vscales     <- -1
+  wbbh        <- 0
+  wbwf        <- 0
+  wbwr        <- 0
+  wvert       <- FALSE
   w_option    <- 0
+  zicontroltf <- 0
+  ziscale     <- rep(list(rep(1, 24)), nrow(receptors))
   z_top       <- 25000
 
   # customized functions
@@ -178,6 +202,8 @@ run.xstilt <- function(namelist){
     if (!file.exists(met_loc)) invisible(file.symlink(met_directory, met_loc))
   } else met_loc <- met_directory
 
+  # removed 'isot', 'iconvert', 'outfrac', 'random' -- 
+  # not used by the latest STILT
   output <- xstilt_apply(FUN = simulation_step,
                          slurm = slurm, 
                          slurm_options = slurm_options,
@@ -186,9 +212,15 @@ run.xstilt <- function(namelist){
                          jobname = jobname, 
                          before_footprint = list(before_footprint),
                          before_trajec = list(before_trajec),
+                         capemin = capemin,
+                         cmass = cmass,
                          conage = conage,
                          cpack = cpack,
                          delt = delt, 
+                         dxf = dxf,
+                         dyf = dyf,
+                         dzf = dzf,
+                         efile = efile,
                          emisshrs = emisshrs,
                          frhmax = frhmax, 
                          frhs = frhs, 
@@ -199,76 +231,93 @@ run.xstilt <- function(namelist){
                          hnf_plume = hnf_plume,
                          horcoruverr = horcoruverr, 
                          horcorzierr = horcorzierr,
-                        ichem = ichem, 
-                        iconvect = iconvect, 
-                        initd = initd,
-                        isot = isot, 
-                        kbls = kbls, 
-                        kblt = kblt, 
-                        kdef = kdef,
-                        khmax = khmax, 
-                        kmix0 = kmix0, 
-                        kmixd = kmixd,
-                        kmsl = kmsl, 
-                        kpuff = kpuff, 
-                        krnd = krnd, 
-                        kspl = kspl,
-                        kzmix = kzmix, 
-                        maxdim = maxdim, 
-                        maxpar = maxpar,
-                        lib.loc = lib.loc,
-                        met_file_format = met_file_format,
-                        met_loc = met_loc,
-                        mgmin = mgmin,
-                        n_hours = n_hours,
-                        n_met_min = n_met_min,
-                        ncycl = ncycl,
-                        ndump = ndump,
-                        ninit = ninit,
-                        nturb = nturb,
-                        numpar = numpar, 
-                        outdt = outdt,
-                        outfrac = outfrac,
-                        output_wd = output_wd,
-                        p10f = p10f,
-                        projection = projection,
-                        qcycle = qcycle,
-                        r_run_time = receptors$run_time,
-                        r_lati = receptors$lati,
-                        r_long = receptors$long,
-                        r_zagl = receptors$zagl,
-                        random = random,
-                        rm_dat = rm_dat,
-                        run_foot = run_foot,
-                        run_trajec = run_trajec, 
-                        siguverr = siguverr,
-                        sigzierr = sigzierr, 
-                        smooth_factor = smooth_factor,
-                        splitf = splitf,
-                        stilt_wd = stilt_wd,
-                        time_integrate = time_integrate,
-                        timeout = timeout,
-                        tkerd = tkerd,
-                        tkern = tkern,
-                        tlfrac = tlfrac,
-                        tluverr = tluverr,
-                        tlzierr = tlzierr,
-                        tratio = tratio,
-                        tvmix = tvmix,
-                        varsiwant = list(varsiwant),
-                        veght = veght,
-                        vscale = vscale,
-                        w_option = w_option,
-                        xmn = xmn,
-                        xmx = xmx,
-                        xres = xres,
-                        ymn = ymn,
-                        ymx = ymx,
-                        yres = yres,
-                        zicontroltf = zicontroltf,
-                        ziscale = ziscale,
-                        z_top = z_top,
-                        zcoruverr = zcoruverr, 
+                         hscale = hscale,
+                         ichem = ichem, 
+                         idsp = idsp,
+                         initd = initd,
+                         k10m = k10m,
+                         kagl = kagl, 
+                         kbls = kbls, 
+                         kblt = kblt, 
+                         kdef = kdef,
+                         khinp = khinp,
+                         khmax = khmax, 
+                         kmix0 = kmix0, 
+                         kmixd = kmixd,
+                         kmsl = kmsl, 
+                         kpuff = kpuff, 
+                         krand = krand,
+                         krnd = krnd, 
+                         kspl = kspl,
+                         kwet = kwet,
+                         kzmix = kzmix, 
+                         lib.loc = lib.loc,
+                         maxdim = maxdim, 
+                         maxpar = maxpar,
+                         met_file_format = met_file_format,
+                         met_loc = met_loc,
+                         mgmin = mgmin,
+                         n_hours = n_hours,
+                         n_met_min = n_met_min,
+                         ncycl = ncycl,
+                         ndump = ndump,
+                         ninit = ninit,
+                         nstr = nstr,
+                         nturb = nturb,
+                         numpar = numpar, 
+                         nver = nver,
+                         outdt = outdt,
+                         output_wd = output_wd,
+                         p10f = p10f,
+                         pinbc = pinbc,
+                         pinpf = pinpf,
+                         poutf = poutf,
+                         projection = projection,
+                         qcycle = qcycle,
+                         r_run_time = receptors$run_time,
+                         r_lati = receptors$lati,
+                         r_long = receptors$long,
+                         r_zagl = receptors$zagl,
+                         rhb = rhb,
+                         rht = rht,
+                         rm_dat = rm_dat,
+                         run_foot = run_foot,
+                         run_trajec = run_trajec, 
+                         siguverr = siguverr,
+                         sigzierr = sigzierr, 
+                         smooth_factor = smooth_factor,
+                         splitf = splitf,
+                         stilt_wd = stilt_wd,
+                         time_integrate = time_integrate,
+                         timeout = timeout,
+                         tkerd = tkerd,
+                         tkern = tkern,
+                         tlfrac = tlfrac,
+                         tluverr = tluverr,
+                         tlzierr = tlzierr,
+                         tout = tout,
+                         tratio = tratio,
+                         tvmix = tvmix,
+                         varsiwant = list(varsiwant),
+                         veght = veght,
+                         vscale = vscale,
+                         vscaleu = vscaleu,
+                         vscales = vscales,
+                         w_option = w_option,
+                         wbbh = wbbh,
+                         wbwf = wbwf,
+                         wbwr = wbwr,
+                         wvert = wvert,
+                         xmn = xmn,
+                         xmx = xmx,
+                         xres = xres,
+                         ymn = ymn,
+                         ymx = ymx,
+                         yres = yres,
+                         zicontroltf = zicontroltf,
+                         ziscale = ziscale,
+                         z_top = z_top,
+                         zcoruverr = zcoruverr, 
 
   # pass additional variables to stilt_apply and then to simulation_step() 
   # needed for before_*_xstilt() for X-STILT, DW, 02/11/2019
@@ -286,3 +335,25 @@ run.xstilt <- function(namelist){
                         yres2 = list(yres2), 
                         foot.nhrs = foot.nhrs)
 }
+
+
+# for debugging
+if (F) {
+  
+  X = 1
+  r_run_time = receptors$run_time[X]
+  r_lati = receptors$lati[X]
+  r_long = receptors$long[X]
+  r_zagl = receptors$zagl[X]
+
+
+  args <- list(oco.path = oco.path, ak.wgt = ak.wgt, pwf.wgt = pwf.wgt, 
+               overwrite_wgttraj = namelist$overwrite_wgttraj, 
+               run_hor_err = namelist$run_hor_err,
+               emiss.file = namelist$emiss.file, met = namelist$met, 
+               ct.ver = namelist$ct.ver, ctflux.path = namelist$ctflux.path, 
+               ctmole.path = namelist$ctmole.path, xres2 = list(xres2), 
+               yres2 = list(yres2), foot.nhrs = foot.nhrs)
+
+}
+

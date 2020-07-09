@@ -223,7 +223,7 @@ simulation_step <- function(before_footprint = list(function() {output}),
       zicontroltf = zicontroltf,
       ziscale = ziscale
     )
-    
+
     # Creates subdirectories in out for each model run time. Each of these
     # subdirectories is populated with symbolic links to the shared datasets
     # below and a run-specific SETUP.CFG and CONTROL

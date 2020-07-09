@@ -16,7 +16,7 @@ get.oco.info <- function(oco.path, receptor, diff.td = 1E-4){
 
   # grabbing OCO-2 info
   timestr  <- strftime(receptor$run_time, tz = 'UTC', format = '%Y%m%d%H')
-  oco.file <- list.files(path = oco.path, pattern = substr(timestr, 3, 8))
+  oco.file <- list.files(oco.path, pattern = paste0('_', substr(timestr, 3, 8), '_'))
   if (length(oco.file) == 0) stop('No OCO file found for this timestr\n')
   oco.dat  <- nc_open(file.path(oco.path, oco.file))
 

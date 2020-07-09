@@ -11,7 +11,7 @@
 # update function for loading OCO-3 data, DW, 06/28/2020 
 
 get.site.track <- function(site, oco.sensor, oco.ver, oco.path, searchTF = F,
-                           date.range = c('20140101', '20181231'), 
+                           date.range = c('20140101', '20201231'), 
                            thred.count.per.deg = 100, lon.lat, urbanTF, 
                            dlon.urban = NULL, dlat.urban = NULL,
                            thred.count.per.deg.urban = NULL, rmTF = F){
@@ -27,7 +27,8 @@ get.site.track <- function(site, oco.sensor, oco.ver, oco.path, searchTF = F,
     # txt.path, path for storing output from 'get.site.track()'
     txt.path <- file.path(dirname(oco.path), 'overpass_city') 
     dir.create(txt.path, showWarnings = F, recursive = T)
-    txt.file <- file.path(txt.path, paste0(oco.sensor, '_overpass_', site, '_', oco.ver, '.txt'))
+    txt.file <- file.path(txt.path, paste0(oco.sensor, '_overpass_', site, '_', 
+                                           oco.ver, '.txt'))
 
     # if not call find.overpass(); if exists, read from txt.file
     if (!file.exists(txt.file) | searchTF == T) {
@@ -47,8 +48,8 @@ get.site.track <- function(site, oco.sensor, oco.ver, oco.path, searchTF = F,
     thred.count <- thred.count.per.deg * abs(diff(c(lon.lat$minlat, lon.lat$maxlat)))
     cat('Only return overpass dates that have >', thred.count, 'sounding...\n')
     oco.track <- oco.track %>% filter(timestr >= date.range[1] &
-                                        timestr <= date.range[2] & 
-                                        tot.count >= thred.count)
+                                      timestr <= date.range[2] & 
+                                      tot.count >= thred.count)
 
     # at least one sounding near the city
     if (urbanTF) {

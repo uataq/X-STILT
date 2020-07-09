@@ -8,8 +8,9 @@
 
 ggmap.obs.xco2 <- function(site, timestr, oco.sensor = c('OCO-2', 'OCO-3')[2], 
                            oco.ver, oco.path, lon.lat, workdir, 
-                           plotdir = file.path(workdir, 'plot'), zoom = 8, qfTF = F, 
-                           box.dlat = 0.5, box.dlon = 0.5, size = 0.8, font.size = rel(0.9)){
+                           plotdir = file.path(workdir, 'plot'), zoom = 8, 
+                           qfTF = F, box.dlat = 0.5, box.dlon = 0.5, size = 0.8, 
+                           font.size = rel(0.9)){
 
   library(ggmap); library(ggplot2); library(ggpubr)
   obs.all <- grab.oco(oco.path, timestr, lon.lat, oco.ver)
@@ -83,7 +84,7 @@ ggmap.obs.xco2 <- function(site, timestr, oco.sensor = c('OCO-2', 'OCO-3')[2],
   picname <- paste0('ggmap_xco2_', site, '_', timestr, '.png')
   picfile <- file.path(plotdir, picname)
   print(picfile)
-  ggsave(merge.plot, filename = picfile, width = 9, height = 12)
+  ggsave(merge.plot, filename = picfile, width = 6, height = 9)
 
   return(merge.plot)
 }

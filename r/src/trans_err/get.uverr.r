@@ -29,6 +29,11 @@ get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
       zcoruverr <- 600    # in m
       horcoruverr <- 40   # in km
 
+    } else if (met == 'gfs0p25') {
+      TLuverr <- 1 * 60   # in mins
+      zcoruverr <- 600    # in m
+      horcoruverr <- 25   # in km
+
     } else if (met == 'gdas1') {
       TLuverr <- 2.4 * 60
       zcoruverr <- 700

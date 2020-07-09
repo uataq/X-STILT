@@ -67,8 +67,8 @@
 #### source all functions and load all libraries
 # CHANGE working directory ***
 homedir <- '/central/home/dienwu'
-workdir <- file.path(homedir, 'X-STILT') # current dir
-setwd(workdir)   # move to working directory
+xstilt_wd <- file.path(homedir, 'X-STILT') # current dir
+setwd(xstilt_wd)   # move to working directory
 source('r/dependencies.r') # source all functions
 
 # Please insert your API for the use of ggplot and ggmap
@@ -121,7 +121,7 @@ all.timestr <- oco.track$timestr; print(all.timestr)
 # whether to plot them on maps, plotTF = T/F,
 # this helps you choose which overpass to simulate, see 'tt' below
 ggmap.obs.info(plotTF = F, site, store.path, all.timestr, oco.sensor, oco.ver, 
-               oco.path, lon.lat, workdir, dlat.urban, dlon.urban)
+               oco.path, lon.lat, xstilt_wd, dlat.urban, dlon.urban)
 
 ### 5) *** NOW choose the timestr that you'd like to work on...
 tt <- 9
@@ -234,7 +234,7 @@ cat(paste('Done with receptor setup...total', nrecp, 'receptors..\n'))
 # Error analysis
 # 1) get horizontal transport error component if run_hor_err = T
 # path for outputting wind error stats
-hor.err  <- get.uverr(run_hor_err, site, timestr, workdir, overwrite = F,
+hor.err  <- get.uverr(run_hor_err, site, timestr, xstilt_wd, overwrite = F,
                       raob.path, raob.format = 'fsl', nhrs, met, met.path, 
                       met.format, lon.lat, agl, err.path)
 
@@ -294,7 +294,7 @@ foot.info <- list(xmn = round(lon.lat$citylon) - 10,
 ### and prepare ODIAC based on footprint domain 
 if (run_hor_err) {
   foot.ext <- extent(foot.info$xmn, foot.info$xmx, foot.info$ymn, foot.info$ymx)
-  emiss.file <- tif2nc.odiacv3(site, timestr, vname = odiac.vname, workdir, 
+  emiss.file <- tif2nc.odiacv3(site, timestr, vname = odiac.vname, xstilt_wd, 
                                foot.ext, tiff.path, gzTF = F)
 } else { emiss.file = NA }
 
@@ -349,7 +349,7 @@ if (run_trajec | run_foot) {
                    run_hor_err = run_hor_err, run_trajec = run_trajec, 
                    slurm = slurm, slurm_options = slurm_options, 
                    smooth_factor = smooth_factor, time_integrate = time_integrate, 
-                   timeout = timeout, varstrajec = varstrajec, workdir = workdir)        
+                   timeout = timeout, varstrajec = varstrajec, xstilt_wd = xstilt_wd)        
   cat('Done with creating namelist...\n')
 
   # call run.xstilt() to start running trajec and foot
@@ -371,7 +371,7 @@ if (!run_trajec & !run_foot & run_sim) {
     # get actual ppm error, need to have error statistics ready
     # see cal.trajfoot.stat() in called before_footprint_xstilt.r for err stat
     cat('Start simulations of XCO2 error due to horizontal trans err...\n')
-    receptor <- cal.trans.err(site, timestr, workdir, outdir, 
+    receptor <- cal.trans.err(site, timestr, xstilt_wd, outdir, 
                               store.path = err.path, met)
     if (is.null(receptor)) stop('No results calculated, check cal.trans.err()\n')
 
@@ -382,7 +382,7 @@ if (!run_trajec & !run_foot & run_sim) {
     # call func to match ODIAC emissions with xfoot & sum up to get 'dxco2.ff'
     cat('Start simulations of XCO2.ff or its error due to emiss err...\n')
     receptor <- run.xco2ff.sim(site, timestr, vname = odiac.vname, tiff.path, 
-                               outdir, foot.res, workdir, store.path, nhrs, dpar,
+                               outdir, foot.res, xstilt_wd, store.path, nhrs, dpar,
                                smooth_factor, zisf, oco.ver, met, lon.lat, 
                                run_emiss_err, edgar.file, ffdas.file, 
                                plotTF = F, writeTF = T)

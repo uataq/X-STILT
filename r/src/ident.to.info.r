@@ -7,11 +7,13 @@
 
 ident.to.info <- function(ident, stilt.ver, aglTF = T){
 
+
   if (stilt.ver == 1) {  # if using version 1 naming convention
     library(stringr)
 
     # get rid of .RData, if there is
     if (grepl('.RData', ident[1])) ident <- substr(ident, 1, nchar(ident) - 6)
+    if (grepl('.rds', ident[1])) ident <- gsub('.rds', '', ident)
 
     # get # of columns
     ncol <- str_count(ident, 'x') + 1

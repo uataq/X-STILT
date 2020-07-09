@@ -51,7 +51,7 @@ ggmap.obs.sif <- function(site, timestr, oco.sensor, sif.path, lon.lat, workdir,
 
   picname <- paste0('ggmap_sif_', site, '_', timestr, '.png')
   picfile <- file.path(plotdir, picname); print(picfile)
-  ggsave(c2, filename = picfile, width = 12, height = 13)
+  ggsave(c2, filename = picfile, width = 9, height = 10)
 
   return(c2)
 }
