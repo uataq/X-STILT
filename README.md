@@ -9,7 +9,7 @@ X-STILT model developments are ongoing towards a more flexible model framework t
 # X-STILT Features
 
 ## Table of Contents
-- [**Latest commit**](#latest-commit)
+- [**Latest commit**](#latest-commit-by-sept-18-2020)
 - [**Prerequisites**](#prerequisites)
 - [**Obtain column footprint**](#obtain-column-footprint)
 - [**Determine background XCO<sub>2</sub>**](#determine-background-xco2)
@@ -22,7 +22,7 @@ X-STILT model developments are ongoing towards a more flexible model framework t
 
 Latest commit by Sept 18, 2020
 ============
-Changes in ['merge_stilt-hysplit' branch](https://github.com/uataq/X-STILT/tree/merge_stilt-hysplit) towards the release of X-STILT version 2: 
+Changes in ['merge_stilt-hysplit' branch](https://github.com/uataq/X-STILT/tree/merge_stilt-hysplit) towards the release of X-STILT version 2:
 
 :pushpin: Google API key: instead of a charater string in each main script :arrow_forward: insert your google API in the first line of `insert_ggAPI.csv` that will be searched by the main script; 
 
