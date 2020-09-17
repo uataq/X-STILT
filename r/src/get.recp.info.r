@@ -15,7 +15,8 @@ get.recp.info <- function(timestr, oco.ver, oco.path, lon.lat, selTF, recp.indx,
                           data.filter = c('QF', 0)){
 
   # ------------------- Step 1. READ IN OCO-2 LITE FILES ------------------- #
-  oco.dat <- grab.oco(oco.path, timestr, lon.lat, oco.ver)
+  oco.dat <- grab.oco(oco.path, timestr, lon.lat, oco.ver) %>% 
+             dplyr::select(-c('lons', 'lats', 'vertices')) %>% unique()
   if (nrow(oco.dat) == 0) cat('No sounding found over this overpass for this region\n')
   
   # filter by quality flag too, more receptors when XCO2 is high
@@ -35,10 +36,11 @@ get.recp.info <- function(timestr, oco.ver, oco.path, lon.lat, selTF, recp.indx,
   # ------------------- Step 2. SET UP the STILT receptors ----------------- #
   # if generate trajec with horizontal error component,
   # use the same lat.lon from original trajec, DW, 07/31/2018
-  trajfile  <- list.files(path = trajpath, pattern = 'X_traj.rds',
-                          recursive = T, full.names = T)
+  trajfile <- list.files(trajpath, 'X_traj.rds', recursive = T, full.names = T)
 
   if (length(trajfile) > 0 & !run_trajec) {
+
+    cat('Found existing trajectories...\n')
 
     # if trajec data exists
     trajname  <- basename(trajfile)
@@ -49,12 +51,13 @@ get.recp.info <- function(timestr, oco.ver, oco.path, lon.lat, selTF, recp.indx,
     sel.dat$find.lon <- signif(sel.dat$lon, max(nchar(recp.info$recp.lon)) - 1)
     recp.info <- recp.info %>% dplyr::select('lati' = 'recp.lat', 'long' = 'recp.lon') %>%
                  left_join(sel.dat, by = c('lati' = 'find.lat', 'long' = 'find.lon')) %>%
-                 mutate(run_times_utc = as.POSIXct(substr(id, 1, 14), '%Y%m%d%H%M%S', tz = 'UTC'))
+                 mutate(run_times_utc = as.POSIXct(substr(id, 1, 14), '%Y%m%d%H%M%S', tz = 'UTC')) %>% 
+                 arrange(lati)
 
   } else {
 
     ### if generate trajec without error component
-    if(selTF){
+    if (selTF) {
       # select lat, lon based on OCO-2 soundings and data quality
       sel.lat  <- sel.dat$lat
       sort.lat <- sort(sel.lat)
@@ -62,24 +65,23 @@ get.recp.info <- function(timestr, oco.ver, oco.path, lon.lat, selTF, recp.indx,
       match.index <- unique(match(recp.lat, sel.lat))
       recp.info <- sel.dat[match.index, ]
 
-    }else{   # if no requirement, simulate all soundings, no selection
+    } else {   # if no requirement, simulate all soundings, no selection
       recp.info <- sel.dat
     }  # end if selTF
 
     # compute simulation timing, yyyy-mm-dd HH:MM:SS (UTC), aka 'receptors' info
     # that are used for each simulation and match Ben's code
     recp.info <- recp.info %>% mutate(run_times_utc = as.POSIXct(substr(id, 1, 14), '%Y%m%d%H%M%S',
-                                                                 tz = 'UTC'))
+                                                                 tz = 'UTC')) %>% 
+                               dplyr::select('run_time' = 'run_times_utc', 
+                                             'lati' = 'lat', 'long' = 'lon') %>% 
+                               arrange(lati)
+                               
+    # subset receptor data frame or find the nearest lat..
+    if (!is.null(recp.num)) recp.info <- recp.info[min(recp.num) : max(recp.num), ]
+    if (!is.null(find.lat)) recp.info <- recp.info[findInterval(find.lat, recp.info$lati), ]
 
   } # end if trajec file existed
-
-  recp.info <- recp.info[order(recp.info$lat), ]
-  recp.info <- recp.info %>% dplyr::select('run_time' = 'run_times_utc', 
-                                           'lati' = 'lat', 'long' = 'lon')
-
-  # subset receptor data frame or find the nearest lat..
-  if (!is.null(recp.num)) recp.info <- recp.info[min(recp.num):max(recp.num), ]
-  if (!is.null(find.lat)) recp.info <- recp.info[findInterval(find.lat, recp.info$lati), ]
 
   ## add release height
   recp.info$zagl <- list(agl)

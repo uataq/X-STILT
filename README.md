@@ -9,6 +9,7 @@ X-STILT model developments are ongoing towards a more flexible model framework t
 # X-STILT Features
 
 ## Table of Contents
+- [**Latest commit**](#latest-commit)
 - [**Prerequisites**](#prerequisites)
 - [**Obtain column footprint**](#obtain-column-footprint)
 - [**Determine background XCO<sub>2</sub>**](#determine-background-xco2)
@@ -17,6 +18,37 @@ X-STILT model developments are ongoing towards a more flexible model framework t
 - [**Specific for your desired cities or space-based sensors**](#specific-for-your-desired-cities-or-space-based-sensors)
 - [**Example figures of column footprints and XCO<sub>2.ff</sub>**](#example-figures-of-column-footprints-and-xco2ff)
 - [**Reference**](#reference)
+
+
+Latest commit by Sept 18, 2020
+============
+Changes in ['merge_stilt-hysplit' branch](https://github.com/uataq/X-STILT/tree/merge_stilt-hysplit) towards the release of X-STILT version 2: 
+
+:pushpin: Google API key: instead of a charater string in each main script :arrow_forward: insert your google API in the first line of `insert_ggAPI.csv` that will be searched by the main script; 
+
+:pushpin: **Built upon the latest HYSPLITv5**: no more discrete release levels :arrow_forward: *line source release* -- i.e., particles are now evenly distributed between `minagl` and `maxagl`, e.g., default is 3000 particles from 0 - 3km; 
+
+:pushpin: PWF calculations in `r/src/foot_weighting`
+
+   * Instead of interpolate PWF from OCO-2 to each discrete release level :arrow_forward: calculate PWF based on dp and dry air column density (mol m-2) between particles. 
+   
+   * To further calculate the dry air X-density, we also extracted specific humidity and temperature profiles via `get.met.vars()`. 
+
+   * If ak.wgt is turned off (ak.wgt == FALSE), the dependence on any satellite sensors will be removed. That being said, normalied AK is 1 and PWF is calculated based on MODELED surface pressures instead of RETRIEVED surface pressures. 
+
+:pushpin: Add modules for generating spatial footprints based on TROPOMI averaging kernels: need to specify the TROPOMI species; can be multiple species, but currently limited to CO and NO2; 
+
+:pushpin: Other minor changes: 
+   * Add interactive mode for choosing site, overpass time, etc. One can modify the code to turn it off;
+
+   * Update a few functions for working with OCO-3 data; 
+
+   * Get rid of the additional .rds files end with X_wgttraj.rds to reduce file sizes :arrow_forward: trajectory-level footprints after the AK and PWF weighting are now stored as additional columns in the initial *X_traj.rds files. Here are the descriptions of columns in output$particle from rds files: 
+      * `foot_before_weight:` footprint BEFORE AK and PWF weighting;
+      * `foot:` footprint AFTER AK and PWF weighting; 
+      * `pwf, ak.norm, ap, ak.pwf:` computed pressure weighting and interpolated apriori and averaging kernel profiles from OCO-2/3; 
+      * `wgt:` final weighting factors used for scaling trajectory-level footprint based on flags of `ak.wgt` and `pwf.wgt`. 
+
 
 
 <!-- toc -->

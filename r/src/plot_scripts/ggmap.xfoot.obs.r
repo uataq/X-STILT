@@ -40,8 +40,7 @@ ggmap.xfoot.obs <- function(mm, site, oco.ver, oco.path, timestr,
       sum.foot <- sel.foot %>% group_by(fac) %>% dplyr::summarize(sum = sum(foot))
 
       # receptor locations and add receptors on map
-      sel.recp <- data.frame(lon = recp.lon, lat = recp.lat,
-                             fac = unique(sel.foot$fac)) %>% 
+      sel.recp <- data.frame(lon = recp.lon, lat = recp.lat, fac = unique(sel.foot$fac)) %>% 
                   full_join(sum.foot, by = 'fac') %>%
                   mutate(x = map.ext$maxlon - 0.5, y = map.ext$maxlat - 0.5)
       print(sel.recp)
@@ -80,12 +79,10 @@ ggmap.xfoot.obs <- function(mm, site, oco.ver, oco.path, timestr,
   d <- data.frame(x = c(lon.lat$minlon, rep(lon.lat$maxlon, 2), lon.lat$minlon),
                   y = c(rep(lon.lat$minlat, 2), rep(lon.lat$maxlat, 2)))
   d <- rbind(d, d[1,])
-  print(d)
   p2 <- p2 + geom_path(data = d, aes(x, y), size = 0.4, colour = 'gray30')
 
-  p3 <- p2 + theme(legend.position = leg.pos,
+  p3 <- p2 + theme(legend.position = leg.pos, legend.key = element_blank(), 
                    legend.text = element_text(size = font.size),
-                   legend.key = element_blank(), 
                    legend.key.width = unit(width/10, 'cm'),
                    legend.key.height = unit(height/15, 'cm'),
                    axis.title.y = element_text(size = font.size, angle = 90),
@@ -106,14 +103,32 @@ ggmap.xfoot.obs <- function(mm, site, oco.ver, oco.path, timestr,
     p4 <- p3 + guides(fill = guide_legend(order = 1, nrow = 2, byrow = T))
   if (leg.pos %in% c('left', 'right')) 
     p4 <- p3 + guides(fill = guide_legend(order = 1, ncol = 1))
+  if (!is.null(title)) p4 <- annotate_figure(p4, top = title)
+  if (storeTF) ggsave(p4, file = picname, width = width, height = height, dpi = 300)
+ 
+  return(p4)
+}
 
-  recp.obs <- obs %>% filter(abs(lat - recp.lat) < 1E-4, abs(lon - recp.lon) < 1E-4)
-  print(recp.obs)
+
+
+
+
+
+
+
+
+if (F) {
+
   l1 <- ggplot() + theme_bw() + labs(x = 'XCO2', y = 'LATITUDE') + 
         geom_point(data = obs, aes(xco2, lat), size = 1.6, shape = 17) + 
-        ylim(c(map.ext$minlat + 0.1, map.ext$maxlat - 0.1)) + 
-        geom_point(data = recp.obs, aes(xco2, lat), 
-                   size = 2, shape = 17, color = 'orange')
+        ylim(c(map.ext$minlat + 0.1, map.ext$maxlat - 0.1))
+        
+  if (length(recp.lat) * length(recp.lon) == 1) {
+    recp.obs <- obs %>% filter(abs(lat - recp.lat) < 1E-4, 
+                               abs(lon - recp.lon) < 1E-4)
+    l1 <- l1 + geom_point(data = recp.obs, aes(xco2, lat), size = 2, 
+                          shape = 17, color = 'orange')
+  } 
 
   #p1.cy <- ggplot_gtable(ggplot_build(p4))
   #l1.cy <- ggplot_gtable(ggplot_build(l1))
@@ -124,10 +139,5 @@ ggmap.xfoot.obs <- function(mm, site, oco.ver, oco.path, timestr,
   if (leg.pos %in% c('bottom', 'top'))
     pp <- ggarrange(p4, l1, ncol = 2, widths = c(2.5, 1), common.legend = T)
 
-  if (!is.null(title)) pp <- annotate_figure(pp, top = title)
-  if (storeTF) ggsave(pp, file = picname, width = width, height = height, dpi = 300)
- 
-  print(picname)
-
-  return(pp)
+  #if (!is.null(title)) pp <- annotate_figure(pp, top = title)
 }

@@ -27,10 +27,10 @@ load_libs('dplyr', 'ncdf4', 'parallel', 'raster', 'readr', 'rslurm', 'ggplot2',
           'ggpubr', 'rworldmap', 'lutz', lib.loc = lib.loc)
 
 ### Load permute fortran dll for footprint matrix permutation
-permute_exe <- file.path(xstilt_wd, 'stilt/r/src/permute.so')
+permute_exe <- file.path(xstilt_wd, 'stilt_hysplit/r/src/permute.so')
 if (!file.exists(permute_exe)) {
-  cat('calc_footprint(): failed to find permute.so in stilt/r/src/, compile now...\n')
-  system(paste0('R CMD SHLIB ', xstilt_wd, '/stilt/r/src/permute.f90'))
+  cat('calc_footprint(): failed to find permute.so in stilt_hysplit/r/src/, compile now...\n')
+  system(paste0('R CMD SHLIB ', xstilt_wd, '/stilt_hysplit/r/src/permute.f90'))
 }
 dyn.load(permute_exe)
 

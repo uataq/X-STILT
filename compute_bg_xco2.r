@@ -20,13 +20,13 @@
 
 ## source all functions and load all libraries
 # CHANGE working directory ***
-homedir <- '/uufs/chpc.utah.edu/common/home'
-xstilt_wd <- file.path(homedir, 'lin-group7/wde/X-STILT') #current dir
+homedir <- '/central/home/dienwu'
+xstilt_wd <- file.path(homedir, 'X-STILT') 
 setwd(xstilt_wd)   # move to working directory
 source('r/dependencies.r') # source all functions
 
-# insert your google API for the use of ggplot and ggmap
-api.key <- ''
+# Please insert your API in the 'insert_ggAPI.csv' for use of ggplot and ggmap
+api.key <- readLines('insert_ggAPI.csv')
 register_google(key = api.key)
 
 
@@ -35,7 +35,7 @@ site     <- 'Riyadh'  # insert target city
 lon.lat  <- get.lon.lat(site = site, dlon = 1, dlat = 2)
 site.lon <- lon.lat$citylon; site.lat <- lon.lat$citylat
 oco.sensor <- c('OCO-2', 'OCO-3')[2]
-oco.ver    <- c('V7rb', 'V8r', 'V9r', 'VEarlyR')[4]   # retrieval algo version
+oco.ver    <- c('V7rb', 'V8r', 'V9r', 'V10r', 'VEarlyR')[5]   # retrieval algo version
 oco.path   <- file.path(input.path, oco.sensor, paste0('L2_Lite_FP_', oco.ver))
 
 
@@ -47,19 +47,18 @@ oco.path   <- file.path(input.path, oco.sensor, paste0('L2_Lite_FP_', oco.ver))
 method <- c('M1', 'M2H', 'M2S', 'M3')[4]
 
 ## required output and input paths, txtfile name for storing background values
-input.path  <- file.path(homedir, 'lin-group7/wde/input_data')
-output.path <- file.path(homedir, 'lin-group7/wde/output', site)
+input.path  <- '/central/groups/POW'
+output.path <- file.path(homedir, 'output', site)
 bg.txtfile  <- file.path(output.path, paste0(method, '_bg_', site, '_', 
                                              oco.sensor, '_', oco.ver, '.txt'))
 oco.path <- file.path(input.path, oco.sensor, paste0('L2_Lite_FP_', oco.ver))
 
 # path for storing overpass sampling info by 'get,site.track'
-txt.path   <- file.path(input.path, 'OCO-2/overpass_city') 
-oco.track <- get.site.track(site, oco.sensor, oco.ver, oco.path, searchTF = F,
-                            date.range = c('20140901', '20201231'), 
-                            thred.count.per.deg = 100, lon.lat = lon.lat, 
-                            urbanTF = T, dlon.urban = 0.5, dlat.urban = 0.5,
-                            thred.count.per.deg.urban = 100, txt.path) %>% 
+oco.track <- get.site.track(site, oco.sensor, oco.ver, oco.path, searchTF = F, 
+                            date.range = c('20140101', '20201231'), 
+                            thred.count.per.deg = 100, lon.lat, 
+                            urbanTF, dlon.urban, dlat.urban, 
+                            thred.count.per.deg.urban = 50, rmTF = F) %>% 
               filter(qf.urban.count > 80)
 all.timestr <- oco.track$timestr; print(all.timestr)
 

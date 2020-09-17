@@ -35,66 +35,122 @@
 #' @import dplyr, proj4, raster
 #' @export
 
+# Gaussian kernel weighting calculation
+make_gauss_kernel <- function (rs, sigma, projection) {
+  # Modified from raster:::.Gauss.weight()
+  require(raster)
+  d <- 3 * sigma
+  nx <- 1 + 2 * floor(d/rs[1])
+  ny <- 1 + 2 * floor(d/rs[2])
+  m <- matrix(ncol = nx, nrow = ny)
+  xr <- (nx * rs[1])/2
+  yr <- (ny * rs[2])/2
+  r <- raster(m, xmn = -xr[1], xmx = xr[1], ymn = -yr[1], ymx = yr[1],
+              crs = projection)
+  p <- xyFromCell(r, 1:ncell(r))^2
+  m <- 1/(2 * pi * sigma^2) * exp(-(p[, 1] + p[, 2])/(2 * sigma^2))
+  m <- matrix(m, ncol = nx, nrow = ny, byrow = TRUE)
+  w <- m/sum(m)
+  w[is.na(w)] <- 1
+  w
+}
+
+# Wrap longitudes into -180:180 range
+wrap_longitude_meridian <- function(x) {
+  (x %% 360 + 540) %% 360 - 180
+}
+
+# Wrap longitudes into 0:360 range
+wrap_longitude_antimeridian <- function(x) {
+  x <- wrap_longitude_meridian(x)
+  ifelse(x < 0, x + 360, x)
+}
+
 calc_footprint <- function(p, output = NULL, r_run_time,
                            projection = '+proj=longlat',
                            smooth_factor = 1, time_integrate = F,
                            xmn, xmx, xres, ymn, ymx, yres = xres) {
-  
   require(dplyr)
   require(raster)
   
+  p <- p[ , c('time', 'indx', 'long', 'lati', 'foot')]
+  
   np <- length(unique(p$indx))
-  
-  # Interpolate particle locations during initial time steps
-  times <- c(seq(0, 10, by = 0.1),
-             seq(10.2, 20, by = 0.2),
-             seq(20.5, 100, by = 0.5))
   time_sign <- sign(median(p$time))
-  times <- times * time_sign
+  is_longlat <- grepl('+proj=longlat', projection, fixed = T)
   
-  # Preserve total field prior to split-interpolating particle positions
-  aptime <- abs(p$time)
-  foot_0_10_sum <- sum(p$foot[aptime <= 10], na.rm = T)
-  foot_10_20_sum <- sum(p$foot[aptime > 10 & aptime <= 20], na.rm = T)
-  foot_20_100_sum <- sum(p$foot[aptime > 20 & aptime <= 100], na.rm = T)
-
-  # Split particle incluence along linear trajectory to sub-minute timescales
-  p <- p %>%
-    dplyr::select(indx, time, long, lati, foot) %>%
-    full_join(expand.grid(time = times,
-                          indx = unique(p$indx)),
-              by = c('indx', 'time')) %>%
-    arrange(indx, -time) %>%
+  # Determine longitude wrapping behavior for grid extents containing anti
+  # meridian, including partial wraps (e.g. 20deg from 170:-170) and global
+  # coverage (e.g. 360deg from -180:180)
+  if (is_longlat) {
+    xdist <- ((180 - xmn) - (-180 - xmx)) %% 360
+    if (xdist == 0) {
+      xdist <- 360
+      xmn <- -180
+      xmx <- 180
+    } else if ((xmx < xmn) || (xmx > 180)){
+      p$long <- wrap_longitude_antimeridian(p$long)
+      xmn <- wrap_longitude_antimeridian(xmn)
+      xmx <- wrap_longitude_antimeridian(xmx)
+    }
+  }
+  
+  # Interpolate particle locations during first 100 minutes of simulation if
+  # median distance traveled per time step is larger than grid resolution
+  distances <- p %>%
+    dplyr::filter(abs(time) < 100) %>%
     group_by(indx) %>%
-    mutate(long = na_interp(long, x = time),
-           lati = na_interp(lati, x = time),
-           foot = na_interp(foot, x = time)) %>%
-    ungroup() %>%
-    na.omit() %>%
-    mutate(time = round(time, 1))
-
-  # Scale interpolated values to retain total field
-  aitime <- abs(p$time)
-  mi <- aitime <= 10
-  p$foot[mi] <- p$foot[mi] / (sum(p$foot[mi], na.rm = T) / foot_0_10_sum)
-  mi <- aitime > 10 & aitime <= 20
-  p$foot[mi] <- p$foot[mi] / (sum(p$foot[mi], na.rm = T) / foot_10_20_sum)
-  mi <- aitime > 20 & aitime <= 100
-  p$foot[mi] <- p$foot[mi] / (sum(p$foot[mi], na.rm = T) / foot_20_100_sum)
+    summarize(dx = median(abs(diff(long))),
+              dy = median(abs(diff(lati)))) %>%
+    ungroup()
+  
+  should_interpolate <- (median(distances$dx) > xres) || 
+    (median(distances$dy) > yres)
+  if (should_interpolate) {
+    times <- c(seq(0, 10, by = 0.1),
+               seq(10.2, 20, by = 0.2),
+               seq(20.5, 100, by = 0.5)) * time_sign
+    
+    # Preserve total field prior to split-interpolating particle positions
+    aptime <- abs(p$time)
+    foot_0_10_sum <- sum(p$foot[aptime <= 10], na.rm = T)
+    foot_10_20_sum <- sum(p$foot[aptime > 10 & aptime <= 20], na.rm = T)
+    foot_20_100_sum <- sum(p$foot[aptime > 20 & aptime <= 100], na.rm = T)
+    
+    # Split particle influence along linear trajectory to sub-minute timescales
+    p <- p %>%
+      full_join(expand.grid(time = times,
+                            indx = unique(p$indx)),
+                by = c('indx', 'time')) %>%
+      arrange(indx, -time) %>%
+      group_by(indx) %>%
+      mutate(long = na_interp(long, x = time),
+             lati = na_interp(lati, x = time),
+             foot = na_interp(foot, x = time)) %>%
+      ungroup() %>%
+      na.omit() %>%
+      mutate(time = round(time, 1))
+    
+    # Scale interpolated values to retain total field
+    aptime <- abs(p$time)
+    mi <- aptime <= 10
+    p$foot[mi] <- p$foot[mi] / (sum(p$foot[mi], na.rm = T) / foot_0_10_sum)
+    mi <- aptime > 10 & aptime <= 20
+    p$foot[mi] <- p$foot[mi] / (sum(p$foot[mi], na.rm = T) / foot_10_20_sum)
+    mi <- aptime > 20 & aptime <= 100
+    p$foot[mi] <- p$foot[mi] / (sum(p$foot[mi], na.rm = T) / foot_20_100_sum)
+  }
   
   # Preserve time relative to individual particle release as rtime
-  releases <- p[!duplicated(p$indx), ]
-  is_backward <- median(p$time) < 0
   p <- p %>%
     group_by(indx) %>%
     mutate(rtime = time - (time_sign) * min(abs(time))) %>%
     ungroup()
-
+  
   # Translate x, y coordinates into desired map projection
-  is_longlat <- grepl('+proj=longlat', projection, fixed = T)
   if (!is_longlat) {
     require(proj4)
-    i[, c('long', 'lati')] <- project(i[, c('long', 'lati')], projection)
+    p[, c('long', 'lati')] <- project(p[, c('long', 'lati')], projection)
     grid_lims <- project(list(c(xmn, xmx), c(ymn, ymx)), projection)
     xmn <- min(grid_lims$x)
     xmx <- max(grid_lims$x)
@@ -102,40 +158,23 @@ calc_footprint <- function(p, output = NULL, r_run_time,
     ymx <- max(grid_lims$y)
   }
   
-  # Set footprint grid
+  # Set footprint grid breaks using lower left corner of each cell
   glong <- head(seq(xmn, xmx, by = xres), -1)
   glati <- head(seq(ymn, ymx, by = yres), -1)
   
-  # Gaussian kernel bandwidth scaling
+  # Gaussian kernel bandwidth scaling by summed variances, elapsed time, and
+  # average latitude of the ensemble
   kernel <- p %>%
     group_by(rtime) %>%
-    dplyr::summarize(varsum = var(long, na.rm = T) + var(lati, na.rm = T),
-                     lati = mean(lati, na.rm = T)) %>%
+    dplyr::summarize(varsum = var(long) + var(lati),
+                     lati = mean(lati)) %>%
+    ungroup() %>%
     na.omit()
+  
   di <- kernel$varsum^(1/4)
   ti <- abs(kernel$rtime/1440)^(1/2)
   grid_conv <- if (is_longlat) cos(kernel$lati * pi/180) else 1
   w <- smooth_factor * 0.06 * di * ti / grid_conv
-  
-  # Gaussian kernel weighting calculation
-  make_gauss_kernel <- function (rs, sigma, projection) {
-    # Modified from raster:::.Gauss.weight()
-    require(raster)
-    d <- 3 * sigma
-    nx <- 1 + 2 * floor(d/rs[1])
-    ny <- 1 + 2 * floor(d/rs[2])
-    m <- matrix(ncol = nx, nrow = ny)
-    xr <- (nx * rs[1])/2
-    yr <- (ny * rs[2])/2
-    r <- raster(m, xmn = -xr[1], xmx = xr[1], ymn = -yr[1], ymx = yr[1],
-                crs = projection)
-    p <- xyFromCell(r, 1:ncell(r))^2
-    m <- 1/(2 * pi * sigma^2) * exp(-(p[, 1] + p[, 2])/(2 * sigma^2))
-    m <- matrix(m, ncol = nx, nrow = ny, byrow = TRUE)
-    w <- m/sum(m)
-    w[is.na(w)] <- 1
-    w
-  }
   
   # Determine maximum kernel size
   xyres <- c(xres, yres)
@@ -146,8 +185,9 @@ calc_footprint <- function(p, output = NULL, r_run_time,
   xbufh <- (xbuf - 1) / 2
   ybuf <- nrow(max_k)
   ybufh <- (ybuf - 1) / 2
-  max_glong <- seq(xmn - (xbuf*xres), xmx + ((xbuf - 1)*xres), by = xres)
-  max_glati <- seq(ymn - (ybuf*yres), ymx + ((ybuf - 1)*yres), by = yres)
+  
+  glong_buf <- seq(xmn - (xbuf*xres), xmx + ((xbuf - 1)*xres), by = xres)
+  glati_buf <- seq(ymn - (ybuf*yres), ymx + ((ybuf - 1)*yres), by = yres)
   
   # Remove zero influence particles and positions outside of domain
   p <- p %>%
@@ -158,8 +198,8 @@ calc_footprint <- function(p, output = NULL, r_run_time,
   
   # Pre grid particle locations
   p <- p %>%
-    transmute(loi = as.integer(findInterval(long, max_glong)),
-              lai = as.integer(findInterval(lati, max_glati)),
+    transmute(loi = as.integer(findInterval(long, glong_buf)),
+              lai = as.integer(findInterval(lati, glati_buf)),
               foot = foot,
               time = time,
               rtime) %>%
@@ -168,8 +208,8 @@ calc_footprint <- function(p, output = NULL, r_run_time,
     ungroup()
   
   # Dimensions in accordance with CF convention (x, y, t)
-  nx <- length(max_glati)
-  ny <- length(max_glong)
+  nx <- length(glati_buf)
+  ny <- length(glong_buf)
   grd <- matrix(0, nrow = ny, ncol = nx)
   
   # Split particle data by footprint layer
@@ -180,7 +220,7 @@ calc_footprint <- function(p, output = NULL, r_run_time,
   layers <- sort(unique(p$layer))
   nlayers <- length(layers)
   
-  # Preallocate footprint output array
+  # Allocate and fill footprint output array
   foot <- array(grd, dim = c(dim(grd), nlayers))
   for (i in 1:nlayers) {
     layer_subset <- dplyr::filter(p, layer == layers[i])
@@ -210,7 +250,7 @@ calc_footprint <- function(p, output = NULL, r_run_time,
   size <- dim(foot)
   foot <- foot[(xbuf+1):(size[1]-xbuf), (ybuf+1):(size[2]-ybuf), ] / np
   
-  # Determine timestamp to use in output files
+  # Determine time to use in output files
   if (time_integrate) {
     time_out <- as.numeric(r_run_time) 
   } else {

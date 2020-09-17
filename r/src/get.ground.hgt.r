@@ -15,7 +15,7 @@
 
 get.ground.hgt <- function(receptor = NULL, agl = 0.1, run_trajec = T, 
                            namelist, rundir, emisshrs = 0.01, hnf_plume, 
-                           met_file_format, met_loc, n_hours, rm_dat = T, 
+                           met_file_format, met_path, n_hours, rm_dat = T, 
                            timeout, w_option = 0, z_top = 25000){
 
   # before running trajec, create new 'tmp.output', 
@@ -42,7 +42,7 @@ get.ground.hgt <- function(receptor = NULL, agl = 0.1, run_trajec = T,
                               long = receptor$long, zagl = agl)
 
   # get met files for + or - 1 hour
-  met_files <- find_met_files(receptor$run_time, met_file_format, n_hours, met_loc)
+  met_files <- find_met_files(receptor$run_time, met_file_format, n_hours, met_path)
   
   particle <- NULL
   if (file.exists(tmp.output$file)) particle <- readRDS(tmp.output$file)

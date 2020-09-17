@@ -1,18 +1,19 @@
 # Script to make footprint plots with OCO-2 observations, DW, 05/12/2020
 
-homedir <- '/uufs/chpc.utah.edu/common/home'
-xstilt_wd <- file.path(homedir, 'lin-group7/wde/X-STILT') # current dir
+homedir <- '/central/home/dienwu'
+xstilt_wd <- file.path(homedir, 'X-STILT') # current dir
 source(file.path(xstilt_wd, 'r/dependencies.r'))
 register_google(key = '')
 
 # choose the site
 site <- 'Seoul'
-input.path <- file.path(homedir, 'lin-group7/wde/input_data')
-oco2.ver  <- c('b7rb', 'b8r', 'b9r')[3]           # OCO-2 version
-oco2.path <- file.path(input.path, paste0('OCO-2/L2/OCO2_lite_', oco2.ver))
+input.path  <- '/central/groups/POW'
+oco.sensor  <- c('OCO-2', 'OCO-3')[2]
+oco.ver     <- c('V7rb', 'V8r', 'V9r', 'VEarlyR')[4]   # retrieval algo version
+oco.path    <- file.path(input.path, oco.sensor, paste0('L2_Lite_FP_', oco.ver))
 
 # footprint path
-store.path  <- file.path(homedir, 'lin-group7/wde/output', site)
+store.path <- file.path(homedir, 'output', site)
 out.path    <- list.files(store.path, 'out_20', full.names = T)
 all.timestr <- strsplit.to.df(basename(out.path))$V2
 

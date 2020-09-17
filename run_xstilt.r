@@ -3,8 +3,7 @@
 #' ---------------------------------------------------------------------------
 
 #' @flags: 
-#' A. run_trajec == T or run_foot == T: 
-#'    run trajectory or footprint, simulations will be started in STEP 6
+#' A. run_trajec == T or run_foot == T: run trajectory or footprint, simulations
 #'
 #' A1. if run_hor_err == T or run_ver_err == T (set error parameters in STEP 4)
 #'     X-STILT generates trajec with perturbations from wind or PBL errors.
@@ -22,19 +21,18 @@
 #'                or XCO2 errors due to transport errors (run_hor_err == T).
 #'
 #' ---------------------------------------------------------------------------
-
 #' @updates:
 #' now build upon Ben Fasoli's STILT-R version 2 codes, DW, 05/23/2018
 #' !!! need to clear up codes for forward run, based on Ben's parallel computing
 #' Add plotting scripts for footprint and XCO2 enhancements, DW, 06/28/2018
 #' Add horizontal transport error module with flag 'run_hor_err'
-#'   with additional subroutines in /src/oco2-xstilt/trans_err, DW, 07/23/2018
+#'     with additional subroutines in /src/oco2-xstilt/trans_err, DW, 07/23/2018
 #' Add vertical trans error module, with flag 'run_ver_err', add ziscale
-#'   when scaling PBL heights and break trans error part (step 4) into
-#'   horizontal wind error and vertical trans error (via PBL perturb), 
-#'   DW, 07/25/2018
+#'     when scaling PBL heights and break trans error part (step 4) into
+#'     horizontal wind error and vertical trans error (via PBL perturb), 
+#'     DW, 07/25/2018
 #' simplify main code and use 'get.uverr()' to get horizontal wind error stat,
-#'   DW, 08/31/2018
+#'     DW, 08/31/2018
 #' add emission uncertainty, DW, 09/06/2018
 #' update code according to v9 changes, DW, 10/19/2018
 #' Optimize horizontal trans error using parallel computing, DW, 10/21/2018
@@ -53,32 +51,36 @@
 #'    DW, 01/29/2019 
 #' optimize the trans error codes to remove zero footprint during the
 #'    trajec-level CO2 calculations to reduce required memories, DW
-#' ---------------------------------------------------------------------------
-#' 
 #' allows for generating footprint with multiple reslutions at a time, 
 #'    see `foot.res2` and `before_footprint_xstilt.r` for more info, DW, 02/11/2019
 #' update all scripts for OCO-3 sensors, DW, 06/29/2020
+
+#' ---------------------------------------------------------------------------
+#' migrate X-STILT to use the latest HYSPLITv5, DW, 09/17/2020
+#' add modules for dealing with TROPOMi data, DW, 09/17/2020
 
 
 # test STILT-HYSPLIT 
 #Rscript -e "uataq::stilt_init('X-STILT', branch = 'hysplit-merge')" 
 
-
 #### source all functions and load all libraries
 # CHANGE working directory ***
 homedir <- '/central/home/dienwu'
-xstilt_wd <- file.path(homedir, 'X-STILT') # current dir
+xstilt_wd <- file.path(homedir, 'X-STILT_new') 
 setwd(xstilt_wd)   # move to working directory
 source('r/dependencies.r') # source all functions
 
-# Please insert your API for the use of ggplot and ggmap
-api.key <- ''
+# Please insert your API in the 'insert_ggAPI.csv' for use of ggplot and ggmap
+api.key <- readLines('insert_ggAPI.csv')
+if (api.key == '') stop('Missing googleAPI, insert your API code in insert_ggAPI.csv\n')
 register_google(key = api.key)
-project <- 'OCO-3'   # name your project
+
 
 #------------------------------ STEP 1 --------------------------------------- #
 ### 1) input dlat, dlon to get spatial domain around city center
-site <- 'Riyadh'   # choose a city
+#site <- 'Riyadh'   # choose a city
+cat('Enter city name: ')
+site <- readLines('stdin', n = 1); print(site)
 lon.lat <- get.lon.lat(site = site, dlon = 1, dlat = 1.5)
 
 
@@ -86,12 +88,19 @@ lon.lat <- get.lon.lat(site = site, dlon = 1, dlat = 1.5)
 # e.g., OCO-2/3 XCO2, SIF, NOAA RAOB, ODAIC emission (1km tiff files)
 input.path  <- '/central/groups/POW'
 oco.sensor  <- c('OCO-2', 'OCO-3')[2]
-oco.ver     <- c('V7rb', 'V8r', 'V9r', 'VEarlyR')[4]   # retrieval algo version
+oco.ver     <- c('V7rb', 'V8r', 'V9r', 'V10r', 'VEarlyR')[5] # retrieval algo ver
 oco.path    <- file.path(input.path, oco.sensor, paste0('L2_Lite_FP_', oco.ver))
 sif.path    <- file.path(input.path, oco.sensor, 'L2_Lite_SIF_V8r')
 raob.path   <- file.path(input.path, 'RAOB', site)  # NOAA radiosonde
 odiac.vname <- c('2016', '2017', '2018', '2019')[4]         # ODIAC version
 tiff.path   <- file.path(input.path, 'ODIAC', paste0('ODIAC', odiac.vname))  
+project <- oco.sensor   # name your project
+
+
+# if tropomi.speci includes NA, no runs related to TROPOMI will be generated
+tropomi.speci <- c(NA, 'CO', 'NO2')[1]   
+tropomi.path <- file.path(input.path, 'TROPOMI', paste0('L2_', tropomi.speci))
+tropomi.hir.path <- paste0(tropomi.path, '_HiR')    # higher res TROPOMI
 
 
 ## path for storing output or anything related to trans err
@@ -104,8 +113,6 @@ dir.create(err.path, showWarnings = F, recursive = T)
 # whether to search for overpasses over urban region,
 # defined as city.lat +/- dlat, city.lon +/- dlon
 urbanTF <- T; dlon.urban <- 0.5; dlat.urban <- 0.5
-
-# rmTF = T, for removing overpasses during hemispheric growing seasons
 oco.track <- get.site.track(site, oco.sensor, oco.ver, oco.path, searchTF = F, 
                             date.range = c('20140101', '20201231'), 
                             thred.count.per.deg = 100, lon.lat, 
@@ -115,18 +122,24 @@ oco.track <- get.site.track(site, oco.sensor, oco.ver, oco.path, searchTF = F,
 # one can further subset 'oco.track' based on sounding # or data quality
 # over entire lon.lat domain or near city center
 # see columns 'qf.count' or 'wl.count' in 'oco.track'
-oco.track   <- oco.track %>% filter(qf.urban.count > 50)
-all.timestr <- oco.track$timestr; print(all.timestr)
+oco.track   <- oco.track %>% filter(qf.urban.count > 50); print(oco.track)
+all.timestr <- oco.track$timestr
 
 # whether to plot them on maps, plotTF = T/F,
 # this helps you choose which overpass to simulate, see 'tt' below
 ggmap.obs.info(plotTF = F, site, store.path, all.timestr, oco.sensor, oco.ver, 
                oco.path, lon.lat, xstilt_wd, dlat.urban, dlon.urban)
 
+
 ### 5) *** NOW choose the timestr that you'd like to work on...
-tt <- 9
+# tt = 1
+cat('Enter the row index for your target overpass: ')
+tt <- as.numeric(readLines('stdin', n = 1)); print(tt)
 timestr <- all.timestr[tt]
 cat(paste('Working on:', timestr, 'for city/region:', site, '...\n\n'))
+
+if (timestr > '2019080600') tropomi.path <- tropomi.hir.path
+if (NA %in% tropomi.speci) tropomi.path <- NA
 cat('Done with choosing cities & overpasses...\n')
 
 
@@ -147,27 +160,25 @@ run_hor_err   <- F  # T: set error parameters in STEP 4
 run_ver_err   <- F  # T: set error parameters in STEP 4
 run_emiss_err <- F  # T: get XCO2 error due to prior emiss err, see STEP 4 and 8
 run_sim       <- F  # T: do analysis with existing trajec/foot, see STEP 8
-
 delt <- 2           # fixed timestep [min]; set = 0 for dynamic timestep
 nhrs <- -24         # number of hours backward (-) or forward (+)
 
 # change to Ben's definitions,  see validate_varsiwant()
 varstrajec <- c('time', 'indx', 'lati', 'long', 'zagl', 'zsfc', 'foot', 'samt',
-                'dmas', 'mlht', 'temp', 'pres', 'sigw', 'tlgr', 'dens')
+                'dmas', 'mlht', 'temp', 'pres', 'sigw', 'tlgr', 'dens', 'sphu')
 
 # path for the ARL format of meteo fields
 # simulation_step() will find corresponding files
-met        <- c('gdas0p5', 'gfs0p25')[2]    # choose met fields
-met.path   <- file.path(homedir, met)       # path of met fields
-met.format <- '%Y%m%d'                      # met file name convention
-met.num    <- 1                             # min number of files needed
+met        <- c('gdas0p5', 'gfs0p25', 'hrrr')[2]    # choose met fields
+met.path   <- file.path(homedir, met)               # path of met fields
+met.format <- '%Y%m%d'                              # met file name convention
+met.num    <- 1                                     # min number of files needed
 
 # path to grab or store trajec, foot and potential trans err stat DW, 07/31/2018
 # ourput directory for storing traj with default convention;
 # store traj with wind err in a separate directory if run_hor_err = T
-outdir <- file.path(store.path, paste('out', timestr, met, sep = '_'))
-if (run_hor_err) outdir <- file.path(err.path, paste('out_err_', timestr, '_', met))
-
+outdir <- file.path(store.path, paste('out', timestr, met, oco.sensor, sep = '_'))
+if (run_hor_err) outdir <- gsub('out', 'outerr', outdir)
 cat('Done with basis settings...\n')
 
 
@@ -181,20 +192,14 @@ cat('Done with basis settings...\n')
 # if release particles from fixed levels
 agl    <- c(10, 500, 2000, 3000)[4]        # in mAGL
 numpar <- 100       # par for each time window for forward box runs
-dpar   <- numpar
 
-# SET COLUMN RECEPTORS as a list, if release particles from a column
-if (columnTF) {
-
-  # min, middle, max heights for STILT levels, in METERS
+# line source for column release according to HYSPLITv5, DW, 09/17/2020
+# all particles will be randomly distributed vertically
+if (columnTF) {     # insert min, max heights for STILT levels, in METERS
   minagl <- 0
-  midagl <- 3000         # cut-off level for different vertical spacing
-  maxagl <- 6000
-  dh     <- c(100, 500)  # vertical spacing below and above 'midagl', in METERS
-  dpar   <- c(10, 50, 100, 200, 2500)[3]   # particle numbers per level
-  agl    <- c(seq(minagl, midagl, dh[1]), seq(midagl + dh[2], maxagl, dh[2]))
-  nlev   <- length(agl)
-  numpar <- nlev * dpar   # total number of particles
+  maxagl <- 3000        
+  agl    <- c(minagl, maxagl)
+  numpar <- 3000        
 }  # end if columnTF
 
 
@@ -208,8 +213,8 @@ if (selTF) {
 
   # number of points to aggregate within 1deg over small/large enhancements,
   # i.e., over background/enhancements, binwidth will be 1deg/num
-  num.bg   <- 20   # e.g., every 20 pts in 1 deg
-  num.peak <- 40   # e.g., every 40 pts in 1 deg
+  num.bg   <- 100   # e.g., every # of pts in 1 deg background lat range
+  num.peak <- 500   # e.g., every # of pts in 1 deg urban lat range
 
   # recp.indx: how to pick receptors from all screened soundings (QF = 0)
   recp.indx <- c(seq(lon.lat$minlat,  peak.lat[1],     1 / num.bg),
@@ -220,7 +225,6 @@ if (selTF) {
 # whether to subset receptors when debugging; if no subset, insert NULL
 recp.num <- NULL     # can be a number for max num of receptors or a vector, 1:20
 find.lat <- NULL     # for debug or test, model one sounding
-
 
 ### 3) select satellite soundings, plotTF for whether plotting OCO-2 observed XCO2
 recp.info <- get.recp.info(timestr, oco.ver, oco.path, lon.lat, selTF, 
@@ -234,9 +238,9 @@ cat(paste('Done with receptor setup...total', nrecp, 'receptors..\n'))
 # Error analysis
 # 1) get horizontal transport error component if run_hor_err = T
 # path for outputting wind error stats
-hor.err  <- get.uverr(run_hor_err, site, timestr, xstilt_wd, overwrite = F,
-                      raob.path, raob.format = 'fsl', nhrs, met, met.path, 
-                      met.format, lon.lat, agl, err.path)
+hor.err <- get.uverr(run_hor_err, site, timestr, xstilt_wd, overwrite = F,
+                     raob.path, raob.format = 'fsl', nhrs, met, met.path, 
+                     met.format, lon.lat, agl, err.path)
 
 ## if run_hor_err = T, require ODIAC and CT fluxes and mole fractions
 # to calculate trans error of total CO2, DW, 07/28/2018
@@ -257,7 +261,7 @@ pbl.err <- get.zierr(run_ver_err, nhrs.zisf = 24, const.zisf = zisf)
 ### 4) if calculating XCO2 error due to emiss error, need EDGAR and FFDAS files
 # rearrange by DW, 10/21/2018
 if (run_emiss_err) { 
-  edgar.file <- file.path(input.path, 'EDGAR/CO2_2000-2008/v42_CO2_2008_TOT.0.1x0.1.nc')
+  edgar.file <- file.path(input.path, 'EDGAR/v42_CO2_2008_TOT.0.1x0.1.nc')
   ffdas.path <- file.path(input.path, 'FFDAS')
   ffdas.file <- list.files(ffdas.path, 'totals')
   ffdas.file <- file.path(ffdas.path, ffdas.file[grep('2008', ffdas.file)])
@@ -301,12 +305,11 @@ if (run_hor_err) {
 
 ### 2) whether weighted footprint by AK and PW for column simulations (X-STILT)
 # NA: no weighting performed for fixed receptor simulations
-ak.wgt  <- ifelse(columnTF, TRUE, NA)
-pwf.wgt <- ifelse(columnTF, TRUE, NA)
+ak.wgt  <- TRUE
+pwf.wgt <- TRUE
 
 # whether to overwrite existing wgttraj.rds files; if F, read from existing wgttraj.rds
-overwrite_wgttraj <- F  
-
+overwrite_wgttraj <- T  
 
 ### 3) other footprint parameters using STILTv2 (Fasoli et al., 2018)
 hnf_plume      <- T  # whether turn on hyper near-field (HNP) for mising hgts
@@ -323,15 +326,14 @@ if (run_trajec | run_foot) {
   ## use SLURM for parallel simulation settings
   # avoid using < 10 cores per node when running trans error stat (run_hor_err) 
   # along with calculating 2D foot together (run_foot), *** memory limits
-  n_nodes  <- 1
-  n_cores  <- 1
+  n_nodes  <- 10
+  n_cores  <- 6
 
   # time allowed for running hymodelc before forced terminations
   timeout  <- 4 * 60 * 60  # in sec
   job.time <- '04:00:00'    # total job time
-  #slurm    <- n_nodes > 0
-  slurm <- F
-  slurm_options <- list(time = job.time, account = 'POW', partition = 'POW')
+  slurm    <- n_nodes > 1
+  slurm_options <- list(time = job.time, account = 'pow', partition = 'any')
   jobname <- paste0('XSTILT_', site, '_', timestr)
 
   # create a namelist including all variables
@@ -349,12 +351,14 @@ if (run_trajec | run_foot) {
                    run_hor_err = run_hor_err, run_trajec = run_trajec, 
                    slurm = slurm, slurm_options = slurm_options, 
                    smooth_factor = smooth_factor, time_integrate = time_integrate, 
-                   timeout = timeout, varstrajec = varstrajec, xstilt_wd = xstilt_wd)        
+                   timeout = timeout, tropomi.speci = list(tropomi.speci), 
+                   tropomi.path = list(tropomi.path), varstrajec = varstrajec, 
+                   xstilt_wd = xstilt_wd)        
   cat('Done with creating namelist...\n')
 
   # call run.xstilt() to start running trajec and foot
   run.xstilt(namelist)  # see more variables defined in run.xstilt()
-  #q('no')
+  q('no')
 } # end if run trajec or foot
 
 
@@ -371,8 +375,7 @@ if (!run_trajec & !run_foot & run_sim) {
     # get actual ppm error, need to have error statistics ready
     # see cal.trajfoot.stat() in called before_footprint_xstilt.r for err stat
     cat('Start simulations of XCO2 error due to horizontal trans err...\n')
-    receptor <- cal.trans.err(site, timestr, xstilt_wd, outdir, 
-                              store.path = err.path, met)
+    receptor <- cal.trans.err(site, timestr, xstilt_wd, outdir, store.path, met)
     if (is.null(receptor)) stop('No results calculated, check cal.trans.err()\n')
 
   } else {
@@ -382,9 +385,9 @@ if (!run_trajec & !run_foot & run_sim) {
     # call func to match ODIAC emissions with xfoot & sum up to get 'dxco2.ff'
     cat('Start simulations of XCO2.ff or its error due to emiss err...\n')
     receptor <- run.xco2ff.sim(site, timestr, vname = odiac.vname, tiff.path, 
-                               outdir, foot.res, xstilt_wd, store.path, nhrs, dpar,
-                               smooth_factor, zisf, oco.ver, met, lon.lat, 
-                               run_emiss_err, edgar.file, ffdas.file, 
+                               outdir, foot.res, xstilt_wd, store.path, nhrs, 
+                               numpar, smooth_factor, zisf, oco.ver, met, 
+                               lon.lat, run_emiss_err, edgar.file, ffdas.file, 
                                plotTF = F, writeTF = T)
     if (is.null(receptor)) stop('No results calculated, check run.xco2ff.sim()\n')
   } # end if run_hor_err

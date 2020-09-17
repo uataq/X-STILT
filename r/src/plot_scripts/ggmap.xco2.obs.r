@@ -3,7 +3,7 @@
 
 # last update for lite b9 data, DW, 10/19/2018
 
-ggmap.xco2.obs <- function(mm, site, oco2.ver, oco2.path, timestr, recp.lon, 
+ggmap.xco2.obs <- function(mm, site, oco.ver, oco.path, timestr, recp.lon, 
                            recp.lat, xco2, min.xco2.sig = 1E-6, max.xco2.sig = 2, 
                            qfTF = T, title = NULL, picname, storeTF = T, 
                            width = 12, height = 8, leg.pos = 'bottom', 
@@ -17,9 +17,9 @@ ggmap.xco2.obs <- function(mm, site, oco2.ver, oco2.path, timestr, recp.lon,
                         maxlon = max(mm[[1]]$data$lon),
                         minlat = min(mm[[1]]$data$lat),
                         maxlat = max(mm[[1]]$data$lat))
-  if (!is.null(oco2.path)) {
+  if (!is.null(oco.path)) {
     cat('Reading OCO-2 data according to the spatial domain of ggmap...\n')
-    obs <- grab.oco2(ocopath = oco2.path, timestr, lon.lat = map.ext, oco2.ver)
+    obs <- grab.oco(oco.path, timestr, lon.lat = map.ext, oco.ver)
     if (qfTF) obs <- obs %>% filter(qf == 0)
   }
 
@@ -54,7 +54,7 @@ ggmap.xco2.obs <- function(mm, site, oco2.ver, oco2.path, timestr, recp.lon,
   }  # end if
 
   # plot observed XCO2, add xco2 raster layer
-  if (!is.null(oco2.path)) {
+  if (!is.null(oco.path)) {
     p1 <- p1 + geom_point(data = obs, aes(lon, lat, colour = xco2), size = 0.4)
     min.y <- floor(min(obs$xco2, na.rm = T))
     max.y <- ceiling(max(obs$xco2, na.rm = T))
@@ -85,7 +85,7 @@ ggmap.xco2.obs <- function(mm, site, oco2.ver, oco2.path, timestr, recp.lon,
                    axis.ticks = element_line(size = font.size),
                    title = element_text(size = font.size))
 
-  if (!is.null(oco2.path)) {
+  if (!is.null(oco.path)) {
     breaks <- seq(min.y, max.y, 2); limits <- c(min.y, max.y)
     p3 <- p3 + scale_colour_gradientn(name = 'OBS\nXCO2 [ppm]:', colours = col,
                                       limits = limits, breaks = breaks, 
@@ -94,7 +94,7 @@ ggmap.xco2.obs <- function(mm, site, oco2.ver, oco2.path, timestr, recp.lon,
   }                            
 
   if (leg.pos %in% c('bottom', 'top')) 
-    p4 <- p3 + guides(fill = guide_legend(order = 1, nrow = 2, byrow = T))
+    p4 <- p3 + guides(fill = guide_legend(order = 1, nrow = 1, byrow = T))
   if (leg.pos %in% c('left', 'right')) 
     p4 <- p3 + guides(fill = guide_legend(order = 1, ncol = 1))
 

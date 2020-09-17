@@ -3,6 +3,4 @@
 # install dependencies for STILT
 if (!require('devtools')) install.packages('devtools')
 devtools::install_github('benfasoli/uataq')
-
-uataq::stilt_init('stilt')
-system('ln -s +++')
+uataq::stilt_init('stilt_hysplit', branch = 'hysplit-merge')

@@ -21,16 +21,21 @@ run.xstilt <- function(namelist){
   receptors <- namelist$recp.info
 
   # met fields 
-  met_directory   <- namelist$met.path
-  met_file_format <- namelist$met.format
+  met_path  <- namelist$met.path
   n_met_min <- namelist$met.num
+  met_file_format <- namelist$met.format
+  met_subgrid_buffer <- 0.1
+  met_subgrid_enable <- F
+  met_subgrid_levels <- NA
 
   # modification for OCO-2 column simulations, DW, 05/24/2018
   # if NA, meaning no weighting nor OCO2 files for regular simualtions
   ak.wgt   <- namelist$ak.wgt     # whether weighted foot by averaging kernel
   pwf.wgt  <- namelist$pwf.wgt    # whether weighted foot by pres weighting
   oco.path <- namelist$oco.path
-  
+  tropomi.speci <- namelist$tropomi.speci
+  tropomi.path <- namelist$tropomi.path
+
   # Model control
   rm_dat     <- T
   timeout    <- namelist$timeout  # in sec
@@ -67,7 +72,7 @@ run.xstilt <- function(namelist){
   # footprint with diff resolution, can be NA or numbers
   xres2 <- namelist$foot.info$xres2
   yres2 <- namelist$foot.info$yres2
-  foot.nhrs <- namelist$foot.info$foot.nhrs 
+  foot.nhrs      <- namelist$foot.info$foot.nhrs 
   hnf_plume      <- namelist$hnf_plume
   smooth_factor  <- namelist$smooth_factor
   time_integrate <- namelist$time_integrate
@@ -178,13 +183,15 @@ run.xstilt <- function(namelist){
   setwd(stilt_wd)
   source('r/dependencies.r')
 
-  # Structure out directory ----------------------------------------------------
+
+  # Structure out directory ------------------------------------------------------
   # Outputs are organized in three formats. by-id contains simulation files by
-  # unique simulation identifier. particles and footprints contain symbolic
-  # links to the particle trajectory and footprint files in by-id
+  # unique simulation identifier. particles and footprints contain symbolic links
+  # to the particle trajectory and footprint files in by-id
   system(paste0('rm -r ', output_wd, '/footprints'), ignore.stderr = T)
   if (run_trajec) {
     system(paste0('rm -r ', output_wd, '/by-id'), ignore.stderr = T)
+    system(paste0('rm -r ', output_wd, '/met'), ignore.stderr = T)
     system(paste0('rm -r ', output_wd, '/particles'), ignore.stderr = T)
   }
   for (d in c('by-id', 'particles', 'footprints')) {
@@ -192,15 +199,6 @@ run.xstilt <- function(namelist){
     if (!file.exists(d))
       dir.create(d, recursive = T)
   }
-
-  # Met path symlink -----------------------------------------------------------
-  # Auto symlink the meteorological data path to the working directory to
-  # eliminate issues with long (>80 char) paths in fortran. Note that this
-  # assumes that all meteorological data is found in the same directory.
-  if ((nchar(paste0(met_directory, met_file_format)) + 2) > 80) {
-    met_loc <- file.path(path.expand('~'), paste0('m', namelist$project))
-    if (!file.exists(met_loc)) invisible(file.symlink(met_directory, met_loc))
-  } else met_loc <- met_directory
 
   # removed 'isot', 'iconvert', 'outfrac', 'random' -- 
   # not used by the latest STILT
@@ -212,50 +210,53 @@ run.xstilt <- function(namelist){
                          jobname = jobname, 
                          before_footprint = list(before_footprint),
                          before_trajec = list(before_trajec),
+                         lib.loc = lib.loc,
                          capemin = capemin,
                          cmass = cmass,
                          conage = conage,
                          cpack = cpack,
-                         delt = delt, 
+                         delt = delt,
                          dxf = dxf,
                          dyf = dyf,
                          dzf = dzf,
                          efile = efile,
                          emisshrs = emisshrs,
-                         frhmax = frhmax, 
-                         frhs = frhs, 
-                         frme = frme, 
+                         frhmax = frhmax,
+                         frhs = frhs,
+                         frme = frme,
                          frmr = frmr,
-                         frts = frts, 
-                         frvs = frvs, 
+                         frts = frts,
+                         frvs = frvs,
                          hnf_plume = hnf_plume,
-                         horcoruverr = horcoruverr, 
+                         horcoruverr = horcoruverr,
                          horcorzierr = horcorzierr,
                          hscale = hscale,
-                         ichem = ichem, 
+                         ichem = ichem,
                          idsp = idsp,
                          initd = initd,
                          k10m = k10m,
-                         kagl = kagl, 
-                         kbls = kbls, 
-                         kblt = kblt, 
+                         kagl = kagl,
+                         kbls = kbls,
+                         kblt = kblt,
                          kdef = kdef,
                          khinp = khinp,
-                         khmax = khmax, 
-                         kmix0 = kmix0, 
+                         khmax = khmax,
+                         kmix0 = kmix0,
                          kmixd = kmixd,
-                         kmsl = kmsl, 
-                         kpuff = kpuff, 
+                         kmsl = kmsl,
+                         kpuff = kpuff,
                          krand = krand,
-                         krnd = krnd, 
+                         krnd = krnd,
                          kspl = kspl,
                          kwet = kwet,
-                         kzmix = kzmix, 
-                         lib.loc = lib.loc,
-                         maxdim = maxdim, 
+                         kzmix = kzmix,
+                         maxdim = maxdim,
                          maxpar = maxpar,
                          met_file_format = met_file_format,
-                         met_loc = met_loc,
+                         met_path = met_path,
+                         met_subgrid_buffer = met_subgrid_buffer,
+                         met_subgrid_enable = met_subgrid_enable,
+                         met_subgrid_levels = met_subgrid_levels,
                          mgmin = mgmin,
                          n_hours = n_hours,
                          n_met_min = n_met_min,
@@ -264,7 +265,7 @@ run.xstilt <- function(namelist){
                          ninit = ninit,
                          nstr = nstr,
                          nturb = nturb,
-                         numpar = numpar, 
+                         numpar = numpar,
                          nver = nver,
                          outdt = outdt,
                          output_wd = output_wd,
@@ -282,9 +283,9 @@ run.xstilt <- function(namelist){
                          rht = rht,
                          rm_dat = rm_dat,
                          run_foot = run_foot,
-                         run_trajec = run_trajec, 
+                         run_trajec = run_trajec,
                          siguverr = siguverr,
-                         sigzierr = sigzierr, 
+                         sigzierr = sigzierr,
                          smooth_factor = smooth_factor,
                          splitf = splitf,
                          stilt_wd = stilt_wd,
@@ -321,19 +322,20 @@ run.xstilt <- function(namelist){
 
   # pass additional variables to stilt_apply and then to simulation_step() 
   # needed for before_*_xstilt() for X-STILT, DW, 02/11/2019
-                        oco.path = oco.path, 
-                        ak.wgt = ak.wgt, 
-                        pwf.wgt = pwf.wgt, 
-                        overwrite_wgttraj = namelist$overwrite_wgttraj, 
-                        run_hor_err = namelist$run_hor_err,
-                        emiss.file = namelist$emiss.file, 
-                        met = namelist$met, 
-                        ct.ver = namelist$ct.ver, 
-                        ctflux.path = namelist$ctflux.path, 
-                        ctmole.path = namelist$ctmole.path, 
-                        xres2 = list(xres2), 
-                        yres2 = list(yres2), 
-                        foot.nhrs = foot.nhrs)
+                         oco.path = oco.path, 
+                         tropomi.speci = tropomi.speci,
+                         tropomi.path = tropomi.path,
+                         ak.wgt = ak.wgt, 
+                         pwf.wgt = pwf.wgt, 
+                         overwrite_wgttraj = namelist$overwrite_wgttraj, 
+                         run_hor_err = namelist$run_hor_err,
+                         emiss.file = namelist$emiss.file, 
+                         ct.ver = namelist$ct.ver, 
+                         ctflux.path = namelist$ctflux.path, 
+                         ctmole.path = namelist$ctmole.path, 
+                         xres2 = list(xres2), 
+                         yres2 = list(yres2), 
+                         foot.nhrs = foot.nhrs)
 }
 
 
@@ -346,12 +348,12 @@ if (F) {
   r_long = receptors$long[X]
   r_zagl = receptors$zagl[X]
 
-
-  args <- list(oco.path = oco.path, ak.wgt = ak.wgt, pwf.wgt = pwf.wgt, 
+  args <- list(oco.path = oco.path, tropomi.speci = tropomi.speci,
+               tropomi.path = tropomi.path, ak.wgt = ak.wgt, pwf.wgt = pwf.wgt, 
                overwrite_wgttraj = namelist$overwrite_wgttraj, 
-               run_hor_err = namelist$run_hor_err,
-               emiss.file = namelist$emiss.file, met = namelist$met, 
-               ct.ver = namelist$ct.ver, ctflux.path = namelist$ctflux.path, 
+               run_hor_err = namelist$run_hor_err, emiss.file = namelist$emiss.file, 
+               met = namelist$met, ct.ver = namelist$ct.ver, 
+               ctflux.path = namelist$ctflux.path, 
                ctmole.path = namelist$ctmole.path, xres2 = list(xres2), 
                yres2 = list(yres2), foot.nhrs = foot.nhrs)
 
