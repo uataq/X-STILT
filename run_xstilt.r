@@ -66,7 +66,7 @@
 #### source all functions and load all libraries
 # CHANGE working directory ***
 homedir <- '/central/home/dienwu'
-xstilt_wd <- file.path(homedir, 'X-STILT_new') 
+xstilt_wd <- file.path(homedir, 'X-STILT') 
 setwd(xstilt_wd)   # move to working directory
 source('r/dependencies.r') # source all functions
 
