@@ -1,10 +1,19 @@
 # STILT Dependency Loader
 # For documentation, see https://github.com/uataq/stilt
 # Ben Fasoli
-# add Dien's OCO-2/XSTILT source codes, 05/23/2018, DW
+# add Dien's OCO-2/XSTILT source codes, 09/18/2020, DW
 
 ####
 if (!'xstilt_wd' %in% ls()) xstilt_wd <- getwd()
+
+# if fortran dependencies not exist
+if ( !file.exists(file.path(xstilt_wd, 'stilt_hysplit/r/src/permute.so')) ) {
+  setwd(file.path(xstilt_wd, 'stilt_hysplit'))
+  cat('need to setup STILT\n')
+  system('chmod +x setup')
+  system('./setup')
+  setwd(xstilt_wd)
+}
 
 ### Source stilt R functions
 rsc <- dir(file.path(xstilt_wd, 'stilt_hysplit/r/src'), 
