@@ -1,3 +1,7 @@
 [submodule "stilt"]
 	path = stilt
 	url = https://github.com/uataq/stilt
+[submodule "stilt_hysplit"]
+	path = stilt_hysplit
+	url = git@github.com:uataq/stilt.git
+	branch = hysplit-merge
