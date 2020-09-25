@@ -15,7 +15,7 @@ if ( !file.exists(permute_exe) | !file.exists(hycs_std) ) {
   cat('need to setup STILT\n')
   system('chmod +x setup')
   system('./setup')
-  system(paste('ln -s', file.path(xstilt_wd, 'stilt_hysplit/exe/hycs_std'), hycs_std))
+  #system(paste('ln -s', file.path(xstilt_wd, 'stilt_hysplit/exe/hycs_std'), hycs_std))
   setwd(xstilt_wd)
 }
 

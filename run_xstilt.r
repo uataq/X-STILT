@@ -167,12 +167,23 @@ nhrs <- -24         # number of hours backward (-) or forward (+)
 varstrajec <- c('time', 'indx', 'lati', 'long', 'zagl', 'zsfc', 'foot', 'samt',
                 'dmas', 'mlht', 'temp', 'pres', 'sigw', 'tlgr', 'dens', 'sphu')
 
-# path for the ARL format of meteo fields
-# simulation_step() will find corresponding files
-met        <- c('gdas0p5', 'gfs0p25', 'hrrr')[2]    # choose met fields
-met.path   <- file.path(homedir, met)               # path of met fields
-met.format <- '%Y%m%d'                              # met file name convention
-met.num    <- 1                                     # min number of files needed
+# info for the ARL format of meteo fields
+# see https://uataq.github.io/stilt/#/configuration?id=meteorological-data-input
+# for more details
+met <- c('gdas0p5', 'gfs0p25', 'hrrr')[3]         # choose met fields
+met_path <- file.path(homedir, met)               # path of met fields
+n_met_min <- 1                                    # min number of files needed
+met_file_format <- '%Y%m%d'                       # met file name convention
+
+# OPTION for subseting met fields if met_subgrid_enable is on, 
+# useful for large met fields like GFS or HRRR
+met_subgrid_buffer <- 0.1   # Percent to extend footprint area for met subdomain
+met_subgrid_enable <- T    
+
+# if set, extracts the defined number of vertical levels from the meteorological 
+# data files to further accelerate simulations, default is NA
+met_subgrid_levels <- NA    
+
 
 # path to grab or store trajec, foot and potential trans err stat DW, 07/31/2018
 # ourput directory for storing traj with default convention;
@@ -239,8 +250,8 @@ cat(paste('Done with receptor setup...total', nrecp, 'receptors..\n'))
 # 1) get horizontal transport error component if run_hor_err = T
 # path for outputting wind error stats
 hor.err <- get.uverr(run_hor_err, site, timestr, xstilt_wd, overwrite = F,
-                     raob.path, raob.format = 'fsl', nhrs, met, met.path, 
-                     met.format, lon.lat, agl, err.path)
+                     raob.path, raob.format = 'fsl', nhrs, met, met_path, 
+                     met_file_format, lon.lat, agl, err.path)
 
 ## if run_hor_err = T, require ODIAC and CT fluxes and mole fractions
 # to calculate trans error of total CO2, DW, 07/28/2018
@@ -342,18 +353,21 @@ if (run_trajec | run_foot) {
                    ctflux.path = ctflux.path, ctmole.path = ctmole.path, 
                    delt = delt, emiss.file = emiss.file, foot.info = foot.info, 
                    hnf_plume = hnf_plume, hor.err = hor.err, jobname = jobname,
-                   met = met, met.format = met.format, met.num = met.num, 
-                   met.path = met.path, nhrs = nhrs, n_cores = n_cores,
-                   n_nodes = n_nodes, numpar = numpar, outdir = outdir, 
-                   oco.path = oco.path, overwrite_wgttraj = overwrite_wgttraj,
-                   pbl.err = pbl.err, project = project, projection = projection,
-                   pwf.wgt = pwf.wgt, recp.info = recp.info, run_foot = run_foot, 
+                   met = met, met_file_format = met_file_format, 
+                   met_path = met_path, met_subgrid_buffer = met_subgrid_buffer, 
+                   met_subgrid_enable = met_subgrid_enable, 
+                   met_subgrid_levels = met_subgrid_levels, nhrs = nhrs, 
+                   n_cores = n_cores, n_met_min = n_met_min, n_nodes = n_nodes, 
+                   numpar = numpar, outdir = outdir, oco.path = oco.path, 
+                   overwrite_wgttraj = overwrite_wgttraj, pbl.err = pbl.err, 
+                   project = project, projection = projection, pwf.wgt = pwf.wgt, 
+                   recp.info = recp.info, run_foot = run_foot, 
                    run_hor_err = run_hor_err, run_trajec = run_trajec, 
                    slurm = slurm, slurm_options = slurm_options, 
                    smooth_factor = smooth_factor, time_integrate = time_integrate, 
                    timeout = timeout, tropomi.speci = list(tropomi.speci), 
                    tropomi.path = list(tropomi.path), varstrajec = varstrajec, 
-                   xstilt_wd = xstilt_wd)        
+                   xstilt_wd = xstilt_wd)      
   cat('Done with creating namelist...\n')
 
   # call run.xstilt() to start running trajec and foot

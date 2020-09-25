@@ -21,12 +21,12 @@ run.xstilt <- function(namelist){
   receptors <- namelist$recp.info
 
   # met fields 
-  met_path  <- namelist$met.path
-  n_met_min <- namelist$met.num
-  met_file_format <- namelist$met.format
-  met_subgrid_buffer <- 0.1
-  met_subgrid_enable <- F
-  met_subgrid_levels <- NA
+  met_path  <- namelist$met_path
+  n_met_min <- namelist$n_met_min
+  met_file_format <- namelist$met_file_format
+  met_subgrid_buffer <- namelist$met_subgrid_buffer
+  met_subgrid_enable <- namelist$met_subgrid_enable
+  met_subgrid_levels <- namelist$met_subgrid_levels
 
   # modification for OCO-2 column simulations, DW, 05/24/2018
   # if NA, meaning no weighting nor OCO2 files for regular simualtions
