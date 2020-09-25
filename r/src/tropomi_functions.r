@@ -84,18 +84,18 @@ find.tropomi <- function(tropomi.path, timestr, lon.lat) {
 
 ### ------------------------------- 
 # timestr needs to have a format of YYYYMMDD
-grab.tropomi.no2 <- function(tropomi.path, timestr, lon.lat){
+grab.tropomi.no2 <- function(tropomi.path, timestr, lon.lat) {
 
     library(ncdf4)
     if (nchar(timestr) > 8) timestr <- substr(timestr, 1, 8)
     fn <- list.files(tropomi.path, paste0('____', timestr))
 
     if (length(fn) > 1) { 
-        cat('grab.tropomi.co(): Multiple TROPOMI files;\nX-STILT is looking for the tropomi file that has soundings over your spatial domain\n')
+        cat('grab.tropomi.no2(): Multiple TROPOMI files;\nX-STILT is looking for the tropomi file that has soundings over your spatial domain\n')
         tropomi.info <- find.tropomi(tropomi.path, timestr, lon.lat)
         fn <- tropomi.info$fn
     }
-    if (length(fn) == 0) { cat('NO TROPOMI CO files found..\n'); return() }
+    if (length(fn) == 0) { cat('NO TROPOMI NO2 files found..\n'); return() }
 
 
     # get dimension first, index starts with ZERO
@@ -170,13 +170,6 @@ grab.tropomi.no2 <- function(tropomi.path, timestr, lon.lat){
 }
 # end of subroutinr
 
-
-if (F) {
-
-    n1 <- ggplot(data = merge_df) + 
-          geom_polygon(aes(lons, lats, fill = tropo_xno2)) 
-
-}
 
 ### ------------------------------- 
 # timestr should be format of YYYYMMDD, if it has > 8 letters, we will simply crop it 

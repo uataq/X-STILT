@@ -15,8 +15,6 @@
 #'       can work with multiple receptors at a time, now, DW, 06/05/2018
 #' fix footprint lat/lon to lower lefts, as Ben uses centered lat/lon
 # '      use raster rather than nc_open, DW, 06/19/2018
-#'
-#' add plotTF for plotting XCO2 contribution maps, DW, 06/20/2018
 #' store output contribution map into the same by-d directory,
 # '      remove store.path, DW, 07/26/2018
 #' 
@@ -29,10 +27,10 @@
 # max.yr for max year available 
 
 run.xco2ff.sim <- function(site = 'Riyadh', timestr = '2014100920', vname = '2018', 
-                           tiff.path, outdir, foot.res, workdir, store.path, nhrs, 
-                           oco.sensor, oco.ver, met, lon.lat, run_emiss_err, 
-                           edgar.file = NA, ffdas.file = NA, writeTF = T, 
-                           max.yr = 2018, overwriteTF = F){
+                           tiff.path, outdir, foot.res, workdir, store.path,
+                           nhrs, oco.sensor, oco.ver, met, lon.lat, 
+                           run_emiss_err, edgar.file = NA, ffdas.file = NA, 
+                           writeTF = T, max.yr = 2018, overwriteTF = F){
 
   library(rgdal)
   

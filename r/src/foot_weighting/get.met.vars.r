@@ -9,15 +9,14 @@
 if (F) {
     met_file_format = '%Y%m%d'
     met_path = file.path(homedir, 'gfs0p25')
-    z_top = 30000
+    z_top = 25000
     output$receptor <- list(run_time = r_run_time, lati = r_lati,
                             long = r_long, zagl = r_zagl)
-    
 }
 
 # still need specific humidity profiles to calculate c.dry per layer 
 # returns 'output'
-get.met.vars <- function(namelist, output, met_file_format, met_path, z_top = 30000) {
+get.met.vars <- function(namelist, output, met_file_format, met_path, z_top = 25000) {
 
     tmp.namelist <- namelist
     tmp.namelist$delt <- 1
@@ -47,8 +46,6 @@ get.met.vars <- function(namelist, output, met_file_format, met_path, z_top = 30
                              n_hours = tmp.nhrs, output = tmp.output, rm_dat = T, 
                              timeout = 600, w_option = 0, z_top = z_top) 
     if (nrow(tmp.p) == 0) stop('get.met.vars(): no trajec generated\n')
-    print(str(tmp.p))
-
 
     # ----------------------------------------------------------------------- #
     # subset trajectories at min time step
@@ -57,9 +54,9 @@ get.met.vars <- function(namelist, output, met_file_format, met_path, z_top = 30
     # if specific humidity is all zero, meaning no SH is modeled in adopted met fields, 
     # use RH and saturation vapor pressure to calculate specific humidity 
     if (length(unique(tmp.pmin$sphu)) == 1) {           
-        tmp.pmin <- tmp.pmin %>% mutate(
 
-                    # Clausius–Clapeyron equation for saturation vapor pressure
+        # Clausius–Clapeyron equation for saturation vapor pressure
+        tmp.pmin <- tmp.pmin %>% mutate(
                     es = 6.112 * exp( (17.67 * (temz - 273.15)) / (temz - 273.15 + 243.5) ), 
                     e = rhfr * es,   # vapor pressure in air
                     w = 0.622 * e / (pres - e),   # water vapor mixing ratio

@@ -7,7 +7,8 @@
 if (!'xstilt_wd' %in% ls()) xstilt_wd <- getwd()
 
 # if fortran dependencies not exist
-if ( !file.exists(file.path(xstilt_wd, 'stilt_hysplit/r/src/permute.so')) ) {
+permute_exe <- file.path(xstilt_wd, 'stilt_hysplit/r/src/permute.so')
+if ( !file.exists(permute_exe) ) {
   setwd(file.path(xstilt_wd, 'stilt_hysplit'))
   cat('need to setup STILT\n')
   system('chmod +x setup')
@@ -36,11 +37,8 @@ load_libs('dplyr', 'ncdf4', 'parallel', 'raster', 'readr', 'rslurm', 'ggplot2',
           'ggpubr', 'rworldmap', 'lutz', lib.loc = lib.loc)
 
 ### Load permute fortran dll for footprint matrix permutation
-permute_exe <- file.path(xstilt_wd, 'stilt_hysplit/r/src/permute.so')
-if (!file.exists(permute_exe)) {
-  cat('calc_footprint(): failed to find permute.so in stilt_hysplit/r/src/, compile now...\n')
-  system(paste0('R CMD SHLIB ', xstilt_wd, '/stilt_hysplit/r/src/permute.f90'))
-}
+if (!file.exists(permute_exe))
+  stop('calc_footprint(): failed to find permute.so in r/src/')
 dyn.load(permute_exe)
 
 # Validate arguments and load dependencies if necessary

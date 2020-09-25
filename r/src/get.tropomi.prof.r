@@ -3,23 +3,27 @@
 # DW, 08/25/2020 
 
 # add other species like NO2, DW, 09/02/2020
-get.tropomi.prof <- function(tropomi.path, tropomi.speci, receptor) {
+get.tropomi.prof <- function(tropomi.path, tropomi.speci, receptor, 
+                             tropomi.fn = NULL) {
 
-  # grabbing OCO-2 info
-  timestr <- strftime(receptor$run_time, tz = 'UTC', format = '%Y%m%d%H')
-  lon.lat <- data.frame(minlon = receptor$long - 1, maxlon = receptor$long + 1, 
-                        minlat = receptor$lati - 1, maxlat = receptor$lati + 1)
-  tropomi.info <- find.tropomi(tropomi.path, substr(timestr, 1, 8), lon.lat)
-  if (length(tropomi.info$fn) == 0) stop('No TROPOMI file found for this timestr\n')
+  if (is.null(tropomi.fn)) {
 
+    timestr <- strftime(receptor$run_time, tz = 'UTC', format = '%Y%m%d%H')
+    lon.lat <- data.frame(minlon = receptor$long - 1, maxlon = receptor$long + 1, 
+                          minlat = receptor$lati - 1, maxlat = receptor$lati + 1)
+    tropomi.info <- find.tropomi(tropomi.path, substr(timestr, 1, 8), lon.lat)
+    if (length(tropomi.info$fn) == 0) stop('No TROPOMI file found for this timestr\n')
+    tropomi.fn <- file.path(tropomi.path, tropomi.info$fn)
+
+  } else tropomi.fn <- file.path(tropomi.path, tropomi.fn)
 
 
   # --------------------- load all TROPOMI grid center lat/lon
-  tropomi.dat <- nc_open(file.path(tropomi.path, tropomi.info$fn))
+  tropomi.dat       <- nc_open(tropomi.fn)
   indx_along_track  <- ncvar_get(tropomi.dat, 'PRODUCT/scanline')
   indx_across_track <- ncvar_get(tropomi.dat, 'PRODUCT/ground_pixel')
-  tropomi.lat <- ncvar_get(tropomi.dat, 'PRODUCT/latitude')
-  tropomi.lon <- ncvar_get(tropomi.dat, 'PRODUCT/longitude')
+  tropomi.lat       <- ncvar_get(tropomi.dat, 'PRODUCT/latitude')
+  tropomi.lon       <- ncvar_get(tropomi.dat, 'PRODUCT/longitude')
   dimnames(tropomi.lat) <- dimnames(tropomi.lon) <- list(indx_across_track, indx_along_track)
 
   var_array <- array(  
@@ -94,6 +98,10 @@ get.tropomi.prof <- function(tropomi.path, tropomi.speci, receptor) {
 
     xno2.tropo <- ncvar_get(tropomi.dat, 'PRODUCT/nitrogendioxide_tropospheric_column')[across.indx, along.indx]
     xno2.tropo.uncert <- ncvar_get(tropomi.dat, 'PRODUCT/nitrogendioxide_tropospheric_column_precision')[across.indx, along.indx]
+
+    # read air mass factor 
+    amf_tot  <- ncvar_get(tropomi.dat, 'PRODUCT/air_mass_factor_total')[across.indx, along.indx]
+    amf_tropo <- ncvar_get(tropomi.dat, 'PRODUCT/air_mass_factor_troposphere')[across.indx, along.indx]
     
     # Water vapor and water liquid slant column density, in mol m-2
     xh2ov.slant <- ncvar_get(tropomi.dat, 'DETAILED_RESULTS/water_slant_column_density')[across.indx, along.indx]
@@ -113,6 +121,9 @@ get.tropomi.prof <- function(tropomi.path, tropomi.speci, receptor) {
     # k from surface to top of atmosphere, 0 to 33 
     k <- ncvar_get(tropomi.dat, 'PRODUCT/layer')      
     
+    # "TM5 layer index of the highest layer in the tropopause"
+    tropo_indx <- ncvar_get(tropomi.dat, 'PRODUCT/tm5_tropopause_layer_index')[across.indx, along.indx]
+
     # vertices: lower or upper pressure level boundaries, v = 0 for lower level
     v <- ncvar_get(tropomi.dat, 'PRODUCT/vertices')  
 
@@ -122,14 +133,20 @@ get.tropomi.prof <- function(tropomi.path, tropomi.speci, receptor) {
 
     # NO2 averaging kernel from TOA to surface, unitless, no need for any conversion
     ak.norm.no2 <- ncvar_get(tropomi.dat, 'PRODUCT/averaging_kernel')[, across.indx, along.indx]
+    
+    # The tropospheric averaging kernel can be obtained by scaling the kernel by
+    # M/Mtrop (see [RD20]) and setting all elements of the kernel to zero above 
+    # the tropopause layer, i.e. for l > l_TM5_tp, based on user manual, 2019
+    ak.norm.no2.tp <- c( ak.norm.no2[k <= tropo_indx] * amf_tot / amf_tropo, 
+                         rep(0, length(k[k > tropo_indx])) )
 
     # store as a list
     # reverse TROPOMI NO2 pressure levels, now from TOA to sfc
     all.info <- list(tropomi.lat = find.lat, tropomi.lon = find.lon, 
-                     ak = rev(ak.norm.no2), lower.pres = rev(pres.df$lower), 
-                     upper.pres = rev(pres.df$upper), tropomi.zsfc = hsfc, 
-                     tropomi.psfc = psfc, xno2.tropo = xno2.tropo, 
-                     xno2.tropo.uncert = xno2.tropo.uncert, 
+                     ak = rev(ak.norm.no2), ak.tropo = rev(ak.norm.no2.tp), 
+                     lower.pres = rev(pres.df$lower), upper.pres = rev(pres.df$upper), 
+                     tropomi.zsfc = hsfc, tropomi.psfc = psfc, 
+                     xno2.tropo = xno2.tropo, xno2.tropo.uncert = xno2.tropo.uncert, 
                      xh2ov.slant = xh2ov.slant, xh2ol.slant = xh2ol.slant)
 
   } else {
@@ -143,3 +160,11 @@ get.tropomi.prof <- function(tropomi.path, tropomi.speci, receptor) {
 
 
 
+if (F) {
+
+  # load additional variables 
+
+  albedo <- ncvar_get(tropomi.dat, 'INPUT_DATA/surface_albedo')[across.indx, ]
+
+
+}

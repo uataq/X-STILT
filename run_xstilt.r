@@ -128,7 +128,7 @@ all.timestr <- oco.track$timestr
 # whether to plot them on maps, plotTF = T/F,
 # this helps you choose which overpass to simulate, see 'tt' below
 ggmap.obs.info(plotTF = F, site, store.path, all.timestr, oco.sensor, oco.ver, 
-               oco.path, lon.lat, xstilt_wd, dlat.urban, dlon.urban)
+               oco.path, sif.path, lon.lat, xstilt_wd, dlat.urban, dlon.urban)
 
 
 ### 5) *** NOW choose the timestr that you'd like to work on...
@@ -385,10 +385,9 @@ if (!run_trajec & !run_foot & run_sim) {
     # call func to match ODIAC emissions with xfoot & sum up to get 'dxco2.ff'
     cat('Start simulations of XCO2.ff or its error due to emiss err...\n')
     receptor <- run.xco2ff.sim(site, timestr, vname = odiac.vname, tiff.path, 
-                               outdir, foot.res, xstilt_wd, store.path, nhrs, 
-                               numpar, smooth_factor, zisf, oco.ver, met, 
-                               lon.lat, run_emiss_err, edgar.file, ffdas.file, 
-                               plotTF = F, writeTF = T)
+                               outdir, foot.res, workdir = xstilt_wd, store.path, 
+                               nhrs, oco.sensor, oco.ver, met, lon.lat, 
+                               run_emiss_err, edgar.file, ffdas.file)
     if (is.null(receptor)) stop('No results calculated, check run.xco2ff.sim()\n')
   } # end if run_hor_err
 } # end if run_sim

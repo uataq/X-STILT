@@ -21,7 +21,9 @@ get.wgt.tropomi.func <- function(output, tropomi.path, tropomi.speci){
 	# get useful info from TROPOMI column CO and/or NO2 data, DW, 09/05/2020 
 	# e.g., surface pressure/height, AK, vertical pressures, retrieved obs...
 	tropomi.info <- get.tropomi.prof(tropomi.path, tropomi.speci, receptor)
-	tropomi.df <- as.data.frame(tropomi.info[c('ak', 'lower.pres', 'upper.pres')]) %>% 
+
+	# use tropospheric AK instead of total AK, DW, 09/23/2020
+	tropomi.df <- as.data.frame(tropomi.info[c('ak.tropo', 'lower.pres', 'upper.pres')]) %>% 
 
 				  # overwrite the pressure for the bottom level with sfc pressure
 				  mutate(lower.pres = ifelse(lower.pres == max(lower.pres), 
@@ -66,9 +68,9 @@ get.wgt.tropomi.func <- function(output, tropomi.path, tropomi.speci){
 	# use P2  = P1 * exp (g/RTv_mean * dz) to calculate dz
 	if ('CO' %in% tropomi.speci) 
 		qt.bin <- qt.bin %>% mutate(dz = -log(ratio.pres) / a.tropomi, ak.norm = ak / dz)
-	if ('NO2' %in% tropomi.speci) qt.bin <- qt.bin %>% rename(ak.norm = ak)
+	if ('NO2' %in% tropomi.speci) qt.bin <- qt.bin %>% rename(ak.norm = ak.tropo)
 
-	cat(paste('get.wgt.tropomi.func(): AK_norm for the surface layer is', 
+	cat(paste('get.wgt.tropomi.func(): tropospheric AK_norm for the surface layer is', 
 			  signif(qt.bin[qt.bin$lower.pres == max(qt.bin$lower.pres), 'ak.norm'], 3), '\n'))
 
 	# ----------------------------------------------------------------------------
