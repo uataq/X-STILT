@@ -8,13 +8,17 @@ if (!'xstilt_wd' %in% ls()) xstilt_wd <- getwd()
 
 # if fortran dependencies not exist
 permute_exe <- file.path(xstilt_wd, 'stilt_hysplit/r/src/permute.so')
-if ( !file.exists(permute_exe) ) {
+hycs_std <- file.path(xstilt_wd, 'exe/hycs_std')
+
+if ( !file.exists(permute_exe) | !file.exists(hycs_std) ) {
   setwd(file.path(xstilt_wd, 'stilt_hysplit'))
   cat('need to setup STILT\n')
   system('chmod +x setup')
   system('./setup')
+  system(paste('ln -s', file.path(xstilt_wd, 'stilt_hysplit/exe/hycs_std'), hycs_std))
   setwd(xstilt_wd)
 }
+
 
 ### Source stilt R functions
 rsc <- dir(file.path(xstilt_wd, 'stilt_hysplit/r/src'), 
