@@ -4,4 +4,4 @@
 [submodule "stilt_hysplit"]
 	path = stilt_hysplit
 	url = git@github.com:uataq/stilt.git
-	branch = hysplit-merge
+	branch = main
