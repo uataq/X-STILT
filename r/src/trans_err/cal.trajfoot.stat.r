@@ -46,7 +46,7 @@ cal.trajfoot.stat <- function(workdir, output = NULL, outdir, met, emiss.file,
         cat('cal.trajfoot.stat(): NO trajec file found...\n'); return()}
     emiss <- raster(emiss.file)   # get emissions
 
-	#------------------------------------------------------------------------- #
+	  #------------------------------------------------------------------------- #
     #### 2. directly read from exiting weighted trajs -------------------------
     cat(paste('cal.trajfoot.stat(): Reading in trajec for', r_lati, 'N...\n'))
     if (is.null(output)) output <- readRDS(traj.file) 

@@ -10,9 +10,12 @@
 # add run_trajec, if run_trajec == T, always recalculate 'recp.info', 
 #   rather than grab from exising trajec, DW, 10/30/2018
 
+# add options for using TROPOMI overpass hour, but still keep the finer lat/lon
+# soundings that match OCO-2/3, DW, 10/09/2020
 get.recp.info <- function(timestr, oco.ver, oco.path, lon.lat, selTF, recp.indx,
-                          recp.num, find.lat, agl, run_trajec, trajpath = NULL, 
-                          data.filter = c('QF', 0)){
+                          recp.num, find.lat, agl, run_trajec, outdir = NULL, 
+                          data.filter = c('QF', 0), tropomiTF = F, 
+                          tropomi.path = NULL, tropomi.fn = NULL){
 
   # ------------------- Step 1. READ IN OCO-2 LITE FILES ------------------- #
   oco.dat <- grab.oco(oco.path, timestr, lon.lat, oco.ver) %>% 
@@ -33,12 +36,14 @@ get.recp.info <- function(timestr, oco.ver, oco.path, lon.lat, selTF, recp.indx,
   # round lat, lon for each sounding, fix bug, DW, 07/31/2018
   sel.dat <- sel.dat %>% mutate(lat = signif(lat, 6), lon = signif(lon, 7))
 
+
   # ------------------- Step 2. SET UP the STILT receptors ----------------- #
   # if generate trajec with horizontal error component,
   # use the same lat.lon from original trajec, DW, 07/31/2018
-  trajfile <- list.files(trajpath, 'X_traj.rds', recursive = T, full.names = T)
+  trajfile <- list.files(file.path(outdir, 'by-id'), 'X_traj.rds', 
+                         recursive = T, full.names = T)
 
-  if (length(trajfile) > 0 & !run_trajec) {
+  if ( length(trajfile) > 0 & !run_trajec ) {
 
     cat('Found existing trajectories...\n')
 
@@ -46,13 +51,25 @@ get.recp.info <- function(timestr, oco.ver, oco.path, lon.lat, selTF, recp.indx,
     trajname  <- basename(trajfile)
     recp.info <- ident.to.info(ident = trajname, stilt.ver = 2)
 
-    # get overpass time by merging with observed XCO2 and compute run_time
-    sel.dat$find.lat <- signif(sel.dat$lat, max(nchar(recp.info$recp.lat)) - 1)
-    sel.dat$find.lon <- signif(sel.dat$lon, max(nchar(recp.info$recp.lon)) - 1)
-    recp.info <- recp.info %>% dplyr::select('lati' = 'recp.lat', 'long' = 'recp.lon') %>%
-                 left_join(sel.dat, by = c('lati' = 'find.lat', 'long' = 'find.lon')) %>%
-                 mutate(run_times_utc = as.POSIXct(substr(id, 1, 14), '%Y%m%d%H%M%S', tz = 'UTC')) %>% 
-                 arrange(lati)
+
+    if (tropomiTF) {  # for TROPOMI runs, use its overpass time
+      recp.info <- recp.info %>% mutate(run_time = as.POSIXct(as.character(timestr), 
+                                                              'UTC', '%Y%m%d%H%M')) %>% 
+                   dplyr::rename(lati = recp.lat, long = recp.lon) %>% arrange(lati)
+    
+    } else {
+      
+      # get OCO overpass time by merging with observed XCO2 and compute run_time
+      sel.dat$find.lat <- signif(sel.dat$lat, max(nchar(recp.info$recp.lat)) - 1)
+      sel.dat$find.lon <- signif(sel.dat$lon, max(nchar(recp.info$recp.lon)) - 1)
+      recp.info <- recp.info %>% 
+                  dplyr::select('lati' = 'recp.lat', 'long' = 'recp.lon') %>%
+                  left_join(sel.dat, by = c('lati' = 'find.lat', 'long' = 'find.lon')) %>%
+                  mutate(run_time = as.POSIXct(substr(id, 1, 14), '%Y%m%d%H%M%S', tz = 'UTC')) %>% 
+                  arrange(lati)
+      
+    } # end if 
+
 
   } else {
 
@@ -71,15 +88,30 @@ get.recp.info <- function(timestr, oco.ver, oco.path, lon.lat, selTF, recp.indx,
 
     # compute simulation timing, yyyy-mm-dd HH:MM:SS (UTC), aka 'receptors' info
     # that are used for each simulation and match Ben's code
-    recp.info <- recp.info %>% mutate(run_times_utc = as.POSIXct(substr(id, 1, 14), '%Y%m%d%H%M%S',
+    recp.info <- recp.info %>% mutate(run_times_utc = as.POSIXct(substr(id, 1, 14), 
+                                                                 format = '%Y%m%d%H%M%S',
                                                                  tz = 'UTC')) %>% 
                                dplyr::select('run_time' = 'run_times_utc', 
                                              'lati' = 'lat', 'long' = 'lon') %>% 
                                arrange(lati)
-                               
+
+
     # subset receptor data frame or find the nearest lat..
     if (!is.null(recp.num)) recp.info <- recp.info[min(recp.num) : max(recp.num), ]
     if (!is.null(find.lat)) recp.info <- recp.info[findInterval(find.lat, recp.info$lati), ]
+
+    if (tropomiTF) {  # for TROPOMI runs, use its overpass time
+
+      cat('get.recp.info(): tropomiTF == TRUE, use TROPOMI instead of OCO overpass time...\n')
+      tropomi.dat <- grab.tropomi.co(lon.lat = lon.lat, tropomi.fn = tropomi.fn) %>% na.omit()
+      #print(as.character(mean(tropomi.dat$time_utc)))
+      
+      tropomi.dat$date = as.POSIXct(as.character(tropomi.dat$time_utc), 'UTC', 
+                                    format = '%Y%m%d%H%M%S')
+      tropomi.time <- seq(min(tropomi.dat$date), max(tropomi.dat$date), 
+                          length = nrow(recp.info))
+      recp.info$run_time <- tropomi.time
+    }
 
   } # end if trajec file existed
 

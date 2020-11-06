@@ -57,6 +57,7 @@ get.uverr <- function(run_hor_err, site, timestr, workdir, overwrite = F,
     } # end if met
     
     # grab modeled winds, *** if no file found, this takes a long time to run
+    dir.create(err.path, showWarnings = F, recursive = T)
     err.file <- file.path(err.path,  paste0(site, '_', met, '_rad_', timestr, '.txt'))
 
     if (!file.exists(err.file) & overwrite == F) {

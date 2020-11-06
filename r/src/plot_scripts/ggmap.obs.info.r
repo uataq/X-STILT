@@ -2,12 +2,11 @@
 
 ggmap.obs.info <- function(plotTF, site, store.path = NULL, all.timestr = NULL, 
                            oco.sensor = NULL, oco.ver = NULL, oco.path = NULL, 
-                           sif.path = NULL, lon.lat = NULL, workdir = NULL, 
-                           dlat.urban = NULL, dlon.urban = NULL, zoom = 8, 
-                           qfTF = T) {
+                           sif.path = NULL, lon.lat = NULL, dlat.urban = NULL, 
+                           dlon.urban = NULL, zoom = 8, qfTF = T) {
 
     if (plotTF) {
-
+        
         plotdir <- file.path(store.path, 'plot')
         dir.create(plotdir, showWarnings = F, recursive = T)
 
@@ -15,12 +14,12 @@ ggmap.obs.info <- function(plotTF, site, store.path = NULL, all.timestr = NULL,
         # qfTF = T for only plotting data with QF = 0
         for (t in 1 : length(all.timestr)) {
 
-            x1 <- ggmap.obs.xco2(site, all.timestr[t], oco.sensor, oco.ver, oco.path, 
-                                 lon.lat, workdir, plotdir, zoom, qfTF = qfTF, 
+            x1 <- ggmap.obs.xco2(site, all.timestr[t], oco.sensor, oco.ver, 
+                                 oco.path, lon.lat, plotdir, zoom, qfTF = qfTF, 
                                  box.dlat = dlat.urban, box.dlon = dlon.urban)
 
-            s1 <- ggmap.obs.sif(site, all.timestr[t], oco.sensor, oco.ver, sif.path, 
-                                lon.lat, workdir, plotdir, zoom)
+            s1 <- ggmap.obs.sif(site, all.timestr[t], oco.sensor, oco.ver, 
+                                sif.path, lon.lat, plotdir, zoom)
         } # end for t
 
     } else {

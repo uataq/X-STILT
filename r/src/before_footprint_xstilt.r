@@ -10,73 +10,89 @@
 
 # allow for generating footprint with various horizontal resolutions, DW, 02/11/2019 
 # minor update for using OCO-3 data, i.e., change variable names, DW, 06/28/2020
-# stop generating a new "wgttraj.rds", merge two columns of footprint in one file
-#    to reduce the storage, DW, 07/03/2020 
-
 # add vertical AK weighting of TROPOMI column CO, DW, 08/25/2020 
 # if ak.wgt == FALSE, remove dependence of any satellite, DW, 09/15/2020 
-
+# add weighting of trajec-level footprints for NO2 modling by NOx lifetime, DW, 10/06/2020
 
 before_footprint_xstilt <- function() {
 
     # after weighting the foot column, new foot with AK PW weighting is referred to as 'foot', 
     # the foot before weighting will be changed to 'foot_no_wgt', DW, 07/03/2020
-    if ('foot_before_weight' %in% colnames(output$particle) & args$overwrite_wgttraj == F) {    
-        cat("before_footprint_xstilt(): 'foot_before_weight' column exists, no need to weight foot...\n")
+    #if ('foot_before_weight' %in% colnames(output$particle) & args$overwrite.wgt == F) {    
+    #    cat("before_footprint_xstilt(): 'foot_before_weight' column exists, no need to weight foot...\n")
     
-    } else {
+    #} else {
 
-        # ---------------------------------------------------------------------
-        # weight trajec-level footprints by TROPOMI profiles if needed, DW, 09/05/2020
-        # ---------------------------------------------------------------------
-        if (!is.na(args$tropomi.speci)) {   # need to generate footprint for TROPOMI
+    # ---------------------------------------------------------------------
+    # weight trajec-level footprints using TROPOMI profiles, DW, 09/05/2020
+    # ---------------------------------------------------------------------
+    # whether to calc footprint for TROPOMI
+    if (!NA %in% unlist(args$tropomi.speci)) {   
 
-            cat('before_footprint_xstilt(): need to generate footprints based on TROPOMI profiles\n')
-            p.tropomi <- wgt.trajec.foot.tropomi(output = output, 
-                                                 tropomi.path = unlist(args$tropomi.path), 
-                                                 tropomi.speci = unlist(args$tropomi.speci), 
-                                                 ak.wgt = args$ak.wgt, 
-                                                 pwf.wgt = args$pwf.wgt)
-     
-            # generate spatial footprint based on TROPOMI profiles 
-            for (tmp.speci in unlist(args$tropomi.speci)) {
+        cat('before_footprint_xstilt(): need to generate footprints based on TROPOMI profiles\n')
+        p.tropomi <- wgt.trajec.foot.tropomi(output = output, 
+                                             tropomi.fn = unlist(args$tropomi.fn), 
+                                             tropomi.speci = unlist(args$tropomi.speci), 
+                                             ak.wgt = args$ak.wgt, 
+                                             pwf.wgt = args$pwf.wgt)
 
-                cat(paste('\n\nbefore_footprint_xstilt(): generating spatial footprint for TROPOMI', tmp.speci, '\n'))
-                tmp.file <- file.path(rundir, paste0(basename(rundir), 
-                                      '_foot_TROPOMI_', tmp.speci, '.nc'))
-                
-                # use weighted output for footprint
-                if (tmp.speci == 'CO') 
-                    p.tmp <- p.tropomi %>% rename(foot_before_wgt = foot, foot = foot_wgt_co)
-
-                # use weighted output for footprint
-                if (tmp.speci == 'NO2') 
-                    p.tmp <- p.tropomi %>% rename(foot_before_wgt = foot, foot = foot_wgt_no2)
-
-                calc_footprint(p = p.tmp, output = tmp.file, r_run_time = r_run_time,
-                               smooth_factor = smooth_factor, 
-                               time_integrate = time_integrate, 
-                               xmn = xmn, xmx = xmx, xres = xres, 
-                               ymn = ymn, ymx = ymx, yres = yres)
-
-                cat('\n\n')
-            }   # end for tropomi speci
+        # generate spatial footprint based on TROPOMI profiles 
+        for (tmp.speci in unlist(args$tropomi.speci)) {
             
-        }   # end if is.na()
+            if (tmp.speci == 'CO') 
+                p.tmp <- p.tropomi %>% rename(foot_before_wgt = foot, foot = foot_wgt_co)
 
+            # ---------------------------------------------------------------------
+            # weight trajec-level footprints by NOx lifetime, DW, 10/06/2020
+            # ---------------------------------------------------------------------
+            if (tmp.speci == 'NO2') {
+                
+                p.prep <- p.tropomi %>% rename(foot_before_wgt = foot, 
+                                               foot = foot_wgt_no2)
+                
+                # look for corresponding CTM file 
+                ctm.fn <- find_ctm_files(r_run_time, n_hours, 
+                                         ctm_file_format = args$ctm_file_format, 
+                                         ctm_path = args$ctm_path)
+                
+                # performing footprint weighting using estimated K and modeled [OH]
+                p.tmp <- wgt_foot_oh(p = p.prep, r_run_time, ctm = args$ctm_name, 
+                                     ctm.fn = ctm.fn, xstilt_wd) 
+                
+                #cat('before_footprint_xstilt(): Saving chem-adjusted trajec...\n')
+                #saveRDS(p.tmp, gsub('X_traj.rds', 'X_chem_traj.rds', output$file))
+            }   # end if
 
-        # ---------------------------------------------------------------------
-        # weight trajec-level footprints by OCO-2 weighting profiles
-        # this will be carried out by default
-        # ---------------------------------------------------------------------
-        # Weight footprint: call wgt.trajec.footv3() to weight trajec-level
-        # footprint before calculating gridded footprint, DW, 06/01/2018
-        cat("\n\nbefore_footprint_xstilt(): weight trajec-level foot using OCO's vertical profiles...\n")
-        output <- wgt.trajec.foot.oco(output, oco.path = args$oco.path, 
-                                      ak.wgt = args$ak.wgt, pwf.wgt = args$pwf.wgt)
+            # use weighted output for footprint
+            cat(paste('\n\nbefore_footprint_xstilt(): calculating spatial footprint for TROPOMI', 
+                        tmp.speci, '\n'))
+
+            tmp.file <- file.path(rundir, paste0(basename(rundir), '_foot_TROPOMI_', tmp.speci, '.nc'))
+            calc_footprint(p = p.tmp, output = tmp.file, r_run_time = r_run_time,
+                           smooth_factor = smooth_factor, 
+                           time_integrate = time_integrate, 
+                           xmn = xmn, xmx = xmx, xres = xres, 
+                           ymn = ymn, ymx = ymx, yres = yres)
+
+            gc(); cat('\n')
+        }   # end for tropomi speci
         
-    }   # end if
+        cat('DONE with foot for TROPOMI..\n')
+        if (args$tropomiTF) 
+            stop('***THIS IS NOT AN ERROR, but no need to calculate foot for OCO, so stop the model...\n')
+    }   # end if is.na()
 
+    # ---------------------------------------------------------------------
+    # weight trajec-level footprints by OCO-2 weighting profiles
+    # this will be carried out by default
+    # ---------------------------------------------------------------------
+    # Weight footprint: call wgt.trajec.footv3() to weight trajec-level
+    # footprint before calculating gridded footprint, DW, 06/01/2018
+    cat("\n\nbefore_footprint_xstilt(): weight trajec-level foot using OCO's vertical profiles...\n")
+    output <- wgt.trajec.foot.oco(output, oco.path = args$oco.path, 
+                                  ak.wgt = args$ak.wgt, pwf.wgt = args$pwf.wgt)
+    
+    #}   # end if
 
    
     # -------------------------------------------------------------------------
@@ -101,10 +117,10 @@ before_footprint_xstilt <- function() {
 
     # -------------------------------------------------------------------------
     # if foot_nhrs is different from trajec_nhrs, subset trajec
-    if ( args$foot.nhrs < min(output$particle$time) / 60 ) {
+    if ( args$foot_nhrs < n_hours ) {
         cat('\n\nbefore_footprint_xstilt(): subset particles for calculating footprint\n')
         output$particle <- output$particle %>% arrange(abs(time)) %>% 
-                           filter(abs(time) <= abs(args$foot.nhrs) * 60) 
+                           filter(abs(time) <= abs(args$foot_nhrs) * 60) 
     }   # end if
 
 

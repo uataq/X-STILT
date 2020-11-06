@@ -3,7 +3,8 @@
 # DW, 08/25/2020 
 
 # add other species like NO2, DW, 09/02/2020
-get.tropomi.prof <- function(tropomi.path, tropomi.speci, receptor, 
+# if tropomi.fn exists, no need to provide tropomi.path or search for tropomi data
+get.tropomi.prof <- function(receptor, tropomi.speci, tropomi.path = NULL, 
                              tropomi.fn = NULL) {
 
   if (is.null(tropomi.fn)) {
@@ -15,8 +16,7 @@ get.tropomi.prof <- function(tropomi.path, tropomi.speci, receptor,
     if (length(tropomi.info$fn) == 0) stop('No TROPOMI file found for this timestr\n')
     tropomi.fn <- file.path(tropomi.path, tropomi.info$fn)
 
-  } else tropomi.fn <- file.path(tropomi.path, tropomi.fn)
-
+  } # end if
 
   # --------------------- load all TROPOMI grid center lat/lon
   tropomi.dat       <- nc_open(tropomi.fn)

@@ -65,20 +65,20 @@ find.all.metfiles <- function(timestr, dtime, met.format, met.path, nhrs) {
 
 
 # ---------------------- run.forward.trajec ()  ----------------------------- #
-run.forward.trajec <- function(site, site.lon, site.lat, timestr, 
-                               run_trajec = T, run_hor_err = F, run_ver_err = F, 
-                               xstilt_wd, traj.path, box.len, dtime.from, 
-                               dtime.to, dtime.sep, nhrs, delt, agl, numpar, 
+run.forward.trajecv2 <- function(site, site.lon, site.lat, timestr, run_trajec, 
+                                 run_hor_err = F, run_ver_err = F, xstilt_wd, 
+                                 traj.path, box.len, dtime.from, dtime.to, 
+                                 dtime.sep, nhrs, delt, agl, numpar, 
                                
-                               # met fields
-                               met, met.res, met.format, met.path, met.num = 1, 
+                                 # met fields
+                                 met, met.res, met.format, met.path, met.num = 1, 
 
-                               # horizontal and vertial trans error input
-                               raob.path, raob.format = 'fsl', siguverr = NULL, 
-                               err.path, overwrite = F, 
-                               nhrs.zisf = 24, zisf         # zi scaling factor
-                               ){
-  
+                                 # horizontal and vertial trans error input
+                                 raob.path, raob.format = 'fsl', siguverr = NULL, 
+                                 err.path, overwrite = F, 
+                                 nhrs.zisf = 24, zisf         # zi scaling factor
+                                 ){
+    
   setwd(xstilt_wd); source('r/dependencies.r', local = T) # source all functions
   cat(paste('\n\n## ----- Working on', site, 'on', timestr, '----- ##\n'))
 
@@ -112,18 +112,18 @@ run.forward.trajec <- function(site, site.lon, site.lat, timestr,
   date.df <- results$date.df
 
   # create out_forward dir for generating forward trajec
-  traj.path <- file.path(traj.path, paste0('out_forward_', timestr, '_', site))
+  traj.dir <- file.path(traj.path, paste0('out_forward_', timestr, '_', site, '_debug'))
 
   # if running trajec
   if (run_trajec) {
 
     # delete previous directories and then create new one
-    system(paste0('rm -rf ', traj.path), ignore.stderr = T)
-    dir.create(traj.path, showWarnings = FALSE, recursive = T)
+    system(paste0('rm -rf ', traj.dir), ignore.stderr = T)
+    dir.create(traj.dir, showWarnings = FALSE, recursive = T)
 
     # linking AER_NOAA_branch's hymodelc and other executables to outpath
     exes <- list.files(file.path(xstilt_wd, 'exe'))
-    file.symlink(file.path(xstilt_wd, 'exe', exes), traj.path)
+    file.symlink(file.path(xstilt_wd, 'exe', exes), traj.dir)
     
     # if using multiple receptors, or box of receptors or sources, turn it on,
     # then call updated Trajecmulti() instead of Trajec()
@@ -136,6 +136,29 @@ run.forward.trajec <- function(site, site.lon, site.lat, timestr,
     cat('run.forward.trajec(): Generating forward trajec...\n')
     met.files <- find.all.metfiles(timestr, dtime, met.format, met.path, nhrs)
     
+    # Aggregate STILT/HYSPLIT namelist
+    namelist <- list(capemin = -1, cmass = 0, conage = 48, cpack = 1, delt = 1,
+                     dxf = 1, dyf = 1, dzf = 0.01, efile = '', emisshrs = 0.01,
+                     frhmax = 3, frhs = 1, frme = 0.1, frmr = 0, frts = 0.1,
+                     frvs = 0.1, hnf_plume = T, hscale = 10800, ichem = 8,
+                     idsp = 2, initd = 0, k10m = 1, kagl = 1, kbls = 1, kblt = 5,
+                     kdef = 0, khinp = 0, khmax = 9999, kmix0 = 250, kmixd = 3,
+                     kmsl = 0, kpuff = 0, krand = 4, krnd = 6, kspl = 1, kwet = 1,
+                     kzmix = 0, maxdim = 1, maxpar = numpar, mgmin = 10,
+                     mhrs = 9999, ncycl = 0, ndump = 0, ninit = 1, nstr = 0,
+                     nturb = 0, nver = 0, numpar = 1000, outdt = 0, p10f = 1,
+                     pinbc = '', pinpf = '', poutf = '', qcycle = 0, rhb = 80,
+                     rht = 60, splitf = 1, tkerd = 0.18, tkern = 0.18,
+                     tlfrac = 0.1, tout = 0, tratio = 0.75, tvmix = 1,
+                     varsiwant = c('time', 'indx', 'long', 'lati', 'zagl', 
+                                   'foot', 'mlht', 'dens','samt', 'sigw', 'tlgr'),
+                     veght = 0.5, vscale = 200, vscaleu = 200, vscales = -1,
+                     wbbh = 0, wbwf = 0, wbwr = 0, wvert = FALSE, zicontroltf = F,
+                     ziscale = 0) 
+
+    calc_trajectory(namelist, rundir, emisshrs, hnf_plume = T, met_files, n_hours, 
+                    output, rm_dat, timeout, w_option, z_top)
+                    
     Trajecmulti(yr = date.df$yr - 2000, mon = date.df$mon, day = date.df$day, 
                 hr = date.df$hr, mn  = date.df$min, outname = ident, 
                 numpar = numpar, lat = date.df$lat, lon = date.df$lon,
@@ -145,13 +168,13 @@ run.forward.trajec <- function(site, site.lon, site.lat, timestr,
                 nhrs = rep(nhrs, nrow(date.df)),
                 nummodel = timestr, 
                 metd = c('fnl', 'awrf'), 
-                outpath = traj.path, 
+                outpath = traj.dir, 
                 overwrite = run_trajec,
                 metfile = met.files, 
                 metlib = paste0(met.path, '/'),
                 doublefiles = T, 
-                rundir = dirname(traj.path), 
-                rundirname = basename(traj.path), 
+                rundir = dirname(traj.dir), 
+                rundirname = basename(traj.dir), 
                 varsout = varstrajec, 
                 siguverr = hor.err$siguverr, 
                 TLuverr = hor.err$TLuverr, 

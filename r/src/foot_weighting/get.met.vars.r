@@ -35,15 +35,17 @@ get.met.vars <- function(namelist, output, met_file_format, met_path, z_top = 25
                                       long = output$receptor$long, 
                                       zagl = c(0, z_top))
 
-    met_files <- find_met_files(output$receptor$run_time, met_file_format, 
-                                n_hours = tmp.nhrs, met_path)
+    tmp_met_files <- find_met_files(output$receptor$run_time, met_file_format, 
+                                    n_hours = tmp.nhrs, met_path)
+    cat(paste('get.met.vars(): found meteo files of', tmp_met_files, '\n\n'))
 
     # ----------------------------------------------------------------------- #
     # generate trajectories to get specific humidity, temp, surface hgts/pressure, 
     # and u-/v-/w- wind speeds at the receptor location
-    tmp.p <- calc_trajectory(namelist = tmp.namelist, rundir = dirname(output$file), 
-                             emisshrs = 0.01, hnf_plume = T, met_files = met_files, 
-                             n_hours = tmp.nhrs, output = tmp.output, rm_dat = T, 
+    tmp.p <- calc_trajectory(namelist = tmp.namelist, 
+                             rundir = dirname(output$file), emisshrs = 0.01, 
+                             hnf_plume = T, met_files = tmp_met_files, 
+                             n_hours = tmp.nhrs, output = tmp.output, rm_dat = T,
                              timeout = 600, w_option = 0, z_top = z_top) 
     if (nrow(tmp.p) == 0) stop('get.met.vars(): no trajec generated\n')
 

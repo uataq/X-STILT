@@ -2,7 +2,7 @@
 # 'thred.count' for the sounding # thredshold
 
 ggmap.obs.sif <- function(site, timestr, oco.sensor, oco.ver, sif.path, lon.lat,
-                          workdir, plotdir = file.path(workdir, 'plot'), zoom = 8){
+                          plotdir, zoom = 8){
 
   if (is.null(sif.path)) {cat('NO SIF path defined, returning NA...\n'); return()}                          
   sel.sif <- grab.sif(sif.path, timestr, lon.lat, oco.ver)

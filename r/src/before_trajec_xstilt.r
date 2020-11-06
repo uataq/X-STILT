@@ -10,7 +10,7 @@ before_trajec_xstilt <- function() {
     # need modeled ground height to interpolate pres-hgt relation to
     # interpolate satellite weighting profiles from OCO-2 20 levels to model
     # levels, added by Dien Wu, 05/26/2018
-    cat('before_trajec_xstilt(): estimating modeled ground heights for X-STILT ...\n')
+    cat('before_trajec_xstilt(): extracting meteo vars from meteo fields...\n')
 
     # obtain multiple variables from met fields, DW, 09/14/2020
     # e.g., get specific humidity and temp profiles that will be used to 

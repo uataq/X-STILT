@@ -4,11 +4,11 @@
 #     particles, based on different releasing heights
 # written by Dien Wu
 
-wgt.trajec.foot.tropomi <- function(output, tropomi.path, tropomi.speci, 
-									ak.wgt = T, pwf.wgt = T){
+wgt.trajec.foot.tropomi <- function(output, tropomi.fn, tropomi.speci, 
+									ak.wgt = T, pwf.wgt = T, overwriteTF = T){
 
 	# read trajectory before weighting
-	trajdat <- output$particle %>% arrange(abs(time))  # now a data.frame
+	trajdat  <- output$particle %>% arrange(abs(time))  # now a data.frame
 	receptor <- output$receptor 
 	info <- as.data.frame(receptor[c('lati', 'long', 'zsfc', 'psfc')]) %>% 
 			dplyr::rename(mod.zsfc = zsfc, mod.psfc = psfc)
@@ -23,7 +23,8 @@ wgt.trajec.foot.tropomi <- function(output, tropomi.path, tropomi.speci,
 	# if TRUE, it means that footprint has been weighted by AK and PW, 
 	# so, use 'foot_before_weight' as initial footprint ('foot') to redo the weighting
 	if ( 'foot_before_weight' %in% colnames(trajdat) ) {
-		trajdat$foot <- NULL
+		#trajdat$foot <- NULL
+		trajdat[, c('foot', 'ak.norm', 'pwf', 'ap', 'ak.pwf', 'stiltTF', 'wgt')] <- NULL
 		trajdat <- trajdat %>% dplyr::rename(foot = foot_before_weight)
 	}
 
@@ -31,15 +32,14 @@ wgt.trajec.foot.tropomi <- function(output, tropomi.path, tropomi.speci,
 	# ------------------------------------------------------------------------ #
 	# STARTing weighting trajec-level footprint based on vertical profile
 	# ------------------------------------------------------------------------ #
-
 	# weighting foot by multipling AK and PW profiles and # of STILT levels/particles
 	if ( 'CO' %in% tropomi.speci ) {
 		
 		cat('\n\nwgt.trajec.foot.tropomi(): weighting using TROPOMI CO profiles...\n')
 
 		# grab press weighting function, pressures, normalized AK
-		co.path <- tropomi.path[grep('CO', tropomi.path)]; print(co.path)
-		out.co  <- get.wgt.tropomi.func(output, co.path, 'CO') 
+		co.fn  <- tropomi.fn[grep('CO', tropomi.fn)]
+		out.co <- get.wgt.tropomi.func(output, co.fn, 'CO') 
 
 		co.info <- as.data.frame(out.co$tropomi.info)
 		colnames(co.info)[grepl('tropomi.', colnames(co.info))] <- 
@@ -73,8 +73,8 @@ wgt.trajec.foot.tropomi <- function(output, tropomi.path, tropomi.speci,
 		cat('\n\nwgt.trajec.foot.tropomi(): weighting using TROPOMI NO2 profiles...\n')
 
 		# grab press weighting function, pressures, normalized AK
-		no2.path <- tropomi.path[grep('NO2', tropomi.path)]; print(no2.path)
-		out.no2  <- get.wgt.tropomi.func(output, no2.path, 'NO2')
+		no2.fn  <- tropomi.fn[grep('NO2', tropomi.fn)]
+		out.no2 <- get.wgt.tropomi.func(output, no2.fn, 'NO2')
 		
 		no2.info <- as.data.frame(out.no2$tropomi.info)
 		colnames(no2.info)[grepl('tropomi.', colnames(no2.info))] <- 
@@ -105,8 +105,8 @@ wgt.trajec.foot.tropomi <- function(output, tropomi.path, tropomi.speci,
 	# save TROPOMI info in txt file in each by-id folder
 	fn <- file.path(dirname(output$file), paste0('tropomi_info_', receptor$long, 
 												 '_', receptor$lati, '.txt'))
-	write.table(info, file = fn, row.names = F, sep = ',', quote = F)
-
+	if (overwriteTF) write.table(info, file = fn, row.names = F, sep = ',', quote = F)
 
 	return(trajdat)
 }  # end of subroutine
+

@@ -3,7 +3,7 @@
 
 # TROPOMI CO has no aprior profiles, update on 09/05/2020
 
-get.wgt.tropomi.func <- function(output, tropomi.path, tropomi.speci){
+get.wgt.tropomi.func <- function(output, tropomi.fn, tropomi.speci, tropo.no2TF = T){
 	
 	# before weighting trajec-level footprint by AK & PWF
 	# get specific humidity and temp profiles that have been extracted via 
@@ -20,20 +20,23 @@ get.wgt.tropomi.func <- function(output, tropomi.path, tropomi.speci){
 	
 	# get useful info from TROPOMI column CO and/or NO2 data, DW, 09/05/2020 
 	# e.g., surface pressure/height, AK, vertical pressures, retrieved obs...
-	tropomi.info <- get.tropomi.prof(tropomi.path, tropomi.speci, receptor)
+	tropomi.info <- get.tropomi.prof(receptor, tropomi.speci, tropomi.fn = tropomi.fn)
 
 	# use tropospheric AK instead of total AK, DW, 09/23/2020
-	tropomi.df <- as.data.frame(tropomi.info[c('ak.tropo', 'lower.pres', 'upper.pres')]) %>% 
-
-				  # overwrite the pressure for the bottom level with sfc pressure
-				  mutate(lower.pres = ifelse(lower.pres == max(lower.pres), 
-						   					 tropomi.info$tropomi.psfc, lower.pres), 
-					  	 ratio.pres = upper.pres / lower.pres)
+	tropomi.df <- as.data.frame(tropomi.info[c('ak', 'lower.pres', 'upper.pres')]) 
+	if (tropomi.speci == 'NO2' & tropo.no2TF == T) 
+		tropomi.df <- as.data.frame(tropomi.info[c('ak.tropo', 'lower.pres', 'upper.pres')]) 
+	
+	# overwrite the pressure for the bottom level with sfc pressure
+	tropomi.df <- tropomi.df %>% mutate(lower.pres = ifelse(lower.pres == max(lower.pres), 
+						   					                tropomi.info$tropomi.psfc, 
+															lower.pres), 
+					  	 				ratio.pres = upper.pres / lower.pres)
 
 	tropomi.pres.bound <- c(tropomi.df$upper.pres[1], tropomi.df$lower.pres)
 	tropomi.zsfc <- tropomi.info$tropomi.zsfc
 	tropomi.psfc <- tropomi.info$tropomi.psfc
-	if (is.na(tropomi.zsfc)) stop('get.wgt.tropomi.func(): TROPOMI CO-based surface height is NA, please check...\n')
+	if (is.na(tropomi.zsfc)) stop('get.wgt.tropomi.func(): TROPOMI-based surface height is NA, please check...\n')
 	
 
 	# --------- correct for model-satellite mismatch in sfc P or Z --------- #
@@ -149,39 +152,71 @@ get.wgt.tropomi.func <- function(output, tropomi.path, tropomi.speci){
 
 
 
-
-
-
-
-if (F) {
-
-	p0 <- ggplot() + ylim(c(1050, 0)) + theme_bw() + labs(y = 'Bottom Pressure [hPa] per layer')
-	q1 <- p0 + geom_point(data = intp.df, aes(mid.q, lower.pres)) + 
-			   geom_path(data = intp.df, aes(mid.q, lower.pres), color = 'lightblue') + 
-			   labs(x = 'Specific Humidity [q_i, kg / kg]\nderived from RH at receptors (no q in GFS field)')
+# convert TROPOMI CO AK to normalized AK
+convert.tropomi.co.ak <- function(output, co.fn) {
 	
-	d1 <- p0 + geom_point(data = intp.df, aes(xdensity.dry, lower.pres)) + 
-			   labs(x = 'Dry-air column density [C_dry_i, mol m-2]\n= (1 - q_i) / g / M_Dry * dP_i')
-	
-	p1 <- p0 + geom_point(data = intp.df, aes(pwf, lower.pres)) + 
-			   geom_point(data = combine.prof, aes(pwf, pres), color = 'orange', shape = 21, size = 0.8) +
-			   labs(x = 'Pressure Weighting Functions [PWF, unitless]\n= C_dry_i / sum(C_dry_i)')
-	
-	a1 <- p0 + geom_point(data = intp.df, aes(ak.init, lower.pres)) + 
-			   labs(x = 'Initial CO AK [AK_init_i, meters]\nfrom L2 file per layer')
-	
-	z1 <- p0 + geom_point(data = intp.df, aes(diff.z, lower.pres)) + labs(x = 'dZ_i [m]')
-	
-	a2 <- p0 + geom_point(data = intp.df, aes(ak.norm, lower.pres)) + 
-			   geom_point(data = combine.prof, aes(ak.norm, pres), color = 'orange', shape = 21, size = 0.8) + 
-			   labs(x = 'Normalized Averaging Kernel [AK_norm_i, unitless]\n= AK_init_i [m] / dZ_i [m]')
-	
-	a3 <- p0 + geom_point(data = intp.df, aes(ak.pwf, lower.pres)) + 
-			   geom_point(data = combine.prof, aes(ak.pwf, pres), color = 'orange', shape = 21, size = 0.8) + 
-			   labs(x = 'Averaging Kernel [AK_i, unitless]\n= AK_norm_i * PWF_i')
+	# before weighting trajec-level footprint by AK & PWF
+	# get specific humidity and temp profiles that have been extracted via 
+	# before_trajec_xstilt()
+	qt.prof <- output$qt_prof
+	if (is.null(qt.prof)) stop('convert.tropomi.co.ak(): no extracted q and T profiles found...\n')
 
-	all <- ggarrange(q1, d1, p1, a1, a2, a3) 
-	ggsave(all, filename = '../debug_AK_TROPOMI_CO.png', width = 10, height = 8)
+    # grab receptor info and select the particles at first time step back
+    receptor <- output$receptor
+	p <- output$particle
+	min.time <- min(abs(p$time)) * sign(p$time[1])  # MIN time in mins
+	sel.p <- p[p$time == min.time, ] %>% dplyr::select(indx, zagl, zsfc, pres, xhgt)
+	
+	# get useful info from TROPOMI column CO and/or NO2 data, DW, 09/05/2020 
+	# e.g., surface pressure/height, AK, vertical pressures, retrieved obs...
+	co.info <- get.tropomi.prof(receptor, 'CO', co.fn = co.fn)
+	co.df <- as.data.frame(co.info[c('ak', 'lower.pres', 'upper.pres')]) %>% 
+			 mutate(lower.pres = ifelse(lower.pres == max(lower.pres), 
+						   				co.info$tropomi.psfc, lower.pres), 
+					ratio.pres = upper.pres / lower.pres)
+
+	co.pres.bound <- c(co.df$upper.pres[1], co.df$lower.pres)
+	co.zsfc <- co.info$tropomi.zsfc
+	co.psfc <- co.info$tropomi.psfc
+	if (is.na(co.zsfc)) stop('convert.tropomi.co.ak(): TROPOMI-based surface height is NA, please check...\n')
+	
+
+	# --------- correct for model-satellite mismatch in sfc P or Z --------- #
+	# inferred from trajec, DW, 08/30/2019 
+	# P = Psfc * exp (g/RTv_mean * (Zsfc - Z)), fit nonlinear regression between P and delta_Z,
+	# Tv_mean is the mean virtual temp 
+
+	# correct for diff in ZSFC between sensor and particle ZSFC
+	p.zagl.corr <- sel.p$zagl + sel.p$zsfc - co.zsfc	# corrected trajec-level AGL
+	p.pres <- sel.p$pres 
+
+	# use satellite surface altitude and pressure to calculate ZAGL that TROPOMI believes
+	# use particle-level pressure and ASL to calculate the coeffient
+	nls <- stats::nls(p.pres ~ co.psfc * exp(a * (-p.zagl.corr)), start = list(a = 1E-4))		
+	a.co <- coef(nls)[[1]]    # a3 stands for g/RTv_mean based on OCO atmos-X
+
+	# ----------------------------------------------------------------------------
+	# now start to weight trajec-level footprint for X-STILT
+	# ----------------------------------------------------------------------------
+	# first bin up specific according to pressure of bottom level
+	# +1 is adjust as findInterval() finds the lower end of a pressure interval
+	# but pressure declines with height
+	qt.bin <- qt.prof %>% 
+			  mutate(lower.pres = co.pres.bound[findInterval(pres, co.pres.bound) + 1]) %>% 
+			  group_by(lower.pres) %>% summarise_all(mean) %>% ungroup() %>% 
+			  dplyr::select(-pres) %>% right_join(co.df, by = 'lower.pres') %>% 
+			  arrange(lower.pres) %>% mutate_all(~ if_else(is.na(.x), 0, .x))
 
 
+	# if for CO, we need to normalize AK for TROPOMI CO
+	# calculcate the normalized AK, AK_m / dz, 
+	# use P2  = P1 * exp (g/RTv_mean * dz) to calculate dz
+	qt.bin <- qt.bin %>% mutate(dz = -log(ratio.pres) / a.co, ak.norm = ak / dz)
+
+
+	cat(paste('get.wgt.co.func(): tropospheric AK_norm for the surface layer is', 
+			  signif(qt.bin[qt.bin$lower.pres == max(qt.bin$lower.pres), 'ak.norm'], 3), '\n'))
+
+	qt.bin
 }
+

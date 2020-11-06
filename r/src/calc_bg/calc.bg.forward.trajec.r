@@ -24,17 +24,34 @@
 #   DW, 10/30/2018 
 # minor update to the script in using OCO-3 data, DW, 06/30/2020
 
-calc.bg.forward.trajec <- function(traj.path, site, timestr, oco.sensor, oco.ver, 
+if (F) {  # for debugging
+
+  timestr = all.timestr[tt]
+  sensor = 'TROPOMI'
+  oco.ver = 'VEarlyR'
+  oco.path = oco.path[tt]
+  qfTF = T
+  zoom = 7
+  td = 0.05
+  bg.dlat = 0.5
+  perc = 0.2
+  clean.side = 'both'
+
+}
+
+
+calc.bg.forward.trajec <- function(traj.path, site, timestr, sensor, oco.ver, 
                                    oco.path, qfTF = T, met, zoom = 7, td = 0.05,
                                    bg.dlat = 0.5, perc = 0.2, 
                                    clean.side = c('north', 'south', 'both')[3], 
                                    api.key, font.size = rel(1.0)){
   
+  library(ggpubr)
   register_google(key = api.key)
   
   # figure name --
   picname <- file.path(traj.path, paste0('forward_plume_', site, '_', timestr, '_', 
-                                         met, '_', oco.sensor, '_', oco.ver, '.png'))
+                                         met, '_', sensor, '.png'))
   
   cat(paste('\n\n# ---------------------------------#
   calc.bg.forward.trajec(): loading XCO2 obs and forward trajec for', timestr, 
@@ -317,6 +334,12 @@ calc.bg.forward.trajec <- function(traj.path, site, timestr, oco.sensor, oco.ver
                                left_join(clean.obs %>% tally(), by = 'group')
 
     } else stop('Wrong input of @param clean.side')
+
+    if (nrow(clean.obs) == 0) { 
+      cat('calc.bg.forward.trajec(): NO clean OBS found, try another `clean.side`...\n')
+      ggsave(p3, filename = picname, width = width, height = 10)
+      return()
+    }
 
     # include retrieval error in background uncert, DW, 09/06/2018
     bg.info <- bg.info %>% mutate(bg.sd = sqrt(bg.sd.spread ^ 2 + bg.sd.retrv ^ 2), 

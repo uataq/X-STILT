@@ -5,24 +5,27 @@
 
 ####
 if (!'xstilt_wd' %in% ls()) xstilt_wd <- getwd()
+stilt_wd <- file.path(xstilt_wd, 'stilt')
 
-# if fortran dependencies not exist
-permute_exe <- file.path(xstilt_wd, 'stilt_hysplit/r/src/permute.so')
+# if fortran dependencies not exist, DW, 11/06/2020
+permute_exe <- file.path(stilt_wd, 'r/src/permute.so')
 hycs_std <- file.path(xstilt_wd, 'exe/hycs_std')
 
 if ( !file.exists(permute_exe) | !file.exists(hycs_std) ) {
-  setwd(file.path(xstilt_wd, 'stilt_hysplit'))
+  setwd(file.path(xstilt_wd, 'stilt'))
   cat('need to setup STILT\n')
   system('chmod +x setup')
   system('./setup')
-  #system(paste('ln -s', file.path(xstilt_wd, 'stilt_hysplit/exe/hycs_std'), hycs_std))
+
+  cat('linking STILT executables & dependencies to correct X-STILT directory...\n')
+  system(paste('ln -s', file.path(stilt_wd, 'exe/*'), file.path(xstilt_wd, 'exe/')))
   setwd(xstilt_wd)
 }
 
 
+
 ### Source stilt R functions
-rsc <- dir(file.path(xstilt_wd, 'stilt_hysplit/r/src'), 
-           pattern = '.*\\.r$', full.names = T)
+rsc <- dir(file.path(stilt_wd, 'r/src'), pattern = '.*\\.r$', full.names = T)
 
 ### Source R scripts for Dien's X-STILT, 05/23/2018, DW
 rsc <- c(rsc, dir(file.path(xstilt_wd, 'r/src'), pattern = '.*\\.r$',
@@ -34,15 +37,13 @@ invisible(lapply(rsc, source))
 if (!'lib.loc' %in% ls()) lib.loc <- NULL
 
 # add few other packages for OCO-2/XSTILT, DW, 05/23/2018
-#devtools::install_github("SESYNC-ci/rslurm")
-
-load_libs('dplyr', 'ncdf4', 'parallel', 'raster', 'readr', 'rslurm', 'ggplot2', 
-          'ggmap', 'geosphere', 'reshape2', 'stringr', 'MASS', #'PBSmapping', 
-          'ggpubr', 'rworldmap', 'lutz', lib.loc = lib.loc)
+load_libs('dplyr', 'ncdf4', 'parallel', 'raster', 'readr', 'ggplot2', 'ggmap', 
+          'geosphere', 'reshape2', 'stringr', 'MASS', 'rworldmap', 'lutz', 
+          'rslurm', lib.loc = lib.loc)
 
 ### Load permute fortran dll for footprint matrix permutation
 if (!file.exists(permute_exe))
-  stop('calc_footprint(): failed to find permute.so in r/src/')
+  stop('calc_footprint(): failed to find permute.so in stilt/r/src/')
 dyn.load(permute_exe)
 
 # Validate arguments and load dependencies if necessary

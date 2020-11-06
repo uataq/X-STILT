@@ -2,6 +2,46 @@
 #' @author: Dien Wu
 
 ### ------------------------------- 
+# tropomi module used in main script, config_tropomi() being called by config_xstilt()
+config_tropomi <- function(timestr, tropomi.speci, tropomi.path, lon.lat) {
+
+    # get TROPOMI info, if tropomi overpass hour differs from OCO, DW, 10/26/2020
+    if (!NA %in% tropomi.speci) {
+        
+        oco.hr <- substr(timestr, 9, 10)
+        tropomi.fn <- NULL 
+        for (ss in 1 : length(tropomi.speci)) {
+
+            cat(paste('- Obtaining TROPOMI', tropomi.speci[ss], 'info...\n'))
+            tmp.path <- tropomi.path[grep(tropomi.speci[ss], tropomi.path)]
+            tropomi.info <- find.tropomi(tropomi.path = tmp.path, 
+                                         timestr = substr(timestr, 1, 8), 
+                                         lon.lat = lon.lat)
+            
+            if (ss == length(tropomi.speci)) {
+
+                # if TRUE, use TROPOMI overpass hour instead of OCO
+                # while still keep the same lat/lon soundings of OCO as receptor locations
+                # if FALSE, combine trajec simulation as one run, given their same overpass hour
+                tropomi.hr <- substr(tropomi.info[, c(1, 2)], 10, 11)
+                cat(paste('\nOCO overpass hour:', oco.hr, 
+                          'UTC; TROPOMI overpass hour:', tropomi.hr[1], 
+                          'to', tropomi.hr[2], 'UTC\n'))
+
+                tropomiTF <- !oco.hr %in% tropomi.hr
+            }   # end if ss
+
+            tropomi.fn <- c(tropomi.fn, file.path(tmp.path, tropomi.info$fn))
+        }   # end for ss
+       
+    } # end if NA 
+
+    return(list(tropomiTF = tropomiTF, tropomi.fn = tropomi.fn))
+}
+
+
+
+### ------------------------------- 
 # timestr needs to have a format of YYYYMMDD
 find.tropomi <- function(tropomi.path, timestr, lon.lat) {
 
@@ -19,9 +59,21 @@ find.tropomi <- function(tropomi.path, timestr, lon.lat) {
         ## variables
         lat <- ncvar_get(dat, 'PRODUCT/latitude')
         lon <- ncvar_get(dat, 'PRODUCT/longitude')
+
+        # for CO and NO2, 
+
+        # for CH4, A continuous quality descriptor, varying between 0 (no data) 
+        # and 1 (full quality data). Recommend to ignore data with qa_value < 0.5
         qa  <- ncvar_get(dat, 'PRODUCT/qa_value')  # quality assurances
+
+
         if (unique(grepl('_CO_', fn))) 
             val <- ncvar_get(dat, 'PRODUCT/carbonmonoxide_total_column')
+        
+        # bias corrected dry_atmosphere_mole_fraction_of_methane
+        if (unique(grepl('_CH4_', fn)))     # unit of 1e-9
+            val <- ncvar_get(dat, 'PRODUCT/methane_mixing_ratio_bias_corrected')
+            #val <- ncvar_get(dat, 'PRODUCT/methane_mixing_ratio')
 
         if (unique(grepl('_NO2_', fn))) 
             val <- ncvar_get(dat, 'PRODUCT/nitrogendioxide_tropospheric_column')
@@ -58,11 +110,14 @@ find.tropomi <- function(tropomi.path, timestr, lon.lat) {
             cat(paste0('found the data that match the criteria; see nc file: ', 
                        fn, '; stop searching...\n'))
             fn_df <- strsplit.to.df(basename(fn)) 
+
             if (unique(grepl('_CO_', fn))) { start.time = fn_df$V10; end.time = fn_df$V11 }
+            if (unique(grepl('_CH4_', fn))) { start.time = fn_df$V9; end.time = fn_df$V10 } 
             if (unique(grepl('_NO2_', fn))) { start.time = fn_df$V9; end.time = fn_df$V10 } 
             
             tmp_df <- data.frame(start.time = start.time, end.time = end.time, 
                                  tot.count = nrow(sel_df), 
+                                 qa0p5.count = nrow(sel_df %>% filter(qa >= 0.50)), 
                                  qa0p4.count = nrow(sel_df %>% filter(qa >= 0.40)), 
                                  qa0p7.count = nrow(sel_df %>% filter(qa >= 0.70)), 
                                  fn = fn, stringsAsFactors = F)
@@ -75,7 +130,6 @@ find.tropomi <- function(tropomi.path, timestr, lon.lat) {
         cat('Cannot find any TROPOMI data that match your time and spatial domain...\n')
         return()
     }
-
 }
 # end of subrouti
 
@@ -84,22 +138,29 @@ find.tropomi <- function(tropomi.path, timestr, lon.lat) {
 
 ### ------------------------------- 
 # timestr needs to have a format of YYYYMMDD
-grab.tropomi.no2 <- function(tropomi.path, timestr, lon.lat) {
+# if one provides tropomi.fn, no need to provide tropomi.path and timestr
+grab.tropomi.no2 <- function(tropomi.path = NULL, timestr = NULL, lon.lat, 
+                             tropomi.fn = NULL) {
 
     library(ncdf4)
-    if (nchar(timestr) > 8) timestr <- substr(timestr, 1, 8)
-    fn <- list.files(tropomi.path, paste0('____', timestr))
 
-    if (length(fn) > 1) { 
-        cat('grab.tropomi.no2(): Multiple TROPOMI files;\nX-STILT is looking for the tropomi file that has soundings over your spatial domain\n')
-        tropomi.info <- find.tropomi(tropomi.path, timestr, lon.lat)
-        fn <- tropomi.info$fn
-    }
-    if (length(fn) == 0) { cat('NO TROPOMI NO2 files found..\n'); return() }
+    if (is.null(tropomi.fn)) {
+        
+        if (nchar(timestr) > 8) timestr <- substr(timestr, 1, 8)
+        fn <- list.files(tropomi.path, paste0('____', timestr))
 
+        if (length(fn) > 1) { 
+            cat('grab.tropomi.no2(): Multiple TROPOMI files;\nX-STILT is looking for the tropomi file that has soundings over your spatial domain\n')
+            tropomi.info <- find.tropomi(tropomi.path, timestr, lon.lat)
+            fn <- tropomi.info$fn
+        }
+        if (length(fn) == 0) { cat('NO TROPOMI NO2 files found..\n'); return() }
+        fn <- file.path(tropomi.path, fn)
+
+    } else fn <- tropomi.fn 
 
     # get dimension first, index starts with ZERO
-    dat <- nc_open(file.path(tropomi.path, fn))
+    dat <- nc_open(fn)
     indx_along_track  <- ncvar_get(dat, 'PRODUCT/scanline')
     indx_across_track <- ncvar_get(dat, 'PRODUCT/ground_pixel')
     corner <- ncvar_get(dat, 'PRODUCT/corner')
@@ -117,6 +178,8 @@ grab.tropomi.no2 <- function(tropomi.path, timestr, lon.lat) {
     hsfc <- ncvar_get(dat, 'INPUT_DATA/surface_altitude')
     psfc <- ncvar_get(dat, 'INPUT_DATA/surface_pressure') / 100 # Pa to hPa
 
+    # "TM5 layer index of the highest layer in the tropopause"
+    tropo_indx <- ncvar_get(dat, 'PRODUCT/tm5_tropopause_layer_index')
     sfc_class <- ncvar_get(dat, 'INPUT_DATA/surface_classification')
     tropo_xno2 <- ncvar_get(dat, 'PRODUCT/nitrogendioxide_tropospheric_column')
     tropo_xno2_uncert <- ncvar_get(dat, 'PRODUCT/nitrogendioxide_tropospheric_column_precision')
@@ -125,15 +188,17 @@ grab.tropomi.no2 <- function(tropomi.path, timestr, lon.lat) {
     # assign proper dimensions to variables
     dimnames(lat) <- dimnames(lon) <- dimnames(qa) <- dimnames(time_mtrx) <- 
     dimnames(hsfc) <- dimnames(psfc) <- dimnames(sfc_class) <- 
-    dimnames(tropo_xno2) <- dimnames(tropo_xno2_uncert) <- list(indx_across_track, indx_along_track)
+    dimnames(tropo_indx) <- dimnames(tropo_xno2) <- dimnames(tropo_xno2_uncert) <- 
+        list(indx_across_track, indx_along_track)
     
     dimnames(lats) <- dimnames(lons) <- list(corner, indx_across_track, indx_along_track)
 
     # -------------------------  merge matrix 1
     var_name <- list(c('center_lat', 'center_lon', 'time_utc', 'qa', 'hsfc', 
-                       'psfc', 'sfc_class', 'tropo_xno2', 'tropo_xno2_uncert'))
-    var_list <- list(lat, lon, time_mtrx, qa, hsfc, psfc, sfc_class, 
+                       'psfc', 'sfc_class', 'tropo_k', 'tropo_xno2', 'tropo_xno2_uncert'))
+    var_list <- list(lat, lon, time_mtrx, qa, hsfc, psfc, sfc_class, tropo_indx,
                      tropo_xno2, tropo_xno2_uncert)    
+    
     var_array <- array(  
         data = do.call(cbind, var_list), 
         dim = c(dim(var_list[[1]]), length(var_list)), 
@@ -142,11 +207,38 @@ grab.tropomi.no2 <- function(tropomi.path, timestr, lon.lat) {
     
     var_df <- dcast(melt(var_array), Var1 + Var2~Var3, value.var = 'value')
     colnames(var_df)[1:2] <- c('indx_across_track', 'indx_along_track')
-    sel_df <- var_df %>% filter(center_lon >= lon.lat$minlon, 
-                                center_lon <= lon.lat$maxlon,
-                                center_lat >= lon.lat$minlat, 
-                                center_lat <= lon.lat$maxlat)
     
+    # select data frame based on spatial domain 
+    sel_df <- var_df %>% filter(center_lon >= lon.lat$minlat - 0.05, 
+                                center_lon <= lon.lat$maxlon + 0.05,
+                                center_lat >= lon.lat$minlat - 0.05, 
+                                center_lat <= lon.lat$maxlat + 0.05, !is.na(tropo_k)) 
+    sel_df <- sel_df %>% mutate(sample = 1 : nrow(sel_df)) 
+    
+    # calculate tropopause pressure, need pressure levels and tropopause level indx
+    # TM5 hybrid A coefficient at upper and lower interface levels in Pa, dim of [34, 2]
+    a <- ncvar_get(dat, 'PRODUCT/tm5_constant_a') / 100   # convert to hPa now
+    # TM5 hybrid B coefficient at upper and lower interface levels, unitless, dim of [34, 2]
+    b <- ncvar_get(dat, 'PRODUCT/tm5_constant_b')   
+    # k from surface to top of atmosphere, 0 to 33 
+    k <- ncvar_get(dat, 'PRODUCT/layer')  
+    # vertices: lower or upper pressure level boundaries, v = 0 for lower level
+    v <- ncvar_get(dat, 'PRODUCT/vertices')  
+
+    # grab pressure coefficient for lower and upper level boundaries
+    ab_df <- data.frame(a_lower = rep(a[1, ], nrow(sel_df)), 
+                        b_lower = rep(b[1, ], nrow(sel_df)), 
+                        a_upper = rep(a[2, ], nrow(sel_df)), 
+                        b_upper = rep(b[2, ], nrow(sel_df)), 
+                        k = rep(k, nrow(sel_df)),   # from sfc to TOA, indx = 0 to 33
+                        sample = rep(1 : nrow(sel_df), each = length(a[1, ])))
+
+    add_df <- sel_df %>% left_join(ab_df, by = 'sample') %>% group_by(sample) %>%
+                         filter(k == tropo_k) %>% ungroup() %>% 
+                         mutate(tropo_lower_pres = a_lower + b_lower * psfc, 
+                                tropo_upper_pres = a_upper + b_upper * psfc)
+    print(range(add_df$tropo_lower_pres))
+
     # ------------------------- merge matrix 2
     loc_name <- list(c('lats', 'lons')); loc_list <- list(lats, lons)
     loc_array <- array(
@@ -161,9 +253,8 @@ grab.tropomi.no2 <- function(tropomi.path, timestr, lon.lat) {
                                 lons <= lon.lat$maxlon + 0.05,
                                 lats >= lon.lat$minlat - 0.05, 
                                 lats <= lon.lat$maxlat + 0.05)
-    print(nrow(loc_df))
 
-    merge_df <- right_join(sel_df, loc_df, by = c('indx_across_track', 'indx_along_track'))
+    merge_df <- right_join(add_df, loc_df, by = c('indx_across_track', 'indx_along_track'))
     nc_close(dat)
 
     return(merge_df)
@@ -171,23 +262,31 @@ grab.tropomi.no2 <- function(tropomi.path, timestr, lon.lat) {
 # end of subroutinr
 
 
+
 ### ------------------------------- 
-# timestr should be format of YYYYMMDD, if it has > 8 letters, we will simply crop it 
-grab.tropomi.co <- function(tropomi.path, timestr, lon.lat, getakTF = F) {
+# timestr should be format of YYYYMMDD, if it has > 8 letters, we will simply truncate it 
+# if one provides tropomi.fn, no need to provide tropomi.path and timestr
+grab.tropomi.co <- function(tropomi.path = NULL, timestr = NULL, lon.lat, 
+                            getakTF = F, tropomi.fn = NULL) {
 
     library(ncdf4)
-    if (nchar(timestr) > 8) timestr <- substr(timestr, 1, 8)
-    fn <- list.files(tropomi.path, paste0('____', timestr))
+    if (is.null(tropomi.fn)) {
 
-    if (length(fn) > 1) { 
-        cat('grab.tropomi.co(): Multiple TROPOMI files;\nX-STILT is looking for the tropomi file that has soundings over your spatial domain\n')
-        tropomi.info <- find.tropomi(tropomi.path, timestr, lon.lat)
-        fn <- tropomi.info$fn
-    }
-    if (length(fn) == 0) { cat('NO TROPOMI CO files found..\n'); return() }
+        if (nchar(timestr) > 8) timestr <- substr(timestr, 1, 8)
+        fn <- list.files(tropomi.path, paste0('____', timestr))
+
+        if (length(fn) > 1) { 
+            cat('grab.tropomi.co(): Multiple TROPOMI files;\nX-STILT is looking for the tropomi file that has soundings over your spatial domain\n')
+            tropomi.info <- find.tropomi(tropomi.path, timestr, lon.lat)
+            fn <- tropomi.info$fn
+        }
+        if (length(fn) == 0) { cat('NO TROPOMI CO files found..\n'); return() }
+        fn <- file.path(tropomi.path, fn)
+
+    } else fn <- tropomi.fn 
 
     # get dimension first, index starts with ZERO
-    dat <- nc_open(file.path(tropomi.path, fn))
+    dat <- nc_open(fn)
     indx_along_track  <- ncvar_get(dat, 'PRODUCT/scanline')
     indx_across_track <- ncvar_get(dat, 'PRODUCT/ground_pixel')
     corner <- ncvar_get(dat, 'PRODUCT/corner')
@@ -280,7 +379,7 @@ plot.oco.tropomi <- function(site, timestr, lon.lat, xco2.obs, sif.obs, xco.obs,
                              xno2.obs, oco.sensor, xco2.qf = T, xco.qa = 0.4, 
                              xno2.qa = 0.7, zoom = 8, plot.dir = NULL) {
 
-    
+    library(ggpubr)
     tropomi.hr <- unique(substr(xco.obs$time_utc, 9, 10))
     oco.hr <- unique(substr(xco2.obs$timestr, 9, 10))
 

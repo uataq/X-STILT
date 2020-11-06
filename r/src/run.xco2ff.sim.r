@@ -26,11 +26,11 @@
 
 # max.yr for max year available 
 
-run.xco2ff.sim <- function(site = 'Riyadh', timestr = '2014100920', vname = '2018', 
+run.xco2ff.sim <- function(site, timestr = '2014100920', vname = '2019', 
                            tiff.path, outdir, foot.res, workdir, store.path,
                            nhrs, oco.sensor, oco.ver, met, lon.lat, 
                            run_emiss_err, edgar.file = NA, ffdas.file = NA, 
-                           writeTF = T, max.yr = 2018, overwriteTF = F){
+                           max.yr = 2018, overwriteTF = F){
 
   library(rgdal)
   
@@ -73,7 +73,7 @@ run.xco2ff.sim <- function(site = 'Riyadh', timestr = '2014100920', vname = '201
   txtfile <- file.path(store.path, paste0(timestr, '_', site, '_XCO2ff_', abs(nhrs), 
                                           'hrs_', oco.sensor, oco.ver, '_', met, 
                                           '_odiac', vname, '.txt'))
-  
+
   # add emission error file with absolute emission uncertainty and txtfile
   if (run_emiss_err) {
 
@@ -167,7 +167,8 @@ run.xco2ff.sim <- function(site = 'Riyadh', timestr = '2014100920', vname = '201
   }  # end for r
 
   # finally, write in a txt file
-  if (writeTF) write.table(x = receptor, file = txtfile, sep = ',', row.names = F, quote = F)
+  #if (writeTF) 
+  write.table(x = receptor, file = txtfile, sep = ',', row.names = F, quote = F)
 
-  return(receptor)
+  return(txtfile)
 } # end of subroutine

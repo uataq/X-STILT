@@ -18,7 +18,8 @@
 # interpolate vertical profiles onto each particle instead of each release level, 
 #    due to changes in HYSPLIT compiler, DW, 07/07/2020
 
-wgt.trajec.foot.oco <- function(output, oco.path, ak.wgt = T, pwf.wgt = T){
+wgt.trajec.foot.oco <- function(output, oco.path, ak.wgt = T, pwf.wgt = T, 
+								overwriteTF = T){
 
 	if (ak.wgt == F & pwf.wgt == F) {
 		# if ak.wgt == F && pwf.wgt == F, return trajec with original footprint,
@@ -92,7 +93,7 @@ wgt.trajec.foot.oco <- function(output, oco.path, ak.wgt = T, pwf.wgt = T){
 
 
 	# return both weighting profiles and weighted trajec
-	saveRDS(output, output$file) 	# overwrite the "X_traj.rds" file
+	if (overwriteTF) saveRDS(output, output$file) 	# overwrite the "X_traj.rds" file
 	return(output)
 
 }  # end of subroutine

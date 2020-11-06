@@ -27,7 +27,7 @@
 #    due to changes in HYSPLIT compiler, DW, 07/07/2020
 
 
-get.wgt.oco.func <- function(output, oco.path){
+get.wgt.oco.func <- function(output, oco.path) {
 
 	# before weighting trajec-level footprint by AK & PWF
 	# get specific humidity and temp profiles that have been extracted via 
