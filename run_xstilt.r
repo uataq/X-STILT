@@ -19,6 +19,9 @@
 #' ---------------------------------------------------------------------------
 # latest update by DW on 11/06/2020
 # upgrade to use STILT-HYSPLIT and a brand new refactoring on tht X-STILT part 
+# place receptor locations according to a txt file provided by the user -- 
+#     getting rid of the OCO dependencies, DW, 12/06/2020
+
 
 ## go to X-STILT dir and source functions and libraries
 homedir   <- '/central/home/dienwu'
@@ -95,10 +98,7 @@ run_emiss_err <- F    # T: get XCO2 error due to prior emiss err
 # whether to run XCO2.ff or error using existing foot; 
 # need to silent run_trajec and run_foot
 run_sim <- F
-if (run_trajec | run_foot) run_sim <- F   # when running trajec/foot, no sim allowed  
-
-# number of hours backward (-) or forward (+)
-nhrs <- -24  
+nhrs <- -24           # number of hours backward (-) or forward (+)
 
 # output variable names in trajec.rds
 varstrajec <- c('time', 'indx', 'lati', 'long', 'zagl', 'zsfc', 'foot', 'samt',
@@ -148,7 +148,7 @@ met_subgrid_levels <- NA
 
 # -------------------------- TROPOMI & CTM params ---------------------------- #
 # if tropomi.speci includes NA, no runs related to TROPOMI will be generated
-tropomi_speci <- c(NA, 'CO', 'NO2', 'CH4')[4]   
+tropomi_speci <- c(NA, 'CO', 'NO2', 'CH4')[1]   
 tropomi_path  <- file.path(input.path, 'TROPOMI', paste0('L2_', tropomi_speci))
 tropomi_hir_path <- paste0(tropomi_path, '_HiR')    # higher res TROPOMI
 

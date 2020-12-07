@@ -17,9 +17,9 @@
 #    to reduce the storage, DW, 07/03/2020 
 # interpolate vertical profiles onto each particle instead of each release level, 
 #    due to changes in HYSPLIT compiler, DW, 07/07/2020
+# oco.path can be NA for ideal simulation (i.e., ak.wgt = FALSE), DW, 12/06/2020
 
-wgt.trajec.foot.oco <- function(output, oco.path, ak.wgt = T, pwf.wgt = T, 
-								overwriteTF = T){
+wgt.trajec.foot <- function(output, oco.path = NA, ak.wgt = T, pwf.wgt = T){
 
 	if (ak.wgt == F & pwf.wgt == F) {
 		# if ak.wgt == F && pwf.wgt == F, return trajec with original footprint,
@@ -61,7 +61,8 @@ wgt.trajec.foot.oco <- function(output, oco.path, ak.wgt = T, pwf.wgt = T,
 	# use retrieved surface pressure and height for pressure weighting
 	# use retrieved Ak for AK weighting
 	if (ak.wgt) xstilt.prof <- get.wgt.oco.func(output, oco.path) %>% 
-				    		   dplyr::select(c('indx', 'ak.norm', 'pwf', 'ap', 'ak.pwf', 'stiltTF')) %>% 
+				    		   dplyr::select(c('indx', 'ak.norm', 'pwf', 'ap', 
+							   				   'ak.pwf', 'stiltTF')) %>% 
 							   filter(stiltTF == TRUE)
 
 
@@ -93,7 +94,7 @@ wgt.trajec.foot.oco <- function(output, oco.path, ak.wgt = T, pwf.wgt = T,
 
 
 	# return both weighting profiles and weighted trajec
-	if (overwriteTF) saveRDS(output, output$file) 	# overwrite the "X_traj.rds" file
+	saveRDS(output, output$file) 	# overwrite the "X_traj.rds" file
 	return(output)
 
 }  # end of subroutine

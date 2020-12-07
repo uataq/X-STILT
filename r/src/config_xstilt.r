@@ -40,6 +40,7 @@ config_xstilt <- function(namelist){
   if (run_foot)   cat('Need to generate footprint...\n')
   if (!run_trajec & !run_foot & !run_sim) 
     cat('NO calculations will be performed, please check run_* flags..\n')
+  if (run_trajec | run_foot) run_sim = F   # when running trajec/foot, no sim allowed  
 
   # line source for agl
   agl     <- c(namelist$minagl, namelist$maxagl) 
@@ -86,7 +87,7 @@ config_xstilt <- function(namelist){
     tropomi.config <- config_tropomi(timestr, tropomi.speci, tropomi.path, lon.lat)
     tropomiTF  <- tropomi.config$tropomiTF  # if true, separate OCO from TROPOMI runs
     tropomi.fn <- tropomi.config$tropomi.fn
-    if (tropomiTF) cat('Treat OCO and TROPOMI as two separate runs given different overpass hours...\n')
+    if ( tropomiTF) cat('Treat OCO and TROPOMI as two separate runs given different overpass hours...\n')
     if (!tropomiTF) cat('Treat OCO and TROPOMI as one single run...\n')
 
     # if tropomiTF == T, trajec for OCO and TROPOMI will be treated as two separate runs; 
@@ -140,7 +141,7 @@ config_xstilt <- function(namelist){
                                tiff.path = namelist$odiac.path, 
                                outdir = output_wd, foot.res = xres, 
                                workdir = xstilt_wd, store.path, nhrs = n_hours, 
-                               oco.sensor, oco.ver, met, lon.lat,
+                               oco.sensor, oco.ver, met, 
                                run_emiss_err = namelist$run_emiss_err, 
                                edgar.file = namelist$edgar.file, 
                                ffdas.file = namelist$ffdas.file)

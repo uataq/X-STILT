@@ -72,6 +72,7 @@ get.wgt.tropomi.func <- function(output, tropomi.fn, tropomi.speci, tropo.no2TF 
 	if ('CO' %in% tropomi.speci) 
 		qt.bin <- qt.bin %>% mutate(dz = -log(ratio.pres) / a.tropomi, ak.norm = ak / dz)
 	if ('NO2' %in% tropomi.speci) qt.bin <- qt.bin %>% rename(ak.norm = ak.tropo)
+	if ('CH4' %in% tropomi.speci) qt.bin <- qt.bin %>% rename(ak.norm = ak)
 
 	cat(paste('get.wgt.tropomi.func(): tropospheric AK_norm for the surface layer is', 
 			  signif(qt.bin[qt.bin$lower.pres == max(qt.bin$lower.pres), 'ak.norm'], 3), '\n'))
@@ -133,6 +134,16 @@ get.wgt.tropomi.func <- function(output, tropomi.fn, tropomi.speci, tropo.no2TF 
 						mutate(xdry.tot = unique(combine.prof$xdry.tot), 
 							   xno2.tropo.ppb = xno2.tropo / xdry.tot * 1E9, 
 							   xno2.tropo.uncert.ppb = xno2.tropo.uncert / xdry.tot * 1E9)
+
+	if ('CH4' %in% tropomi.speci) 
+		tropomi.info <- tropomi.info[c('tropomi.lat', 'tropomi.lon', 
+									   'tropomi.zsfc', 'tropomi.psfc', 
+									   'xch4', 'xch4.bc', 'xch4.uncert')] %>% 
+						as.data.frame() %>% 
+						mutate(xdry.tot = unique(combine.prof$xdry.tot)) %>% 
+						rename(xch4.ppb = xch4, xch4.bc.ppb = xch4.bc, 
+							   xch4.uncert.ppb = xch4.uncert)
+
 
 	# adjust the PWF for the first level above XSTILT particles 
 	combine.prof$pwf[npar + 1] <- 1 - sum(combine.prof$pwf[-(npar + 1)])

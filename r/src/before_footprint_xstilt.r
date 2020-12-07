@@ -27,7 +27,7 @@ before_footprint_xstilt <- function() {
     # weight trajec-level footprints using TROPOMI profiles, DW, 09/05/2020
     # ---------------------------------------------------------------------
     # whether to calc footprint for TROPOMI
-    if (!NA %in% unlist(args$tropomi.speci)) {   
+    if ( !NA %in% unlist(args$tropomi.speci) ) {   
 
         cat('before_footprint_xstilt(): need to generate footprints based on TROPOMI profiles\n')
         p.tropomi <- wgt.trajec.foot.tropomi(output = output, 
@@ -37,10 +37,16 @@ before_footprint_xstilt <- function() {
                                              pwf.wgt = args$pwf.wgt)
 
         # generate spatial footprint based on TROPOMI profiles 
-        for (tmp.speci in unlist(args$tropomi.speci)) {
+        for ( tmp.speci in unlist(args$tropomi.speci) ) {
             
+            cat(paste('\n\nbefore_footprint_xstilt(): calculating spatial footprint for TROPOMI', 
+                        tmp.speci, '\n'))
+
             if (tmp.speci == 'CO') 
                 p.tmp <- p.tropomi %>% rename(foot_before_wgt = foot, foot = foot_wgt_co)
+
+            if (tmp.speci == 'CH4') 
+                p.tmp <- p.tropomi %>% rename(foot_before_wgt = foot, foot = foot_wgt_ch4)
 
             # ---------------------------------------------------------------------
             # weight trajec-level footprints by NOx lifetime, DW, 10/06/2020
@@ -54,7 +60,10 @@ before_footprint_xstilt <- function() {
                 ctm.fn <- find_ctm_files(r_run_time, n_hours, 
                                          ctm_file_format = args$ctm_file_format, 
                                          ctm_path = args$ctm_path)
-                
+                                         
+                if (length(ctm.fn) == 0) {
+                    cat('NO CTM files found, will skip NO2 modeling'); next }
+
                 # performing footprint weighting using estimated K and modeled [OH]
                 p.tmp <- wgt_foot_oh(p = p.prep, r_run_time, ctm = args$ctm_name, 
                                      ctm.fn = ctm.fn, xstilt_wd) 
@@ -64,9 +73,6 @@ before_footprint_xstilt <- function() {
             }   # end if
 
             # use weighted output for footprint
-            cat(paste('\n\nbefore_footprint_xstilt(): calculating spatial footprint for TROPOMI', 
-                        tmp.speci, '\n'))
-
             tmp.file <- file.path(rundir, paste0(basename(rundir), '_foot_TROPOMI_', tmp.speci, '.nc'))
             calc_footprint(p = p.tmp, output = tmp.file, r_run_time = r_run_time,
                            smooth_factor = smooth_factor, 
@@ -78,7 +84,7 @@ before_footprint_xstilt <- function() {
         }   # end for tropomi speci
         
         cat('DONE with foot for TROPOMI..\n')
-        if (args$tropomiTF) 
+        if ( args$tropomiTF ) 
             stop('***THIS IS NOT AN ERROR, but no need to calculate foot for OCO, so stop the model...\n')
     }   # end if is.na()
 
@@ -89,17 +95,18 @@ before_footprint_xstilt <- function() {
     # Weight footprint: call wgt.trajec.footv3() to weight trajec-level
     # footprint before calculating gridded footprint, DW, 06/01/2018
     cat("\n\nbefore_footprint_xstilt(): weight trajec-level foot using OCO's vertical profiles...\n")
-    output <- wgt.trajec.foot.oco(output, oco.path = args$oco.path, 
-                                  ak.wgt = args$ak.wgt, pwf.wgt = args$pwf.wgt)
     
-    #}   # end if
-
+    # for ideal simulation (ak.wgt == FALSE) then args$oco.path == NA
+    # for real OCO simulation (ak.wgt == TRUE), will use AK from OCO files
+    output <- wgt.trajec.foot(output, oco.path = args$oco.path, 
+                              ak.wgt = args$ak.wgt, pwf.wgt = args$pwf.wgt)
+    
    
     # -------------------------------------------------------------------------
     # calculate horizontal trans error if needed, DW, 01/29/2019
     # -------------------------------------------------------------------------
     # calculate the trajec-level value, e.g., CO2 (FxEmiss), or others (FxGRIDs)
-    if (args$run_hor_err) {
+    if ( args$run_hor_err ) {
         cat('\n\nbefore_footprint_xstilt(): run_hor_err = T; estimating trajec-level value...\n')
 
         ## calculate trajec-level CO2 (emiss x foot) concentration using trajec 

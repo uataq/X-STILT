@@ -80,8 +80,8 @@ get.site.track <- function(site, oco.sensor, oco.ver, oco.path, searchTF = FALSE
     # this helps you choose which overpass to simulate, see 'tt' below
     if (nrow(oco.track) > 0) {
       ggmap.obs.info(plotTF, site, store.path, all.timestr = oco.track$timestr, 
-                    oco.sensor, oco.ver, oco.path, sif.path, lon.lat, 
-                    urban_dlat, urban_dlon)
+                     oco.sensor, oco.ver, oco.path, sif.path, lon.lat, 
+                     urban_dlat, urban_dlon)
                     
     } else cat('get.site.track(): NO OCO track available...\n')
 

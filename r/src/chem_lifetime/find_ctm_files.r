@@ -20,11 +20,9 @@ find_ctm_files <- function(r_run_time, n_hours, ctm_file_format, ctm_path) {
     if (any(idx < 1)) return()
     
     fn <- unique(available[idx])
+    if (length(fn) == 0) return() 
 
-    if (length(fn) == 0) {
-        cat('find_ctm_files(): NO CTM files found, will skip NO2 modeling... \n')
-        next
-    } else cat('find_ctm_files(): Found CTM files.\n')
-
-    return(fn)
+    if (length(fn) > 0) 
+        cat('find_ctm_files(): Found CTM files.\n')
+        return(fn)
 }

@@ -9,7 +9,7 @@ X-STILT model developments are ongoing towards a more flexible model framework t
 # X-STILT Features
 
 ## Table of Contents
-- [**Latest commit**](#latest-commit-by-sept-18-2020)
+- [**Latest commit**](#latest-commit-by-dec-06-2020)
 - [**Prerequisites**](#prerequisites)
 - [**Obtain column footprint**](#obtain-column-footprint)
 - [**Determine background XCO<sub>2</sub>**](#determine-background-xco2)
@@ -20,10 +20,18 @@ X-STILT model developments are ongoing towards a more flexible model framework t
 - [**Reference**](#reference)
 
 
-Latest commit by Sept 18, 2020
+Latest commit by Dec 06, 2020
 ============
 Changes in ['merge_stilt-hysplit' branch](https://github.com/uataq/X-STILT/tree/merge_stilt-hysplit) towards the release of X-STILT version 2:
 
+:pushpin: ADD X-STILT Lite version for ideal simulations. The user can start with `run_xstilt_ideal.r`. This version removed dependencies on any satellite sensors, but still for simulating column concentrations from any locations outside satellite sounding locations. 
+
+*** USE WITH CAUTIONS, since column AK is simply treated as 1 from TOA to the surface (ak_wgt = FALSE); and column PWF is calculated using modeled variables (pwf_wgt = TRUE). NOTE THAT ideal simulations are NOT suitable for comparisons with real satellite sensors that have variable vertical sensitivities. 
+
+*** The user needs to provide a csv/txt file containing the latitudes and longitudes of your desired receptor locations. Receptor time (in form of YYYYMMDDHH or YYYYMMDDHHss) can either be included in this csv/txt file OR be assigned to `timestr` in the main script `run_xstilt_ideal.r`. See examples in `receptor.csv`. 
+
+
+*** 
 :pushpin: Google API key: instead of a charater string in each main script :arrow_forward: insert your google API in the first line of `insert_ggAPI.csv` that will be searched by the main script; 
 
 :pushpin: **Built upon the latest HYSPLITv5**: no more discrete release levels :arrow_forward: *line source release* -- i.e., particles are now evenly distributed between `minagl` and `maxagl`, e.g., default is 3000 particles from 0 - 3km; 

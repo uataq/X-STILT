@@ -17,8 +17,12 @@ if ( !file.exists(permute_exe) | !file.exists(hycs_std) ) {
   system('chmod +x setup')
   system('./setup')
 
-  cat('linking STILT executables & dependencies to correct X-STILT directory...\n')
-  system(paste('ln -s', file.path(stilt_wd, 'exe/*'), file.path(xstilt_wd, 'exe/')))
+  if ( !file.exists(hycs_std) ) {
+    cat('linking STILT executables & dependencies to correct X-STILT directory...\n')
+    system(paste('ln -s', file.path(stilt_wd, 'exe/*'), 
+                          file.path(xstilt_wd, 'exe/')))
+  }
+
   setwd(xstilt_wd)
 }
 

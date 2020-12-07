@@ -82,7 +82,6 @@ wgt_foot_oh <- function(p, r_run_time, ctm, ctm.fn, xstilt_wd) {
     for (r in 1 : nrow(uni.grid)) {
 
         if (r %% 10 == 0) cat(paste(signif(r / nrow(uni.grid) * 100, 3), '% done...\n'))
-
         tmp.ctm <- ctm.df %>% filter(lon == uni.grid$ctm.long[r], 
                                      lat == uni.grid$ctm.lati[r], 
                                      time == uni.grid$ctm.time[r]) 
@@ -102,7 +101,7 @@ wgt_foot_oh <- function(p, r_run_time, ctm, ctm.fn, xstilt_wd) {
             tmp.ctm <- tmp.ctm %>% arrange(pres) %>% filter(!is.na(oh)) %>% 
                                     dplyr::select(lon, lat, pres, time, oh)
             tmp.pres <- tmp.ctm$pres    # pressure for lower pressure boundary
-            if (r %% 10 == 0) cat(paste(signif(r / nrow(uni.grid) * 100, 3), '% done2..\n'))
+            #if (r %% 10 == 0) cat(paste(signif(r / nrow(uni.grid) * 100, 3), '% done2..\n'))
         }   # end if
         
         ## use middle pressure to locate which vertical box particle falls into
@@ -125,7 +124,7 @@ wgt_foot_oh <- function(p, r_run_time, ctm, ctm.fn, xstilt_wd) {
                                            'ctm.time' = 'time', 'ctm.pres' = 'pres')) 
 
         p.chem <- rbind(p.chem, p.tmp)
-        if (r %% 10 == 0) cat(paste(signif(r / nrow(uni.grid) * 100, 3), '% done3..\n'))
+        #if (r %% 10 == 0) cat(paste(signif(r / nrow(uni.grid) * 100, 3), '% done3..\n'))
     }     # end for r
 
     # sanity check, diff < 0, abs(diff) should be smaller than horizonal resolution

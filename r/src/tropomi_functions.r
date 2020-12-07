@@ -28,7 +28,8 @@ config_tropomi <- function(timestr, tropomi.speci, tropomi.path, lon.lat) {
                           'UTC; TROPOMI overpass hour:', tropomi.hr[1], 
                           'to', tropomi.hr[2], 'UTC\n'))
 
-                tropomiTF <- !oco.hr %in% tropomi.hr
+                tropomiTF <- !as.numeric(oco.hr) %in% seq(as.numeric(tropomi.hr[1]), 
+                                                          as.numeric(tropomi.hr[2]), 1)
             }   # end if ss
 
             tropomi.fn <- c(tropomi.fn, file.path(tmp.path, tropomi.info$fn))
@@ -177,6 +178,8 @@ grab.tropomi.no2 <- function(tropomi.path = NULL, timestr = NULL, lon.lat,
     qa   <- ncvar_get(dat, 'PRODUCT/qa_value')  # quality assurances
     hsfc <- ncvar_get(dat, 'INPUT_DATA/surface_altitude')
     psfc <- ncvar_get(dat, 'INPUT_DATA/surface_pressure') / 100 # Pa to hPa
+    amf_tot <- ncvar_get(dat, 'PRODUCT/air_mass_factor_total')
+    amf_tropo <- ncvar_get(dat, 'PRODUCT/air_mass_factor_troposphere')
 
     # "TM5 layer index of the highest layer in the tropopause"
     tropo_indx <- ncvar_get(dat, 'PRODUCT/tm5_tropopause_layer_index')
@@ -237,7 +240,7 @@ grab.tropomi.no2 <- function(tropomi.path = NULL, timestr = NULL, lon.lat,
                          filter(k == tropo_k) %>% ungroup() %>% 
                          mutate(tropo_lower_pres = a_lower + b_lower * psfc, 
                                 tropo_upper_pres = a_upper + b_upper * psfc)
-    print(range(add_df$tropo_lower_pres))
+    #print(range(add_df$tropo_lower_pres))
 
     # ------------------------- merge matrix 2
     loc_name <- list(c('lats', 'lons')); loc_list <- list(lats, lons)

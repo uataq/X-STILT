@@ -102,6 +102,42 @@ wgt.trajec.foot.tropomi <- function(output, tropomi.fn, tropomi.speci,
 	} 	# end if TROPOMI NO2 weighting
 
 
+	# weighting foot by multipling AK and PW profiles and # of STILT levels/particles
+	if ( 'CH4' %in% tropomi.speci ) {
+		
+		cat('\n\nwgt.trajec.foot.tropomi(): weighting using TROPOMI CH4 profiles...\n')
+
+		# grab press weighting function, pressures, normalized AK
+		ch4.fn  <- tropomi.fn[grep('CH4', tropomi.fn)]
+		out.ch4 <- get.wgt.tropomi.func(output, ch4.fn, 'CH4') 
+
+		ch4.info <- as.data.frame(out.ch4$tropomi.info)
+		colnames(ch4.info)[grepl('tropomi.', colnames(ch4.info))] <- 
+			gsub('tropomi', 'tropomi.ch4', colnames(ch4.info)[grepl('tropomi.', colnames(ch4.info))])
+		colnames(ch4.info)[colnames(ch4.info) == 'xdry.tot'] <- 'tropomi.ch4.xdry.tot'
+		ch4.info$tropomi.ch4.ak.sfc <- out.ch4$combine.prof$ak.norm[1]
+
+
+		# combine weighting functions with particles
+		xstilt.prof.ch4 <- out.ch4$combine.prof %>% filter(stiltTF == TRUE) %>%
+				  		   dplyr::select(indx, ak.norm, pwf, ak.pwf) %>% 
+						   rename(ak.norm.ch4 = ak.norm, pwf.ch4 = pwf, 
+						   		  ak.pwf.ch4 = ak.pwf)
+
+		# perform weighting for each particle, so merge combine.prof with trajdat 
+		trajdat.ch4 <- trajdat %>% left_join(xstilt.prof.ch4, by = 'indx') 
+		if (ak.wgt == T & pwf.wgt == T) trajdat.ch4$wgt_ch4 <- trajdat.ch4$ak.pwf.ch4 * npar
+		if (ak.wgt == F & pwf.wgt == T) trajdat.ch4$wgt_ch4 <- trajdat.ch4$pwf.ch4 * npar 
+		if (ak.wgt == T & pwf.wgt == F) trajdat.ch4$wgt_ch4 <- trajdat.ch4$ak.norm.ch4 
+		if (ak.wgt == F & pwf.wgt == F) trajdat.ch4$wgt_ch4 <- 1
+
+		trajdat <- trajdat.ch4 %>% mutate(foot_wgt_ch4 = foot * wgt_ch4) %>% 
+				   dplyr::select(-c('ak.norm.ch4', 'pwf.ch4', 'ak.pwf.ch4')) 
+
+		info <- cbind(info, ch4.info)
+	}	# end if TROPOMI CH4 weighting
+
+
 	# save TROPOMI info in txt file in each by-id folder
 	fn <- file.path(dirname(output$file), paste0('tropomi_info_', receptor$long, 
 												 '_', receptor$lati, '.txt'))

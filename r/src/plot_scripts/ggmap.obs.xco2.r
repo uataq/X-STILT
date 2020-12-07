@@ -33,7 +33,7 @@ ggmap.obs.xco2 <- function(site, timestr, oco.sensor = c('OCO-2', 'OCO-3')[2],
 
   } else {
     #c1 <- m1 + geom_point(data = obs.all, aes(lon, lat, colour = xco2), size = size)
-    c1 <- m1 + geom_polygon(data = qf.all, aes(lons, lats, fill = xco2, group = indx), 
+    c1 <- m1 + geom_polygon(data = obs.all, aes(lons, lats, fill = xco2, group = indx), 
                             alpha = 0.9, color = NA, size = 0.5)
     min.y <- min(obs.all$xco2, na.rm = T)
     max.y <- max(obs.all$xco2, na.rm = T)
@@ -45,7 +45,7 @@ ggmap.obs.xco2 <- function(site, timestr, oco.sensor = c('OCO-2', 'OCO-3')[2],
              title = paste(oco.sensor, 'XCO2 [ppm] for', site, 'on', timestr)) +
         scale_fill_gradientn(name = paste(oco.sensor, 'XCO2 [ppm]'), colours = col,
                              limits = c(max(390, min.y), max.y), 
-                             breaks = seq(380, 420, 2), labels = seq(380, 420, 2)) 
+                             breaks = seq(380, 450, 2), labels = seq(380, 450, 2)) 
 
   # draw a rectangle around the city
   d <- data.frame(x = c(lon.lat$citylon - box.dlon, 

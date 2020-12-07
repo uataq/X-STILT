@@ -28,9 +28,9 @@
 
 run.xco2ff.sim <- function(site, timestr = '2014100920', vname = '2019', 
                            tiff.path, outdir, foot.res, workdir, store.path,
-                           nhrs, oco.sensor, oco.ver, met, lon.lat, 
-                           run_emiss_err, edgar.file = NA, ffdas.file = NA, 
-                           max.yr = 2018, overwriteTF = F){
+                           nhrs, oco.sensor, oco.ver, met, run_emiss_err, 
+                           edgar.file = NA, ffdas.file = NA, max.yr = 2018, 
+                           overwriteTF = F){
 
   library(rgdal)
   
