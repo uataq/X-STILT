@@ -77,7 +77,7 @@ config_xstilt <- function(namelist){
 
   # TROPOMI info if needed ------------------------------------------------
   tropomi.speci <- unlist(namelist$tropomi_speci)
-  if (!NA %in% tropomi_speci) {
+  if (!NA %in% tropomi.speci) {
 
     if (!is.null(namelist$tropomi_hir_path))
       tropomi.path <- unlist(ifelse(substr(timestr, 1, 8) >= 20190806, 
