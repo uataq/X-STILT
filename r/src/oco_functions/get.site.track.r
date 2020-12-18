@@ -13,6 +13,12 @@
 # combine ggmap.obs.info() if plotTF == TRUE, DW, 10/26/2020
 # ---------------------------------------------------------------------------- #
 
+if (F) {
+  date.range = c('20140101', '20201231')
+  thred.count.per.deg = 100
+  
+}
+
 get.site.track <- function(site, oco.sensor, oco.ver, oco.path, searchTF = FALSE,
                            date.range = c('20140101', '20201231'), 
                            thred.count.per.deg = 100, lon.lat, urbanTF = FALSE, 

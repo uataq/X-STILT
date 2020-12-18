@@ -13,7 +13,7 @@ grab.foot <- function(stilt.ver, footfile, foot.sig = 1E-6, lon.lat = NULL){
     lon  <- ncvar_get(footdat, 'Lon') + 1/240
     dimnames(foot) <- list(lat, lon)
 
-    melt.foot <- melt(foot)
+    melt.foot <- reshape2::melt(foot)
     colnames(melt.foot) <- list('lat', 'lon', 'foot')
     nc_close(footdat)
 

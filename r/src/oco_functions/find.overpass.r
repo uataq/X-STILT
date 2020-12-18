@@ -58,32 +58,40 @@ find.overpass <- function(date.range, lon.lat, oco.ver = 'b9r', oco.path,
 
       # drop the scientific notation for sounding ID, DR, DW, 09/04/2019
       id <- format(ncvar_get(dat, 'sounding_id'), scientific = F)
+      orbit <- ncvar_get(dat, 'Sounding/orbit')
 
       # 0=Nadir, 1=Glint, 2=Target, 3=Transition, 4=Snapshot Area Map
       mode <- ncvar_get(dat, 'Sounding/operation_mode')
 
       obs <- data.frame(lat = as.numeric(oco.lat), lon = as.numeric(oco.lon), 
                         qf = as.numeric(qf), xco2 = as.numeric(xco2), 
-                        timestr = as.numeric(substr(id, 1, 10)), mode = mode,
+                        orbit = as.numeric(orbit), mode = mode,
+                        timestr = as.numeric(substr(id, 1, 10)), 
                         stringsAsFactors = F) 
       
       obs <- obs %>% filter(lat >= lon.lat$minlat & lat <= lon.lat$maxlat &
                             lon >= lon.lat$minlon & lon <= lon.lat$maxlon) 
-
       
       # count overpasses
       tot.count <- as.numeric(nrow(obs))
       qf.count  <- as.numeric(nrow(obs %>% filter(qf == 0)))
       sam.count <- as.numeric(nrow(obs %>% filter(mode == 4)))
+      
       nc_close(dat)
         
       # store results if there are soundings over
       if (tot.count > 0) {
+        
         uni.timestr <- unique(obs$timestr)
+
+        # if we have multiple overpass hours in a day, 
+        # check the orbit number, 12/18/2020
+        if (length(uni.timestr) > 1 & length(unique(obs$orbit)) == 1) 
+          uni.timestr <- uni.timestr[1]
 
         tmp <- data.frame(timestr = uni.timestr, tot.count = tot.count,
                           sam.count = sam.count, qf.count = qf.count, 
-                          stringsAsFactors = F)
+                          orbit.id = unique(obs$orbit), stringsAsFactors = F)
 
         # also search for soundings near city center,
         if (urbanTF) {

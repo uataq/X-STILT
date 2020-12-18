@@ -6,13 +6,16 @@
 #' update for OCO-3 early data, DW, 06/28/2020 
 # ---------------------------------------------------------------------------- #
 
+# need to consider both situations, DW, 12/18/2020 
+# 1. same oco orbit in a day, but the overpass time ranges from one hour to another
+# 2. multiple oco orbits in a day -> different orbit and different overpass hour
+
 grab.oco <- function(oco.path, timestr, lon.lat, oco.ver = 'b9r'){
 
-  library(ncdf4)
+  library(ncdf4); library(dplyr)
+
   oco.file <- list.files(oco.path, paste0('_', substr(timestr, 3, 8), '_'))
-  if (length(oco.file) == 0) {
-    cat('NO OCO files found...please check..\n'); return()
-  }
+  if (length(oco.file) == 0) { cat('NO OCO files found...please check..\n'); return() }
   oco.dat <- nc_open(file.path(oco.path, oco.file))
 
   ## grabbing OCO-2 levels, lat, lon
@@ -28,19 +31,21 @@ grab.oco <- function(oco.path, timestr, lon.lat, oco.ver = 'b9r'){
   xco2.obs.uncert <- ncvar_get(oco.dat, 'xco2_uncertainty')
 
   # get lat/lon corners, ndim of 4
-  oco.lons  <- ncvar_get(oco.dat, 'vertex_longitude')
-  oco.lats  <- ncvar_get(oco.dat, 'vertex_latitude')
-  vertices  <- ncvar_get(oco.dat, 'vertices')
+  oco.lons <- ncvar_get(oco.dat, 'vertex_longitude')
+  oco.lats <- ncvar_get(oco.dat, 'vertex_latitude')
+  vertices <- ncvar_get(oco.dat, 'vertices')
   dimnames(oco.lons) <- list(vertices, 1 : length(oco.lat))
   dimnames(oco.lats) <- list(vertices, 1 : length(oco.lat))
-  oco.vert.df <- full_join(melt(oco.lons), melt(oco.lats), by = c('Var1', 'Var2')) %>% 
-                 rename(vertices = Var1, indx = Var2, lons = value.x, lats = value.y)
+  oco.vert.df <- full_join(reshape2::melt(oco.lons), reshape2::melt(oco.lats), 
+                           by = c('Var1', 'Var2')) %>% 
+                 dplyr::rename(vertices = Var1, indx = Var2, 
+                               lons = value.x, lats = value.y)
 
 
   # Warn level being removed for lite v9 data, DW, 10/15/2018 
   if (grepl('7', oco.ver) | grepl('8', oco.ver)) wl <- ncvar_get(oco.dat, 'warn_level')
-  qf    <- ncvar_get(oco.dat, 'xco2_quality_flag')
-  foot  <- ncvar_get(oco.dat, 'Sounding/footprint')
+  qf <- ncvar_get(oco.dat, 'xco2_quality_flag')
+  foot <- ncvar_get(oco.dat, 'Sounding/footprint')
   psurf <- ncvar_get(oco.dat, 'Retrieval/psurf')  # hpa
   aod.tot <- ncvar_get(oco.dat, 'Retrieval/aod_total')  # Total Cloud+Aerosol Optical Depth
   aod.fine <- ncvar_get(oco.dat, 'Retrieval/aod_sulfate') + 
@@ -121,6 +126,12 @@ grab.oco <- function(oco.path, timestr, lon.lat, oco.ver = 'b9r'){
                              lon >= lon.lat$minlon - 0.01, 
                              lon <= lon.lat$maxlon + 0.01) %>% 
                       mutate(timestr = substr(id, 1, 10))
+
+  # if there are multiple orbits, further subset `obs` based on `timestr`, DW, 12/18/2020
+  if ( length(unique(obs$orbit)) > 1 ) {
+    cat(paste('grab.oco(): detected multiple orbits in one day, chose soundings close to', timestr, '\n'))
+    obs <- obs[obs$timestr == timestr, ]
+  } # end if
 
   sel.mode <- unique(obs$mode); cat('Operational Modes:', unique(sel.mode), '\n')
   nc_close(oco.dat)

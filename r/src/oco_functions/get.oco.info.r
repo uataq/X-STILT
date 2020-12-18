@@ -29,7 +29,10 @@ get.oco.info <- function(oco.path, receptor, diff.td = 1E-4){
   oco.lev <- ncvar_get(oco.dat, 'levels')
   oco.lat <- ncvar_get(oco.dat, 'latitude')
   oco.lon <- ncvar_get(oco.dat, 'longitude')
-  
+
+  # add OCO-3 orbit number since mission start
+  oco.orbit <- ncvar_get(oco.dat, 'Sounding/orbit')
+
   # grabbing sounding ID for STILT receptors
   # YYYY MM DD HH mm ss m (millisecond) f (footprint)
   oco.id  <- as.character(ncvar_get(oco.dat, 'sounding_id'))
@@ -97,10 +100,11 @@ get.oco.info <- function(oco.path, receptor, diff.td = 1E-4){
     attributes(ak.norm)$names <- oco.lev
 
     ### combine all OCO-2 vertical profiles and other 1D variables
-    all.info <- list(oco.id = find.id, oco.lat = find.lat, oco.lon = find.lon, 
-                     ak.norm = ak.norm, pwf = pwf, pres = pres, ap = ap, 
-                     oco.grdhgt = grdhgt, oco.psfc = psfc, oco.foot = footprint,
-                     oco.xco2 = xco2, oco.xco2.uncert = xco2.uncert, oco.xh2o = xh2o)
+    all.info <- list(oco.id = find.id, oco.orbit = oco.orbit, oco.lat = find.lat, 
+                     oco.lon = find.lon, ak.norm = ak.norm, pwf = pwf, 
+                     pres = pres, ap = ap, oco.grdhgt = grdhgt, oco.psfc = psfc, 
+                     oco.foot = footprint, oco.xco2 = xco2, 
+                     oco.xco2.uncert = xco2.uncert, oco.xh2o = xh2o)
     
     nc_close(oco.dat)
     all.info      # return both profiles and other retrivals

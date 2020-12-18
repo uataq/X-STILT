@@ -25,7 +25,7 @@
 
 ## go to X-STILT dir and source functions and libraries
 homedir   <- '/central/home/dienwu'
-xstilt_wd <- file.path(homedir, 'X-STILT') 
+xstilt_wd <- file.path(homedir, 'models/X-STILT') 
 setwd(xstilt_wd); source('r/dependencies.r')
 
 # *** there is a current bug with the rslurm package, you may need to 

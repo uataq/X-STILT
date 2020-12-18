@@ -12,6 +12,7 @@
 
 # add options for using TROPOMI overpass hour, but still keep the finer lat/lon
 # soundings that match OCO-2/3, DW, 10/09/2020
+
 get.recp.info <- function(timestr, oco.ver, oco.path, lon.lat, selTF, recp.indx,
                           recp.num, find.lat, agl, run_trajec, outdir = NULL, 
                           data.filter = c('QF', 0), tropomiTF = F, 
@@ -45,12 +46,9 @@ get.recp.info <- function(timestr, oco.ver, oco.path, lon.lat, selTF, recp.indx,
 
   if ( length(trajfile) > 0 & !run_trajec ) {
 
-    cat('Found existing trajectories...\n')
-
-    # if trajec data exists
+    cat('Found existing trajectories...\n') # if trajec data exists
     trajname  <- basename(trajfile)
     recp.info <- ident.to.info(ident = trajname, stilt.ver = 2)
-
 
     if (tropomiTF) {  # for TROPOMI runs, use its overpass time
       recp.info <- recp.info %>% mutate(run_time = as.POSIXct(as.character(timestr), 

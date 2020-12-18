@@ -157,7 +157,7 @@ config_xstilt <- function(namelist){
   # whether to select receptors; or simulate all soundings
   selTF <- namelist$selTF  
   if (selTF) {  # recp.indx: how to subset from all screened soundings (QF = 0)
-    peak.lat <- namelist$peak.lat 
+    peak.lat  <- namelist$peak.lat 
     recp.indx <- c(seq(lon.lat$minlat,  peak.lat[1],     1 / namelist$num.bg),
                    seq(peak.lat[1],     peak.lat[2],     1 / namelist$num.peak),
                    seq(peak.lat[1],     lon.lat$maxlat,  1 / namelist$num.bg))
@@ -477,7 +477,7 @@ if (F) {
 
   args <- list(oco.path = oco.path, 
               tropomiTF = tropomiTF,
-              tropomi.speci = list(tropomi_speci),
+              tropomi.speci = list(tropomi.speci),
               tropomi.fn = list(tropomi.fn), 
               ak.wgt = namelist$ak.wgt, 
               pwf.wgt = namelist$pwf.wgt, 
