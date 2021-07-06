@@ -19,7 +19,7 @@
 ####### ####### ####### ####### ####### ####### ####### ####### ####### #######
 
 ggplot.map <- function(map = c('black', 'ggmap'), maptype = 'roadmap', 
-                       shape.file = './TM_WORLD_BORDERS-0.3.shp', 
+                       shape.file = './data/TM_WORLD_BORDERS-0.3.shp', 
                        minlat, maxlat, minlon, maxlon, land.col = 'black',
                        land.outline = 'gray30', us.land.outline = 'gray30',
                        ocean.col = 'lightsteelblue2', ocean.outline = 'grey', 

@@ -151,14 +151,14 @@ num_jitter = 5               # number of additional receptors per sounding
 #' Only place receptors for soundings that qualify @param obs_filter
 #' here are some choices for OCO-2/3 and TROPOMI (uncomment the one you need)
 #obs_filter = c('QF', 0)              # select OCO soundings with QF = 0
-obs_filter = c('QA', 0.5)            # select TROPOMI soundings with QA >= 0.5 
-#obs_filter = NULL                     # use all soundings regardless of QF or QA
+#obs_filter = c('QA', 0.5)            # select TROPOMI soundings with QA >= 0.5 
+obs_filter = NULL                     # use all soundings regardless of QF or QA
 
 #' number of soundings desired within 1 degree lat range (background or enhanced)
 #' peak range is defined by @param urban_dlat (see Line 75)
-num_bg = num_peak = NA                # if NA, no need to select soundings
+#num_bg = num_peak = NA                # if NA, no need to select soundings
 #num_bg = 50 ; num_peak = 150         # num of soundings/deg selected for OCO-2
-#num_bg = 100; num_peak = 500         # num of soundings/deg selected for OCO-3
+num_bg = 100; num_peak = 500         # num of soundings/deg selected for OCO-3
 
 # *** For ideal simulations, no need to rely on satellite data, set to NA or FALSE 
 # receptors will only based placed based on lati/long info from receptor_demo.csv

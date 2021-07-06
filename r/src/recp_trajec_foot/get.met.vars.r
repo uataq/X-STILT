@@ -47,7 +47,10 @@ get.met.vars <- function(namelist, output, met_file_format, met_path, z_top = 25
                              hnf_plume = T, met_files = tmp_met_files, 
                              n_hours = tmp.nhrs, output = tmp.output, rm_dat = T,
                              timeout = 600, w_option = 0, z_top = z_top) 
-    if (nrow(tmp.p) == 0) stop('get.met.vars(): no trajec generated\n')
+    if (is.null(tmp.p)) stop(paste('get.met.vars(): no trajec generated\n',
+                             '*** Likely the current @param z_top of', z_top, 
+                             'm is too high for the met field you adopted\n', 
+                             '*** Lower z_top in config_xstilt.r'))
 
     # ----------------------------------------------------------------------- #
     # subset trajectories at min time step

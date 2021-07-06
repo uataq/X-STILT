@@ -32,20 +32,11 @@ vignettes/*.pdf
 *.utf8.md
 *.knit.md
 
-old/*
 out*
 *.sh
 in
 *.conf
-*.txt
-*.png
 _rslurm*
-
-*DS_Store
-r/*DS_Store/
-r/src/*DS_Store/
-paper*
-bio_model
 insert_ggAPI_cp.csv
-dien_mod
 r/src/cluster_functions
+dien_mod
