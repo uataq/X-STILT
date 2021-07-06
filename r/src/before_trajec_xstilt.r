@@ -5,7 +5,7 @@
 #' since before_trajec() will have the same environment as the env of simulation_step(), 
 #' no need to add variables
 
-before_trajec_xstilt <- function() {
+before_trajec_xstilt = function() {
 
     # need modeled ground height to interpolate pres-hgt relation to
     # interpolate satellite weighting profiles from OCO-2 20 levels to model
@@ -16,7 +16,7 @@ before_trajec_xstilt <- function() {
     # e.g., get specific humidity and temp profiles that will be used to 
     #   calculate dry-air column density in mol m-2 for further calculating PWF &
     #   convert XCO from mol m-2 to ppb
-    output <- get.met.vars(namelist, output, met_file_format, met_path)
+    output = get.met.vars(namelist, output, met_file_format, met_path)
 
     cat('END of before_trajec_xstilt(), start calculating X-trajectories...\n')
     return(output)

@@ -47,4 +47,5 @@ r/src/*DS_Store/
 paper*
 bio_model
 insert_ggAPI_cp.csv
-
+dien_mod
+r/src/cluster_functions

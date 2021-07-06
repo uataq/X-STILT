@@ -14,7 +14,7 @@
 # use area() in raster package to calculate grid area, DW, 01/20/2019
 
 tif2nc.odiacv3 <- function(site, timestr, vname, workdir, foot.extent, 
-                           tiff.path, gzTF = T){
+                           tiff.path, gzTF = T) {
 
   library(Hmisc); library(raster)
 
@@ -34,7 +34,7 @@ tif2nc.odiacv3 <- function(site, timestr, vname, workdir, foot.extent,
   if (length(gzfile) == 0) {
     cat('NO tiff format of ODIAC emission found...\n'); return()}
     
-  cat(paste('tif2rds.odiac(): working on file', gzfile, '...\n'))
+  cat(paste('tif2nc.odiacv3(): working on file', gzfile, '...\n'))
   if (grepl('.gz', gzfile)) {   # unzip gz file
     # always unzip to odiac directory, do not unzip to group_data
     cat('Unzipping up...\n'); system(paste0('gunzip ', gzfile))
