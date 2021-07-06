@@ -9,7 +9,7 @@ X-STILT model developments are ongoing towards a more flexible model framework t
 # X-STILT Features
 
 ## Table of Contents
-- [**Latest commit**](#latest-commit-by-dec-06-2020)
+- [**Latest commit**](#latest-commit-by-july-06-2021)
 - [**Prerequisites**](#prerequisites)
 - [**Obtain column footprint**](#obtain-column-footprint)
 - [**Determine background XCO<sub>2</sub>**](#determine-background-xco2)
@@ -20,21 +20,21 @@ X-STILT model developments are ongoing towards a more flexible model framework t
 - [**Reference**](#reference)
 
 
-Latest commit by Dec 06, 2020
+Latest commit by July 6, 2021
 ============
-Changes in ['merge_stilt-hysplit' branch](https://github.com/uataq/X-STILT/tree/merge_stilt-hysplit) towards the release of X-STILT version 2:
+Changes to ['merge_stilt-hysplit' branch](https://github.com/uataq/X-STILT/tree/merge_stilt-hysplit) towards the release of X-STILT version 2 that can work with non-OCO sensors or without the dependence of satellite data:
 
-:pushpin: ADD X-STILT Lite version for ideal simulations. The user can start with `run_xstilt_ideal.r`. This version removed dependencies on any satellite sensors, but still for simulating column concentrations from any locations outside satellite sounding locations. 
+:pushpin: X-STILT can now work with TROPOMI X-gas data, such as 
+   * footprint weighting using TROPOMI species-specific averaging kernels;
+   * functions to grab vertical column density and convert to vertical mixing ratio (ppb); 
+   * need to specify the TROPOMI species via `obs_sensor` and `obs_species` (currently limited to CO, CH4, and NO2);
 
-*** USE WITH CAUTIONS, since column AK is simply treated as 1 from TOA to the surface (ak_wgt = FALSE); and column PWF is calculated using modeled variables (pwf_wgt = TRUE). NOTE THAT ideal simulations are NOT suitable for comparisons with real satellite sensors that have variable vertical sensitivities. 
 
-*** The user needs to provide a csv/txt file containing the latitudes and longitudes of your desired receptor locations. Receptor time (in form of YYYYMMDDHH or YYYYMMDDHHss) can either be included in this csv/txt file OR be assigned to `timestr` in the main script `run_xstilt_ideal.r`. See examples in `receptor.csv`. 
+:pushpin: ADD an IDEAL simulations for simulating column influnces/enhancements from any locations (even outside satellite sounding locations). Column AK is simply treated as 1 from TOA to the surface (ak_wgt = FALSE) for ideal runs; and column PWF is calculated using modeled variables (pwf_wgt = TRUE). [*** USE WITH CAUTIONS] Ideal simulations are NOT suitable for comparisons with real satellite sensors that have variable vertical sensitivities. 
 
+*** To use this ideal mode, the user needs to provide a .csv/.txt file containing the latitudes (`lati`) and longitudes (`long`) of your desired receptor locations. Receptor time (in form of YYYYMMDDHH or YYYYMMDDHHss) can either be included in the csv/txt file OR given to `timestr` in the main script `run_xstilt.r`. See examples in `receptor_demo.csv`. 
 
-*** 
-:pushpin: Google API key: instead of a charater string in each main script :arrow_forward: insert your google API in the first line of `insert_ggAPI.csv` that will be searched by the main script; 
-
-:pushpin: **Built upon the latest HYSPLITv5**: no more discrete release levels :arrow_forward: *line source release* -- i.e., particles are now evenly distributed between `minagl` and `maxagl`, e.g., default is 3000 particles from 0 - 3km; 
+:pushpin: **Built upon the latest HYSPLITv5**: Replace discrete release levels with *line source release* -- i.e., particles are now evenly distributed between `minagl` and `maxagl`, e.g., default is 3000 particles from 0 - 3km; 
 
 :pushpin: PWF calculations in `r/src/foot_weighting`
 
@@ -44,12 +44,11 @@ Changes in ['merge_stilt-hysplit' branch](https://github.com/uataq/X-STILT/tree/
 
    * If ak.wgt is turned off (ak.wgt == FALSE), the dependence on any satellite sensors will be removed. That being said, normalied AK is 1 and PWF is calculated based on MODELED surface pressures instead of RETRIEVED surface pressures. 
 
-:pushpin: Add modules for generating spatial footprints based on TROPOMI averaging kernels: need to specify the TROPOMI species; can be multiple species, but currently limited to CO and NO2; 
-
 :pushpin: Other minor changes: 
+   * Allow the calculation of another set of footprint with different temporal resolution with the default runs at one time, e.g., hourly footprint implied by `time_integrate2 = F`;
    * Add interactive mode for choosing site, overpass time, etc. One can modify the code to turn it off;
-
    * Update a few functions for working with OCO-3 data; 
+   * Insert the google API as the first line of `insert_ggAPI.csv` that will be sourced by the model for geolocation and google map plotting; 
 
    * Get rid of the additional .rds files end with X_wgttraj.rds to reduce file sizes :arrow_forward: trajectory-level footprints after the AK and PWF weighting are now stored as additional columns in the initial *X_traj.rds files. Here are the descriptions of columns in output$particle from rds files: 
       * `foot_before_weight:` footprint BEFORE AK and PWF weighting;
