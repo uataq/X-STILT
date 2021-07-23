@@ -1,3 +1,3 @@
 [submodule "stilt"]
 	path = stilt
-	url = https://github.com/uataq/stilt
+	url = https://github.com/uataq/stilt.git

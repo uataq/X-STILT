@@ -5,33 +5,19 @@
 #' since before_trajec() will have the same environment as the env of simulation_step(), 
 #' no need to add variables
 
-before_trajec_xstilt <- function() {
+before_trajec_xstilt = function() {
 
     # need modeled ground height to interpolate pres-hgt relation to
     # interpolate satellite weighting profiles from OCO-2 20 levels to model
     # levels, added by Dien Wu, 05/26/2018
-    cat('before_trajec_xstilt(): estimating modeled ground heights for X-STILT ...\n')
+    cat('before_trajec_xstilt(): extracting meteo vars from meteo fields...\n')
 
-    # store trajec from 5mAGL in the same copy dir 'rundir' by calling
-    # get.ground.height() that calls calc_trajectory() to estimate ground
-    # height [m] along w. u-, v- and w- component instantaneous wind
-    # given receptor lat/lon/time/agl=5 (near ground)
-    # remove ziscale and zicontroltf from get.ground.hgt(), DW
-    #rundir <- dirname(output$file)
-    agl <- 5
-    recp.var <- get.ground.hgt(receptor = output$receptor, agl, run_trajec, 
-                               varsiwant, conage, cpack, dxf, dyf, dzf, emisshrs, 
-                               frhmax, frhs, frme, frmr, frts, frvs, hnf_plume, 
-                               hscale, ichem, iconvect, initd, isot, kbls, kblt, 
-                               kdef, khmax, kmix0, kmixd, kmsl, kpuff, krnd, kspl, 
-                               kzmix, maxdim, maxpar, met_file_format, met_loc,
-                               mgmin, ncycl, ndump, ninit, n_hours, outdt, outfrac, 
-                               p10f, qcycle, random, splitf, tkerd, tkern, 
-                               rm_dat, rundir, timeout, tlfrac, tratio, tvmix, 
-                               veght, vscale, w_option, zicontroltf, z_top)
-                                
-    # paste interpolated info to output$receptor
-    output$receptor <- c(output$receptor, recp.var)
+    # obtain multiple variables from met fields, DW, 09/14/2020
+    # e.g., get specific humidity and temp profiles that will be used to 
+    #   calculate dry-air column density in mol m-2 for further calculating PWF &
+    #   convert XCO from mol m-2 to ppb
+    output = get.met.vars(namelist, output, met_file_format, met_path, z_top)
+
+    cat('END of before_trajec_xstilt(), start calculating X-trajectories...\n')
     return(output)
-
 }  # end of function

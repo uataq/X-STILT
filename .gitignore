@@ -32,17 +32,18 @@ vignettes/*.pdf
 *.utf8.md
 *.knit.md
 
-old/*
 out*
 *.sh
 in
 *.conf
-*.txt
-*.png
 _rslurm*
+insert_ggAPI_cp.csv
+dien_mod
+r/src/cluster_functions
 
-*DS_Store
-r/*DS_Store/
-r/src/*DS_Store/
-paper*
-bio_model
+# ignore a few executables to avoid accidentally tracking via git
+exe/*.CFG 
+exe/*.ASC 
+exe/arw2arl
+exe/hycs_std
+exe/xtrct_grid
