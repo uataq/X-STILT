@@ -19,9 +19,9 @@
 #' @param timestr can be in format of YYYYMMDD, but satellite data required!!
 calc.bg.forward.trajec = function(site, timestr, sensor, sensor_path, sensor_gas, 
                                   sensor_ver, sensor_qa = 0.5, qfTF = T, 
-                                  store_path, met, td = 0.1, bg_dlat = 0.5, 
-                                  bg_dlon = 0.5, zoom = 8, api.key, 
-                                  lon_lat = NULL, font.size = rel(1.0), 
+                                  store_path, met, td = 0.1, bg_deg = 0.5, 
+                                  bin_deg = 0.5, zoom = 8, rm_outlierTF = T, 
+                                  api.key, lon_lat = NULL, font.size = rel(1.0), 
                                   pp_fn = NULL){
   
   library(ggpubr); register_google(key = api.key)
@@ -50,7 +50,7 @@ calc.bg.forward.trajec = function(site, timestr, sensor, sensor_path, sensor_gas
   if ( grepl('TROPOMI', sensor)) {
     obs_df = obs_df %>% rename(lon = center_lon, lat = center_lat) %>% 
                         mutate(time_utc = substr(time_utc, 1, 10))
-    if (sensor_gas == 'CO') obs_df = obs_df %>% rename(val = xco, val_uncert = xco_uncert)
+    if (sensor_gas == 'CO' ) obs_df = obs_df %>% rename(val = xco, val_uncert = xco_uncert)
     if (sensor_gas == 'NO2') obs_df = obs_df %>% rename(val = tno2, val_uncert = tno2_uncert)
     if (sensor_gas == 'CH4') obs_df = obs_df %>% rename(val = ch4_bc, val_uncert = ch4_uncert)
 
@@ -101,8 +101,13 @@ calc.bg.forward.trajec = function(site, timestr, sensor, sensor_path, sensor_gas
     site_lon = lon_lat$citylon
     site_lat = lon_lat$citylat
 
-
-    # -------------------------------------------------------------------------- #
+    # ----------------------------------------------------------------------- #
+    # make google map for plotting
+    clon = (mean(sel_traj$lon) + mean(recp_info$recp.lon)) / 2
+    clat = (mean(sel_traj$lat) + mean(recp_info$recp.lat)) / 2
+    map = ggplot.map(map = 'ggmap', maptype = 'hybrid', zoom = zoom, 
+                     center.lon = clon, center.lat = clat)[[1]] 
+    
     # 3. if there is an intersect, calculate the background over upwind region
     if (intersectTF) {
       rds_fn = paste0('obs_plume_', site, '_', timestr_tmp, '_', sensor, 
@@ -111,20 +116,21 @@ calc.bg.forward.trajec = function(site, timestr, sensor, sensor_path, sensor_gas
 
       # get background values
       bg_tmp = calc.bg.upwind(site_lon, site_lat, obs_df = obs_tmp, sensor, 
-                              bg.dlat = bg_dlat, bg.dlon = bg_dlon, perc = 0.1) 
+                              sensor_gas, bg_deg, perc = 0.1, bin_deg, 
+                              rm_outlierTF, plotTF = T, plot_path, map) 
       if (!is.null(bg_tmp)) bg_tmp = bg_tmp %>% mutate(timestr = timestr_tmp) %>% 
                                                 relocate(timestr, .before = swath)                         
     } else bg_tmp = NULL
 
 
-    # -------------------------------------------------------------------------- #
+    # ----------------------------------------------------------------------- #
     # 4. call plot.urban.plume to generate figure 
     picname = file.path(plot_path, paste0('forward_plume_', site, '_', timestr_tmp, '_', 
                                           met, '_', sensor, '_', sensor_gas, '.png'))
     
     p1 = plot.bg(site, site_lon, site_lat, sensor, sensor_gas, recp_box, 
                  recp_info, sel_traj, densf, obs_df = obs_tmp, plm_df, 
-                 intersectTF, bg_df = bg_tmp, bg_dlat, bg_dlon, zoom, td, 
+                 intersectTF, bg_df = bg_tmp, bg_deg, bin_deg, map, td, 
                  picname, font.size, pp_fn) 
     
     # store all background info

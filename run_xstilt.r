@@ -37,6 +37,9 @@
 # add a jittering option to sample additional receptors within 
 # a satellite sounding, DW, 07/03/2021
 
+#' stop passing @param sensor.ver to config_xstilt, as it was used for OCO 
+# warn levels in OCO-2 v7r or v8r, DW, 07/23/2021
+
 
 # ----------- Dependencies and API key for geolocation (must-have) ---------- #
 ## go to X-STILT dir and source functions and libraries
@@ -59,9 +62,9 @@ register_google(key = api.key)
 cat('Enter your city name: ')
 site = readLines('stdin', n = 1); print(site)
 
-# define entire- and inner urban- domain (affect receptor density if selTF = T)
-dlon = 0.5           # e.g., dlon of 0.5 means 1 x 1 degree box around the site
-dlat = 0.5       
+# define entire- and inner urban- domain (affect receptor # if num_* is not NA)
+dlon = 1           # e.g., dlon of 0.5 means 1 x 1 degree box around the site
+dlat = 1       
 urban_dlon = 0.3     # urban box defined as city.lat +/- dlat, city.lon +/- dlon
 urban_dlat = 0.3     # dlat/dlon in degrees 
 
@@ -111,7 +114,7 @@ odiac_path = file.path(input_path, 'ODIAC', paste0('ODIAC', odiac_ver))
 # see get.timestr() for more details, DW, 07/05/2021
 timestr = get_timestr(site, lon_lat, obs_sensor, obs_ver, obs_path, store_path, 
                       recp_fn, plotTF = FALSE, urbanTF = TRUE, urban_dlon, 
-                      urban_dlat, sif_path, searchTF = FALSE, 
+                      urban_dlat, sif_path, searchTF = T, 
                       date.range = c('20140101', '20211231'))
 
 cat('Done with choosing cities & overpasses...\n')
@@ -141,12 +144,10 @@ maxagl = 3000             # max release height in meter AGL
 numpar = 3000             # total number of particles between minagl and maxagl
 
 # Receptor selection ---------------------------------------------------------
-selTF = TRUE          # T: selected soundings as receptors; F: use all soundings
-
 # T: create receptors within each satellite sounding besides the centered lat/lon
 # F: place receptors ONLY at the centered lat/lon of a sounding, DW, 07/02/2021
-jitterTF   = TRUE            # T: works better for TROPOMI with larger polygons
-num_jitter = 5               # number of additional receptors per sounding
+jitterTF   = FALSE            # T: works better for TROPOMI with larger polygons
+num_jitter = 5                # number of additional receptors per sounding
 
 #' Only place receptors for soundings that qualify @param obs_filter
 #' here are some choices for OCO-2/3 and TROPOMI (uncomment the one you need)
@@ -162,7 +163,7 @@ num_bg = 100; num_peak = 500         # num of soundings/deg selected for OCO-3
 
 # *** For ideal simulations, no need to rely on satellite data, set to NA or FALSE 
 # receptors will only based placed based on lati/long info from receptor_demo.csv
-if (is.na(obs_sensor)) { num_bg = num_peak = num_jitter = NA; selTF = jitterTF = FALSE }
+if (is.na(obs_sensor)) { num_bg = num_peak = num_jitter = NA; jitterTF = FALSE }
 
 
 # ------------------- ARL format meteo params (must-have) -------------------- #
@@ -277,18 +278,17 @@ namelist = list(ak_wgt = ak_wgt, ct_ver = ct_ver, ctflux_path = ctflux_path,
                 num_jitter = num_jitter, num_peak = num_peak, numpar = numpar, 
                 obs_filter = list(obs_filter), obs_path = obs_path, 
                 obs_sensor = obs_sensor, obs_species = obs_species, 
-                obs_ver = obs_ver, odiac_path = odiac_path, odiac_ver = odiac_ver, 
+                odiac_path = odiac_path, odiac_ver = odiac_ver, 
                 projection = projection, pwf_wgt = pwf_wgt, 
                 raob_path = raob_path, recp_fn = recp_fn, 
                 run_emiss_err = run_emiss_err, run_foot = run_foot, 
                 run_hor_err = run_hor_err, run_sim = run_sim, 
                 run_trajec = run_trajec, run_ver_err = run_ver_err, 
-                run_wind_err = run_wind_err, selTF = selTF, site = site, 
-                slurm = slurm, slurm_account = slurm_account, 
-                slurm_partition = slurm_partition, smooth_factor = smooth_factor, 
-                store_path = store_path, time_integrate = time_integrate, 
-                time_integrate2 = list(time_integrate2), timeout = timeout, 
-                timestr = timestr, urban_dlat = urban_dlat, 
+                run_wind_err = run_wind_err, site = site, slurm = slurm, 
+                slurm_account = slurm_account, slurm_partition = slurm_partition,
+                smooth_factor = smooth_factor, store_path = store_path, 
+                time_integrate = time_integrate, time_integrate2 = list(time_integrate2), 
+                timeout = timeout, timestr = timestr, urban_dlat = urban_dlat, 
                 varstrajec = varstrajec, xstilt_wd = xstilt_wd, zisf = zisf)      
 cat('Done with creating namelist...Configuring\n\n')
 config_xstilt(namelist)  # start X-STILT, either calc traj, foot or simulation

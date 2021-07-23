@@ -22,14 +22,14 @@ config_xstilt = function(namelist){
   site      = namelist$site
   timestr   = namelist$timestr
   lon_lat   = namelist$lon_lat[[1]]
-  obs_ver   = namelist$obs_ver
   obs_path  = namelist$obs_path
   obs_sensor = namelist$obs_sensor
   obs_species = namelist$obs_species
   store_path = namelist$store_path
 
   # make sure obs_* are set to NA and no AK weighting for ideal runs
-  if (is.na(obs_sensor)) { obs_ver = obs_path = obs_species = NA; namelist$ak_wgt = FALSE }
+  if (is.na(obs_sensor)) { obs_path = obs_species = NA; namelist$ak_wgt = FALSE }
+
 
   # Model control -------------------------------------------------------------
   rm_dat      = T
@@ -114,7 +114,7 @@ config_xstilt = function(namelist){
       result = run.xco2ff.sim(site, timestr, vname = namelist$odiac_ver, 
                               tiff.path = namelist$odiac_path, 
                               output_wd, foot.res = xres, xstilt_wd, store_path,
-                              nhrs = n_hours, obs_sensor, obs_ver, met, 
+                              nhrs = n_hours, obs_sensor, met, 
                               run_emiss_err = namelist$run_emiss_err, 
                               edgar.file = namelist$edgar_file, 
                               ffdas.file = namelist$ffdas_file)
@@ -151,13 +151,17 @@ config_xstilt = function(namelist){
 
     peak_lat = c(lon_lat$citylat - namelist$urban_dlat, 
                  lon_lat$citylat + namelist$urban_dlat)
+    
+    num_bg   = namelist$num_bg 
+    num_peak = namelist$num_peak 
+
+    # make sure selTF is correct based on num_*
+    selTF = TRUE; if (is.na(num_bg) | is.na(num_peak)) selTF = FALSE
     receptors = get.recp.sensor(timestr, obs_filter = unlist(namelist$obs_filter), 
-                                obs_fn, obs_sensor, obs_ver, obs_path, lon_lat, 
-                                selTF = namelist$selTF, jitterTF = namelist$jitterTF, 
+                                obs_fn, obs_sensor, obs_path, lon_lat, 
+                                selTF, jitterTF = namelist$jitterTF, 
                                 num_jitter = namelist$num_jitter, peak_lat, 
-                                num_bg = namelist$num_bg, 
-                                num_peak = namelist$num_peak, 
-                                agl, run_trajec, output_wd)
+                                num_bg, num_peak, agl, run_trajec, output_wd)
   } # end if
   cat(paste('Done with receptor setup...total', nrow(receptors), 'receptor(s)..\n\n'))
 

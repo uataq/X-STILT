@@ -4,7 +4,7 @@ config_trans_err = function(namelist, site, lon_lat, timestr, xstilt_wd,
                             simstep_namelist = NULL) {
     
     # Transport and dispersion settings, use default setting in STILT-R v2
-    if (!is.null(simstep_namelist)) {
+    if (is.null(simstep_namelist)) {
         capemin     = -1
         cmass       = 0
         conage      = 48
@@ -100,10 +100,11 @@ config_trans_err = function(namelist, site, lon_lat, timestr, xstilt_wd,
                                 qcycle = qcycle, rhb = rhb, rht = rht,
                                 splitf = splitf, tkerd = tkerd, tkern = tkern, 
                                 tlfrac = tlfrac, tout = tout, tratio = tratio, 
-                                tvmix = tvmix, varsiwant = varsiwant, veght = veght,
-                                vscale = vscale, vscaleu = vscaleu, vscales = vscales, 
-                                wbbh = wbbh, wbwf = wbwf, wbwr = wbwr, winderrtf = 0, 
-                                wvert = wvert, zicontroltf = zicontroltf)
+                                tvmix = tvmix, varsiwant = namelist$varsiwant, 
+                                veght = veght,vscale = vscale, vscaleu = vscaleu, 
+                                vscales = vscales, wbbh = wbbh, wbwf = wbwf, 
+                                wbwr = wbwr, winderrtf = 0, wvert = wvert, 
+                                zicontroltf = zicontroltf)
     }   # end if
 
 

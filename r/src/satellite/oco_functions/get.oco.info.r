@@ -16,7 +16,7 @@
 # ---------------------------------------------------------------------------- #
 
 # must have one of oco.path or oco.fn
-get.oco.info = function(oco.path, receptor, diff.td = 1E-4, oco.fn = NA){
+get.oco.info = function(oco.path, receptor, oco.fn = NA, diff.td = 1E-4){
 
   # grabbing OCO-2 info
   if (is.na(oco.fn)) {

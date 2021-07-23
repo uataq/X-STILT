@@ -3,7 +3,7 @@
 plot.urban.plume = function(site, site_lon, site_lat, sensor, sensor_gas, 
                             recp_box, recp_info, sel_traj, densf, obs_df, 
                             plm_df, intersectTF, bg_df, bg_side = 'south', 
-                            bg.dlat, bg.dlon, map, td, font.size = rel(0.9), 
+                            bg_deg, bin_deg, map, td, font.size = rel(0.9), 
                             pp_fn = NULL ) {
     
     # -------------------------------------------------------------------------
@@ -73,7 +73,8 @@ plot.urban.plume = function(site, site_lon, site_lat, sensor, sensor_gas,
     if (!is.null(bg_df)) {
       
       # obs within and outside the urban plume as indicated by the convex hull
-      blist = select.obs.side(obs_df, sensor, bg.side = bg_side, bg.dlat, bg.dlon)
+      blist = select.obs.side(obs_df, sensor, bg.side = bg_side, bg_deg, 
+                              perc = 0.1, bin_deg)
       obs_bg = blist$obs_bg
       p4 = p3 + geom_polygon(data = obs_bg, aes(lons, lats, fill = val, group = polygon), 
                              color = 'gray20', alpha = 0.3, size = 0.2) 

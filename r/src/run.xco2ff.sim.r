@@ -28,7 +28,7 @@
 # only ODIAC is allowed
 run.xco2ff.sim = function(site, timestr = '2014100920', vname = 2019, 
                           tiff.path, output_wd, foot.res, xstilt_wd, store.path,
-                          nhrs, oco.sensor = NA, oco.ver = NA, met, run_emiss_err, 
+                          nhrs, oco.sensor = NA, met, run_emiss_err, 
                           edgar.file = NA, ffdas.file = NA, max.yr = NULL, 
                           overwriteTF = F){
 
@@ -71,7 +71,7 @@ run.xco2ff.sim = function(site, timestr = '2014100920', vname = 2019,
 
   # txt file name for outputting model results
   txtfile = file.path(store.path, paste0(timestr, '_', site, '_XCO2ff_', 
-                                         abs(nhrs), 'hrs_', oco.sensor, oco.ver, 
+                                         abs(nhrs), 'hrs_', oco.sensor, 
                                          '_', met, '_odiac', vname, '.txt'))
   if (is.na(oco.sensor)) 
     txtfile = file.path(store.path, paste0(timestr, '_', site, '_XCO2ff_', 
@@ -93,7 +93,7 @@ run.xco2ff.sim = function(site, timestr = '2014100920', vname = 2019,
 
     # txt file name for outputting model results
     txtfile = file.path(store.path, paste0(timestr, '_', site, '_XCO2ff_emiss_err_', 
-                                           abs(nhrs), 'hrs_', oco.sensor, oco.ver, 
+                                           abs(nhrs), 'hrs_', oco.sensor, 
                                            '_', met, '_odiac', vname, '.txt'))
     
     if (is.na(oco.sensor)) 

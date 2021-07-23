@@ -1,26 +1,17 @@
 # 
 plot.bg = function(site, site_lon, site_lat, sensor, sensor_gas, recp_box, 
-                   recp_info, sel_traj, densf, obs_df, plm_df, intersectTF, 
-                   bg_df, bg.dlat, bg.dlon, zoom, td, picname, font.size, 
-                   pp_fn = NULL) {
+                   recp_info, sel_traj, densf, obs_df, plm_df, intersectTF, bg_df, 
+                   bg_deg, bin_deg, map, td, picname, font.size, pp_fn = NULL) {
     
-
     # plot map first 
-    uni_sides = unique(bg_df$bg.side)
-    print(uni_sides)
+    uni_sides = unique(bg_df$bg.side); print(uni_sides)
     width = 9; height = 9
 
-    clon = (mean(sel_traj$lon) + mean(recp_info$recp.lon)) / 2
-    clat = (mean(sel_traj$lat) + mean(recp_info$recp.lat)) / 2
-    m1 = ggplot.map(map = 'ggmap', maptype = 'hybrid', zoom = zoom, 
-                    center.lon = clon, center.lat = clat)[[1]] 
-    
     for ( bg_side in uni_sides ) {
-
         pp = plot.urban.plume(site, site_lon, site_lat, sensor, sensor_gas, 
                               recp_box, recp_info, sel_traj, densf, obs_df, 
-                              plm_df, intersectTF, bg_df, bg_side, bg.dlat, 
-                              bg.dlon, map = m1, td, font.size, pp_fn) 
+                              plm_df, intersectTF, bg_df, bg_side, bg_deg, 
+                              bin_deg, map, td, font.size, pp_fn) 
 
         if ( 'list' %in% class(pp) ) {
             e1 = pp$delta 
@@ -35,8 +26,6 @@ plot.bg = function(site, site_lon, site_lat, sensor, sensor_gas, recp_box,
     }   # end for
 
 }   # end of function
-
-
 
 
 

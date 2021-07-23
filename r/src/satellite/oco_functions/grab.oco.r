@@ -10,7 +10,8 @@
 # 1. same oco orbit in a day, but the overpass time ranges from one hour to another
 # 2. multiple oco orbits in a day -> different orbit and different overpass hour
 
-grab.oco = function(oco.path, timestr, lon.lat, oco.ver = 'b9r', oco.fn = NULL) {
+# get rid of @param oco.ver for grabbing warn levels, DW, 07/23/2021
+grab.oco = function(oco.path, timestr, lon.lat, oco.fn = NULL) {
 
   library(ncdf4); library(dplyr)
 
@@ -47,7 +48,7 @@ grab.oco = function(oco.path, timestr, lon.lat, oco.ver = 'b9r', oco.fn = NULL) 
 
 
   # Warn level being removed for lite v9 data, DW, 10/15/2018 
-  if (grepl('7', oco.ver) | grepl('8', oco.ver)) wl = ncvar_get(oco.dat, 'warn_level')
+  #if (grepl('7', oco.ver) | grepl('8', oco.ver)) wl = ncvar_get(oco.dat, 'warn_level')
   qf = ncvar_get(oco.dat, 'xco2_quality_flag')
   foot = ncvar_get(oco.dat, 'Sounding/footprint')
   psurf = ncvar_get(oco.dat, 'Retrieval/psurf')  # hpa
@@ -117,8 +118,7 @@ grab.oco = function(oco.path, timestr, lon.lat, oco.ver = 'b9r', oco.fn = NULL) 
                         aod.fine = as.numeric(aod.fine), sza, oza, saa, oaa, ga, 
                         air.mass, stringsAsFactors = F)
 
-  if (grepl('7', oco.ver) | grepl('8', oco.ver)) 
-    obs.all = cbind(obs.all, wl = as.numeric(wl))
+  #if (grepl('7', oco.ver) | grepl('8', oco.ver)) obs.all = cbind(obs.all, wl = as.numeric(wl))
 
   # add lat/lon corners
   obs.vert = obs.all %>% mutate(indx = as.numeric(rownames(obs.all))) %>% 

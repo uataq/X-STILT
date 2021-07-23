@@ -5,7 +5,7 @@
 # written by Dien Wu
 
 wgt.trajec.foot.tropomi = function(output, tropomi.fn, tropomi.species, 
-								   ak.wgt = T, pwf.wgt = T, overwriteTF = F) {
+								   ak.wgt = T, pwf.wgt = T, overwriteTF = T) {
 
 	# read trajectory before weighting
 	trajdat  = output$particle %>% arrange(abs(time))  # now a data.frame
@@ -61,8 +61,8 @@ wgt.trajec.foot.tropomi = function(output, tropomi.fn, tropomi.species,
 		if (ak.wgt == F & pwf.wgt == T) trajdat.co$wgt.co = trajdat.co$pwf.co * npar 
 		if (ak.wgt == T & pwf.wgt == F) trajdat.co$wgt.co = trajdat.co$ak.norm.co 
 		if (ak.wgt == F & pwf.wgt == F) trajdat.co$wgt.co = 1
-		trajdat = trajdat.co %>% rename(foot_before_wgt = foot) %>% 
-								 mutate(foot = foot_before_weight * wgt.no2)
+		trajdat = trajdat.co %>% dplyr::rename(foot_before_weight = foot) %>% 
+								 mutate(foot = foot_before_weight * wgt.co)
 
 		info = cbind(info, co.info)
 	}	# end if TROPOMI CO weighting
@@ -96,8 +96,8 @@ wgt.trajec.foot.tropomi = function(output, tropomi.fn, tropomi.species,
 		if (ak.wgt == T & pwf.wgt == F) trajdat.no2$wgt.no2 = trajdat.no2$ak.norm.no2 
 		if (ak.wgt == F & pwf.wgt == F) trajdat.no2$wgt.no2 = 1
 
-		# change former foot to foot_before_wgt, and calculate the weighted foot
-		trajdat = trajdat.no2 %>% rename(foot_before_wgt = foot) %>% 
+		# change former foot to foot_before_weight, and calculate the weighted foot
+		trajdat = trajdat.no2 %>% rename(foot_before_weight = foot) %>% 
 								  mutate(foot = foot_before_weight * wgt.no2)
 
 		info = cbind(info, no2.info)
@@ -130,20 +130,14 @@ wgt.trajec.foot.tropomi = function(output, tropomi.fn, tropomi.species,
 		if (ak.wgt == F & pwf.wgt == T) trajdat.ch4$wgt.ch4 = trajdat.ch4$pwf.ch4 * npar 
 		if (ak.wgt == T & pwf.wgt == F) trajdat.ch4$wgt.ch4 = trajdat.ch4$ak.norm.ch4 
 		if (ak.wgt == F & pwf.wgt == F) trajdat.ch4$wgt.ch4 = 1
-		trajdat = trajdat.ch4 %>% rename(foot_before_wgt = foot) %>% 
+		trajdat = trajdat.ch4 %>% rename(foot_before_weight = foot) %>% 
 								  mutate(foot = foot_before_weight * wgt.ch4)
 
 		info = cbind(info, ch4.info)
 	}	# end if TROPOMI CH4 weighting
 
-
-	# save TROPOMI info in txt file in each by-id folder
-	#fn = file.path(dirname(output$file), paste0('tropomi_info_', receptor$long, 
-	#											'_', receptor$lati, '.txt'))
-	#if (overwriteTF) write.table(info, file = fn, row.names = F, sep = ',', quote = F)
-
     output$particle = trajdat     # put weighted particle back to output
-	saveRDS(output, output$file)
+	if (overwriteTF) saveRDS(output, output$file)
 
 	return(output)
 }  # end of subroutine

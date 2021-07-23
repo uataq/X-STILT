@@ -226,7 +226,7 @@ load_forward_traj = function(traj_path, sensor, timestr) {
   recp_info$rel.date = as.POSIXlt(recp_info$timestr, 'UTC', format = '%Y%m%d%H%M')
 
   # get first release time 
-  min.datestr = min(recp_info$rel.date); print(min.datestr)
+  min.datestr = min(recp_info$rel.date)#; print(min.datestr)
   trajdat = trajdat %>% mutate(datestr = min.datestr + time * 60) 
 
   return(list(trajdat = trajdat, recp_box = recp_box, recp_info = recp_info))
@@ -276,7 +276,6 @@ if (F) {
   for (p in unique(obs_df$polygon)) {
     test_df = obs_df %>% filter(polygon == p)
     withinTF = sp::point.in.polygon(test_df$lons, test_df$lats, plm_df$X, plm_df$Y)
-    #if (unique(withinTF) == 1) print(p)
   }
 
     # convert data frame of the urban plume to spatial polygons 

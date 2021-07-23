@@ -86,8 +86,7 @@ get.site.track = function(site, oco.sensor, oco.ver, oco.path, searchTF = FALSE,
         oco.track = oco.track %>% filter(substr(timestr, 5, 6) < '05' | 
                                          substr(timestr, 5, 6) > '08')
       } else oco.track = oco.track %>% filter(substr(timestr, 5, 6) < '12' & 
-                                                substr(timestr, 5, 6) > '03')
-
+                                              substr(timestr, 5, 6) > '03')
     }  # end if rmTF
 
 

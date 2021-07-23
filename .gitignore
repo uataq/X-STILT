@@ -38,5 +38,12 @@ in
 *.conf
 _rslurm*
 insert_ggAPI_cp.csv
-r/src/cluster_functions
 dien_mod
+r/src/cluster_functions
+
+# ignore a few executables to avoid accidentally tracking via git
+exe/*.CFG 
+exe/*.ASC 
+exe/arw2arl
+exe/hycs_std
+exe/xtrct_grid

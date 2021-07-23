@@ -1,17 +1,16 @@
 # script to load OCO-2 or OCO-3 or TROPOMI CO, NO2 data, DW, 03/04/2021
 # will add more sensors or species soon 
 
-#' @param sensor_ver only required for OCO data
 #' @param timestr needs to be in form of YYYYMMDDHH
 #' @param qa quality assurance of TROPOMI data
 #'           e.g., if qa = 0.4, chose data with QA >= 0.4
 
 # for TROPOMI vertical column density (VCD), convert to vertical mixing ratio in ppb 
+#' get rid of @param sensor.ver for grabbing warn levels, DW, 07/23/2021
 get.sensor.obs = function(site, timestr, 
                           sensor = c('OCO-2', 'OCO-3', 'TROPOMI')[1], 
                           sensor_gas = c('CO2', 'CO', 'NO2', 'CH4')[1], 
-                          sensor_fn = NULL, sensor_path, 
-                          sensor_ver = c(NA, 'V10r', 'VEarlyR')[1], qfTF = T, 
+                          sensor_fn = NULL, sensor_path, qfTF = T, 
                           tropomi_qa = c(0, 0.4, 0.5, 0.7, 1)[1], lon_lat = NULL) {
 
     # --------------------------- STEP 1 -------------------------------------- #
@@ -22,7 +21,7 @@ get.sensor.obs = function(site, timestr,
 
     if ( grepl('OCO', sensor) ) {                          # OCO-2 or 3 CO2
         obs = grab.oco(oco.path = sensor_path, timestr, lon.lat = lon_lat, 
-                       oco.ver = sensor_ver, oco.fn = sensor_fn) 
+                       oco.fn = sensor_fn) 
         if ( is.null(obs) ) { cat(err_message); return() }
         if ( nrow(obs) == 0 ) { cat(err_message); return() }
         obs$datestr = as.POSIXlt(as.character(obs$time), 'UTC', format = '%Y-%m-%d %H:%M:%S')

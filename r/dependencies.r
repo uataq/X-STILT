@@ -13,7 +13,7 @@ hycs_std <- file.path(xstilt_wd, 'exe/hycs_std')
 
 if ( !file.exists(permute_exe) | !file.exists(hycs_std) ) {
   setwd(file.path(xstilt_wd, 'stilt'))
-  cat('need to setup STILT\n')
+  cat('need to install STILT\n')
   system('chmod +x setup')
   system('./setup')
 
