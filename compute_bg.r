@@ -87,17 +87,17 @@ cat(paste('\n\nDone with settings with receptor and meteo fields...\n'))
 # -------------------------------- STEP 3 ------------------------------------ #
 if (run_trajec) {       # parallel running, DW, 11/06/2019
 
+    slurm = T
     n_cores = 8
     n_nodes = ceiling(length(all_timestr) / n_cores)
     slurm_options = list(time = '04:00:00', account = 'pow', partition = 'any')
     jobname = paste0('XSTILT_forward_', site, '_', sensor)
-    xstilt_apply(FUN = run.forward.trajec, slurm = T, slurm_options, 
-                 n_nodes, n_cores, jobname, site, site_lon, site_lat, 
-                 timestr = all_timestr, run_trajec, run_hor_err, run_wind_err, 
-                 run_ver_err, xstilt_wd, store_path, box.len, dtime.from, 
-                 dtime.to, dtime.sep, nhrs, delt, agl, numpar, met, met_res, 
-                 met_file_format, met_path, raob_path, siguverr, nhrs.zisf = 24, 
-                 zisf, sensor, sensor_path, sensor_ver, sensor_gas)
+    xstilt_apply(FUN = run.forward.trajec, slurm, slurm_options, n_nodes, n_cores, 
+                 jobname, site, site_lon, site_lat, timestr = all_timestr, 
+                 run_trajec, run_hor_err, run_wind_err, run_ver_err, xstilt_wd, 
+                 store_path, box.len, dtime.from, dtime.to, dtime.sep, nhrs, delt, 
+                 agl, numpar, met, met_res, met_file_format, met_path, raob_path, 
+                 siguverr, nhrs.zisf = 24, zisf, sensor, sensor_path, sensor_gas)
     q('no')
 }   # end of running forward trajec
 
@@ -119,9 +119,8 @@ if (run_trajec == F & run_bg) {         # need forward trajec ready
     for ( tt in 1 : length(all_timestr) ) {            # loop over each overpass
         timestr = all_timestr[tt]
         tmp_df = calc.bg.forward.trajec(site, timestr, sensor, sensor_path, 
-                                        sensor_gas, sensor_ver, sensor_qa, qfTF,
-                                        store_path, met, td, bg_dlat, bg_dlon, 
-                                        zoom, api.key)
+                                        sensor_gas, sensor_qa, qfTF, store_path, 
+                                        met, td, bg_dlat, bg_dlon, zoom, api.key)
         if ( is.null(tmp_df) ) next
         bg_df = rbind(bg_df, tmp_df)
     }   # end for tt

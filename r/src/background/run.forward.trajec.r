@@ -94,7 +94,7 @@ run.forward.trajec = function(site, site_lon, site_lat, timestr,
                               # if satellite paths are provided, default = NA
                               # sensor_var is needed if grabbing data from OCO
                               sensor = c(NA, 'OCO', 'TROPOMI')[1], 
-                              sensor_path = NA, sensor_ver = NA, sensor_gas = NA){
+                              sensor_path = NA, sensor_gas = NA){
   
 
   setwd(xstilt_wd); source('r/dependencies.r', local = T) # source all functions
@@ -118,8 +118,7 @@ run.forward.trajec = function(site, site_lon, site_lat, timestr,
                            minlat = site_lat - 1, maxlat = site_lat + 1)
 
       obs_df = get.sensor.obs(site, timestr, sensor, sensor_gas, sensor_fn = NULL,
-                              sensor_path, sensor_ver, qfTF = F, tropomi_qa = 0,
-                              lon_lat)
+                              sensor_path, qfTF = F, tropomi_qa = 0, lon_lat)
       
       if ( is.null(obs_df) ) return()
       if ( grepl('OCO', sensor) ) obs_df = obs_df %>% rename(time_utc = timestr)

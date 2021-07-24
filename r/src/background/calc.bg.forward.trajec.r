@@ -18,11 +18,10 @@
 
 #' @param timestr can be in format of YYYYMMDD, but satellite data required!!
 calc.bg.forward.trajec = function(site, timestr, sensor, sensor_path, sensor_gas, 
-                                  sensor_ver, sensor_qa = 0.5, qfTF = T, 
-                                  store_path, met, td = 0.1, bg_deg = 0.5, 
-                                  bin_deg = 0.5, zoom = 8, rm_outlierTF = T, 
-                                  api.key, lon_lat = NULL, font.size = rel(1.0), 
-                                  pp_fn = NULL){
+                                  sensor_qa = 0.5, qfTF = T, store_path, met, 
+                                  td = 0.1, bg_deg = 0.5, bin_deg = 0.5, zoom = 8, 
+                                  rm_outlierTF = T, api.key, lon_lat = NULL, 
+                                  font.size = rel(1.0), pp_fn = NULL){
   
   library(ggpubr); register_google(key = api.key)
 
@@ -39,7 +38,7 @@ calc.bg.forward.trajec = function(site, timestr, sensor, sensor_path, sensor_gas
   # OCO-2, OCO-3, TROPOMI CO, CH4, and NO2, DW, 07/06/2021
   if (is.null(lon_lat)) lon_lat = get.lon.lat(site, dlat = 1.5, dlon = 1.5)
   obs_df = get.sensor.obs(site, timestr, sensor, sensor_gas, sensor_fn = NULL,
-                          sensor_path, sensor_ver, qfTF, tropomi_qa = sensor_qa, lon_lat)
+                          sensor_path, qfTF, tropomi_qa = sensor_qa, lon_lat)
   if ( is.null(obs_df) ) return()
 
   # revise column names for OCO data ------------------------------------------
