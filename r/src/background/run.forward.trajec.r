@@ -167,14 +167,15 @@ run.forward.trajec = function(site, site_lon, site_lat, timestr,
     for (tt in 1 : length(timestr)) {
       
       # path that will store the generated wind error statistics if run_hor_err = T
+      tmp_timestr = timestr[tt]
       errlist = config_trans_err(namelist, site, lon_lat = err.lon.lat, 
-                                 timestr = timestr[[tt]], xstilt_wd)
+                                 timestr = tmp_timestr, xstilt_wd)
       hor_err = errlist$hor_err 
       pbl_err = errlist$pbl_err 
       date_df = results[[tt]]
 
       # create out_forward dir for generating forward trajec
-      traj_dir = file.path(traj_path, paste0('out_forward_', timestr[[tt]], '_', site))
+      traj_dir = file.path(traj_path, paste0('out_forward_', tmp_timestr, '_', site))
       if (!is.na(sensor)) traj_dir = paste0(traj_dir, '_', sensor); print(traj_dir)
 
       # delete previous directories and then create new one
@@ -194,8 +195,7 @@ run.forward.trajec = function(site, site_lon, site_lat, timestr,
       # the updated Trajecmulti() and fortran codes will randomly place receptors
       # according to dxyp
       cat('run.forward.trajec(): Generating forward trajec...\n')
-      met_fns = find.all.metfiles(timestr[[tt]], dtime, met_file_format, met_path, nhrs)
-      
+      met_fns = find.all.metfiles(tmp_timestr, dtime, met_file_format, met_path, nhrs)
       Trajecmulti(yr = date_df$yr - 2000, mon = date_df$mon, day = date_df$day, 
                   hr = date_df$hr, mn  = date_df$min, outname = date_df$ident, 
                   numpar = numpar, lat = date_df$lat, lon = date_df$lon,
@@ -203,19 +203,14 @@ run.forward.trajec = function(site, site_lon, site_lat, timestr,
                   dzp  = rep(0, nrow(date_df)),
                   agl  = rep(agl, nrow(date_df)), 
                   nhrs = rep(nhrs, nrow(date_df)),
-                  nummodel = timestr[[tt]], 
-                  metd = c('fnl', 'awrf'), 
-                  outpath = traj_dir, 
-                  overwrite = run_trajec,
+                  nummodel = tmp_timestr, metd = c('fnl', 'awrf'), 
+                  outpath = traj_dir, overwrite = run_trajec,
                   metfile = met_fns, metlib = paste0(met_path, '/'),
                   doublefiles = T, 
-                  rundir = dirname(traj_dir), 
-                  rundirname = basename(traj_dir), 
+                  rundir = dirname(traj_dir), rundirname = basename(traj_dir), 
                   varsout = varstrajec, 
-                  siguverr = hor_err$siguverr, 
-                  TLuverr = hor_err$TLuverr, 
-                  zcoruverr = hor_err$zcoruverr, 
-                  horcoruverr = hor_err$horcoruverr,
+                  siguverr = hor_err$siguverr, TLuverr = hor_err$TLuverr, 
+                  zcoruverr = hor_err$zcoruverr, horcoruverr = hor_err$horcoruverr,
                   hymodelc.exe = './hymodelc.aer', # use the AER version of hymodelc
                   setup.list = list(DELT = delt, VEGHT = 0.5)) %>% invisible()
     }  # end for tt
