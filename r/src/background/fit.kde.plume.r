@@ -27,7 +27,7 @@ fit.kde.plume = function(site, timestr, traj_path, obs_df, sensor,
   }
 
 
-  # ---------------------------------------------------------------------------- 
+  # -------------------------------------------------------------------------- 
   library(ggplot2)
 
   # calculate 2D kernel density and Normalized it by the max density
@@ -48,12 +48,13 @@ fit.kde.plume = function(site, timestr, traj_path, obs_df, sensor,
     densf_recp = densf[(sp::point.in.polygon(densf$lon, densf$lat, 
                                              recp_box$lon, recp_box$lat)) > 0, ]
     dr = ggplot() + geom_contour(data = densf_recp, 
-                                 aes(lon, lat, z = norm.prob, color = ..level..), 
+                                 aes(lon, lat, z = norm.prob,color = ..level..),
                                  breaks = lab.norm)
     
     # count # of pieces for each level grounp, if multiple pieces -> broken contour (remove)
-    dr_df = ggplot_build(dr)$data[[1]] %>% dplyr::select(level, piece) %>% unique() %>% 
-            group_by(level) %>% tally() %>% filter(n == 1) %>% arrange(level)
+    dr_df = ggplot_build(dr)$data[[1]] %>% dplyr::select(level, piece) %>% 
+            unique() %>% group_by(level) %>% tally() %>% filter(n == 1) %>% 
+            arrange(level)
 
     td = max(td, min(dr_df$level))
     if (td > 0.2) td = 0.2

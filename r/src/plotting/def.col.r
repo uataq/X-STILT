@@ -9,3 +9,8 @@ ggdef.col <- function(n){
   hues <- seq(15, 375, length = n + 1)
   hcl(h = hues, l = 65, c = 100)[1:n]
 }
+
+def.colb = function() {
+  c("#000000", "#E69F00", "#56B4E9", "#009E73", 
+    "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+}

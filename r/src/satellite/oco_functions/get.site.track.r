@@ -23,15 +23,16 @@ if (F) {
   urban_dlon = urban_dlat = 0.3
   store.path = store_path
   sif.path = sif_path
+  lon.lat = lon_lat
 }
 
 
 get.site.track = function(site, oco.sensor, oco.ver, oco.path, searchTF = FALSE,
-                          date.range = NULL, thred.count.per.deg = 100, lon.lat, 
-                          urbanTF = FALSE, urban_dlon = NULL, urban_dlat = NULL,
-                          thred.count.per.deg.urban = NULL, rmTF = FALSE, 
-                          plotTF = FALSE, store.path = NULL, sif.path = NULL, 
-                          qfTF = T){
+                          date.range = NULL, thred.count.per.deg = 100, 
+                          lon.lat, urbanTF = FALSE, urban_dlon = NULL, 
+                          urban_dlat = NULL, thred.count.per.deg.urban = NULL, 
+                          rmTF = FALSE, plotTF = FALSE, store.path = NULL, 
+                          sif.path = NULL, qfTF = T){
 
     library(dplyr)
 
@@ -68,7 +69,8 @@ get.site.track = function(site, oco.sensor, oco.ver, oco.path, searchTF = FALSE,
     oco.track = read.table(txt.fn, header = T, sep = ',', stringsAsFactors = F)
 
     # select time range and remove tracks with too few soundings
-    thred.count = thred.count.per.deg * abs(diff(c(lon.lat$minlat, lon.lat$maxlat)))
+    thred.count = thred.count.per.deg * abs(diff(c(lon.lat$minlat, 
+                                                   lon.lat$maxlat)))
     oco.track = oco.track %>% filter(timestr >= date.range[1] &
                                      timestr <= date.range[2] & 
                                      tot.count >= thred.count)
@@ -78,6 +80,11 @@ get.site.track = function(site, oco.sensor, oco.ver, oco.path, searchTF = FALSE,
       thred.count.urban = thred.count.per.deg.urban * urban_dlat * 2
       oco.track = oco.track %>% filter(tot.urban.count > thred.count.urban)
     } # end if urbanTF
+
+    if (qfTF) {
+      oco.track = oco.track %>% filter(qf.count >= 5)
+      if (urbanTF) oco.track = oco.track %>% filter(qf.urban.count >= 5)
+    }
 
     # track selection, whether to remove summtertime tracks
     if (rmTF) {

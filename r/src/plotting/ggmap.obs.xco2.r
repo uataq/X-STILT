@@ -12,7 +12,7 @@ ggmap.obs.xco2 <- function(site, timestr, oco.sensor = c('OCO-2', 'OCO-3')[2],
                            font.size = rel(0.9)){
 
   library(ggmap); library(ggplot2); library(ggpubr)
-  obs.all <- grab.oco(oco.path, timestr, lon.lat, oco.ver)
+  obs.all <- grab.oco(oco.path, timestr, lon.lat)
   qf.obs <- obs.all %>% filter(qf == 0)
 
   # at least need two valid soundings

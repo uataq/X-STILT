@@ -7,7 +7,8 @@ create.outwd = function(timestr, obs_species, obs_sensor, obs_path, lon_lat,
 
   if ( is.na(obs_sensor) ) {    # ideal run without satellite data
     obs_info = data.frame(timestr = timestr, fn = NA, stringsAsFactors = F)
-    output_wd = file.path(store_path, paste('out', timestr, met, 'ideal', sep = '_'))
+    output_wd = file.path(store_path, 
+                          paste('out', timestr, met, 'ideal', sep = '_'))
 
   } else if ( obs_sensor == 'TROPOMI' ) {
     

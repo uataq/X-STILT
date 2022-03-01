@@ -12,7 +12,8 @@ ggmap.xfoot.obs <- function(mm, site, oco.ver = NULL, oco.path = NULL, timestr,
                             dxco2 = 2, title = NULL, picname, storeTF = T, 
                             width = 9, height = 7, leg.pos = 'bottom', 
                             scale.coord = 1.2, facet.nrow = 1, 
-                            foot.unit = 'ppm/(umol/m2/s)', font.size = rel(0.8)){
+                            foot.unit = 'ppm/(umol/m2/s)', 
+                            font.size = rel(0.8)){
   
   library(ggpubr)
   col <- def.col()
@@ -50,13 +51,15 @@ ggmap.xfoot.obs <- function(mm, site, oco.ver = NULL, oco.path = NULL, timestr,
       p1 <- p1 + geom_point(data = sel.recp, aes(lon, lat), colour = 'purple', 
                             size = 3, shape = 1) +
                  facet_wrap(~ fac, nrow = facet.nrow) +
-                 geom_text(data = sel.recp, aes(lon + 0.5, lat), colour = 'purple', 
-                           size = 4, label = 'receptor', fontface = 1) 
+                 geom_text(data = sel.recp, aes(lon + 0.5, lat), 
+                           colour = 'purple', size = 4, label = 'receptor', 
+                           fontface = 1) 
     } # end if fac
   } 
 
   lab <- 10 ^ seq(-20, 3, 1)
-  p2 <- p1 + geom_tile(data = sel.foot, aes(lon + mm[[3]], lat + mm[[2]], fill = foot),
+  p2 <- p1 + geom_tile(data = sel.foot, 
+                       aes(lon + mm[[3]], lat + mm[[2]], fill = foot),
                        alpha = 0.8) +
              scale_fill_gradientn(limits = c(min.foot.sig, max.foot.sig), 
                                   name = paste0('FOOTPRINT\n', foot.unit), 

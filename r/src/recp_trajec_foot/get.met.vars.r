@@ -16,7 +16,8 @@ if (F) {
 
 # still need specific humidity profiles to calculate c.dry per layer 
 # returns 'output'
-get.met.vars <- function(namelist, output, met_file_format, met_path, z_top = 25000) {
+get.met.vars <- function(namelist, output, met_file_format, met_path, 
+                         z_top = 25000) {
 
     tmp.namelist <- namelist
     tmp.namelist$delt <- 1
@@ -34,9 +35,17 @@ get.met.vars <- function(namelist, output, met_file_format, met_path, z_top = 25
                                       lati = output$receptor$lati, 
                                       long = output$receptor$long, 
                                       zagl = c(0, z_top))
-
+    print(output$receptor$run_time)
     tmp_met_files <- find_met_files(output$receptor$run_time, met_file_format, 
                                     n_hours = tmp.nhrs, met_path)
+    
+    # for GFS (daily file) relax run_time to YYYY-MM-DD, DW, 08/08/2021
+    # so it can find the sufficient amount of met files
+    # Ben's find_met_files only relax the run_time based on 6-hourly HRRR
+    #if (grepl('gfs', met_path))     
+    #    tmp_met_files <- find_met_files(as.Date(output$receptor$run_time), 
+    #                                    met_file_format, n_hours = tmp.nhrs, 
+    #                                    met_path)
     cat(paste('get.met.vars(): found meteo files of', tmp_met_files, '\n\n'))
 
     # ----------------------------------------------------------------------- #
@@ -45,8 +54,9 @@ get.met.vars <- function(namelist, output, met_file_format, met_path, z_top = 25
     tmp.p <- calc_trajectory(namelist = tmp.namelist, 
                              rundir = dirname(output$file), emisshrs = 0.01, 
                              hnf_plume = T, met_files = tmp_met_files, 
-                             n_hours = tmp.nhrs, output = tmp.output, rm_dat = T,
-                             timeout = 600, w_option = 0, z_top = z_top) 
+                             n_hours = tmp.nhrs, output = tmp.output, 
+                             rm_dat = T, timeout = 600, w_option = 0, 
+                             z_top = z_top) 
     if (is.null(tmp.p)) stop(paste('get.met.vars(): no trajec generated\n',
                              '*** Likely the current @param z_top of', z_top, 
                              'm is too high for the met field you adopted\n', 
@@ -66,13 +76,15 @@ get.met.vars <- function(namelist, output, met_file_format, met_path, z_top = 25
                     e = rhfr * es,   # vapor pressure in air
                     w = 0.622 * e / (pres - e),   # water vapor mixing ratio
                     sphu = w / (1 + w)   # finally specific humidity in kg/kg
-        ) %>% dplyr::select(-c(foot, mlht, dens, samt, sigw, tlgr, foot_no_hnf_dilution))       
+        ) %>% dplyr::select(-c(foot, mlht, dens, samt, sigw, tlgr, 
+                               foot_no_hnf_dilution))       
     }   # end if
 
 
     # ----------------------------------------------------------------------- #
     # subset particles based on min release hgt, the most closed to the receptor
-    tmp.sfc <- tmp.pmin %>% filter(xhgt == min(xhgt)) %>% rename(psfc = pres) %>% 
+    tmp.sfc <- tmp.pmin %>% filter(xhgt == min(xhgt)) %>% 
+               rename(psfc = pres) %>% 
                dplyr::select(lati, long, time, zagl, zsfc, psfc, temp, xhgt)
     tmp.nsec <- abs(tmp.sfc$time) * 60      # in second
     
@@ -103,7 +115,8 @@ get.met.vars <- function(namelist, output, met_file_format, met_path, z_top = 25
     # add surface wind/temp, pressure, height to 'receptor'
     # add temp and q profiles to 'output'
     output$receptor <- c(output$receptor, tmp.sfc)
-    output$qt_prof <- tmp.pmin %>% dplyr::select(c('sphu', 'temz', 'pres')) %>% arrange(pres) 
+    output$qt_prof <- tmp.pmin %>% dplyr::select(c('sphu', 'temz', 'pres')) %>% 
+                      arrange(pres) 
     
     return(output)
 }

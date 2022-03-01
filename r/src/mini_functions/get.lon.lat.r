@@ -6,33 +6,41 @@
 #' country and reg name, DW, DR, 08/15/2018
 #' site can be a vector
 
-get.lon.lat <- function(site, dlon, dlat, city.loc = NULL) {
+get.lon.lat = function(site, dlon, dlat, city.loc = NULL) {
 
   # spatial domains placing receptors and city center, help select OCO-2 data
   library(ggmap); library(rworldmap); library(sp); library(lutz)
 
   # location name to lon, lat coordinates
-  if (is.null(city.loc)) 
-    city.loc <- geocode(location = site, output = 'latlon', source = 'google',
-                        override_limit = T)
+  if (is.null(city.loc)) {
+      # Please insert your API in the 'insert_ggAPI.csv' for use of ggplot and ggmap
+      # google API can be obtained from https://console.developers.google.com/
+      # *** if the site lat/lon is known, no need for API
+      api.key = readLines('insert_ggAPI.csv')
+      if (api.key == '') 
+        stop('Missing googleAPI, insert your API in insert_ggAPI.csv\n')
+      register_google(key = api.key)
+      city.loc = geocode(location = site, output = 'latlon', source = 'google',
+                         override_limit = T)
+  }
 
   # from https://stackoverflow.com/questions/21708488/
   # get-country-and-continent-from-longitude-and-latitude-point-in-r
   # use high res map from rworldxtra if you were concerned about detail
-  countriesSP <- getMap(resolution = 'low')
+  countriesSP = getMap(resolution = 'low')
 
   # converting points to a SpatialPoints object
   # setting CRS directly to that from rworldmap
-  pointsSP <- SpatialPoints(city.loc, proj4string = CRS(proj4string(countriesSP)))
+  pointsSP = SpatialPoints(city.loc, proj4string =CRS(proj4string(countriesSP)))
 
   # use 'over' to get indices of the Polygons object containing each point
-  indices <- over(pointsSP, countriesSP)
+  indices = over(pointsSP, countriesSP)
 
   # get time.zone 
-  tz <- tz_lookup_coords(city.loc$lat, city.loc$lon)
+  tz = tz_lookup_coords(city.loc$lat, city.loc$lon)
 
   # convert indices from factors to characters
-  lon.lat <- data.frame(cityid = site, citylon = city.loc$lon, 
+  lon.lat = data.frame(cityid = site, citylon = city.loc$lon, 
                         citylat = city.loc$lat, tz = tz, 
                         countryid = as.character(indices$ADMIN), 
                         regid = as.character(indices$continent), 

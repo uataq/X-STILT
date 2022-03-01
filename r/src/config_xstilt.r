@@ -28,7 +28,7 @@ config_xstilt = function(namelist){
   store_path = namelist$store_path
 
   # make sure obs_* are set to NA and no AK weighting for ideal runs
-  if (is.na(obs_sensor)) { obs_path = obs_species = NA; namelist$ak_wgt = FALSE }
+  if (is.na(obs_sensor)) { obs_path = obs_species = NA; namelist$ak_wgt = F }
 
 
   # Model control -------------------------------------------------------------
@@ -46,7 +46,9 @@ config_xstilt = function(namelist){
   if (!run_trajec & !run_foot & !run_sim) 
     cat('NO calculations will be performed, please check run_* flags..\n')
   if (run_sim) { run_trajec = F; run_foot = F }   
-  if (run_trajec | run_foot) run_sim = F   # when running trajec/foot, no sim allowed  
+
+  # if running trajec/foot, no sim allowed
+  if (run_trajec | run_foot) run_sim = F   
 
   # line source for agl
   agl     = c(namelist$minagl, namelist$maxagl) 
@@ -85,8 +87,16 @@ config_xstilt = function(namelist){
   # Create output directory ------------------------------------------------
   outlist = create.outwd(timestr, obs_species, obs_sensor, obs_path, lon_lat, 
                          store_path, met, run_hor_err)
-  obs_fn  = outlist$obs_info$fn    # get observation file name if satellite is used
+  obs_info = outlist$obs_info    # get obs file name if satellite is used
   output_wd = outlist$output_wd
+
+  if ( nrow(obs_info) > 1 ) {
+    track_indx = which(obs_info$tot.count == max(obs_info$tot.count))
+    obs_fn = obs_info$fn[track_indx]
+    if (length(output_wd) > 1) output_wd = output_wd[track_indx]
+  } else obs_fn = obs_info$fn
+  cat(paste('Obs file -', obs_fn, '\n'))
+
 
   # Compute XCO2 using existing traj & foot ------------------------------------
   # calculate XCO2 concentration and its error (need trajec and footprint ready)
@@ -97,13 +107,14 @@ config_xstilt = function(namelist){
     # requires two sets of trajectories before running the following section:
     if (run_hor_err) { # this does not need footprint
 
-      ## call function cal.trans.err() to estimate receptor-level trans err [ppm]
+      ## call cal.trans.err() to estimate receptor-level trans err [ppm]
       # get actual ppm error, need to have error statistics ready
       # see cal.trajfoot.stat() in called before_footprint_xstilt.r for err stat
       cat('Start simulations of XCO2 error due to horizontal trans err...\n')
       result = cal.trans.err(site, timestr, workdir = xstilt_wd, 
                              outdir = output_wd, store_path, met)
-      if (is.null(result)) stop('No results calculated, check cal.trans.err()\n')
+      if (is.null(result)) 
+        stop('No results calculated, check cal.trans.err()\n')
 
     } else {
 
@@ -118,7 +129,8 @@ config_xstilt = function(namelist){
                               run_emiss_err = namelist$run_emiss_err, 
                               edgar.file = namelist$edgar_file, 
                               ffdas.file = namelist$ffdas_file)
-      if (is.null(result)) stop('No results calculated, check run.xco2ff.sim()\n')
+      if (is.null(result)) 
+        stop('No results calculated, check run.xco2ff.sim()\n')
       return(result)
     } # end if run_hor_err
 
@@ -132,7 +144,8 @@ config_xstilt = function(namelist){
   if (is.na(obs_sensor)) {
     receptors = read.table(namelist$recp_fn, header = T, sep = ',')
     
-    if (!is.na(namelist$timestr)) { # if no time column found, use @param timestr
+    # if no time column found, use @param timestr
+    if (!is.na(namelist$timestr)) { 
       receptors$run_times = timestr 
     } else receptors = receptors %>% rename(run_times = time)
     
@@ -144,24 +157,25 @@ config_xstilt = function(namelist){
     if (!nchart %in% c(8, 10, 12, 14)) 
       stop('Incorrect form of time string...please check @param recp_fn or @param timestr\n')
 
-    receptors$run_time = as.POSIXct(receptors$run_times, 'UTC', format = formatt) 
+    receptors$run_time = as.POSIXct(receptors$run_times, 'UTC', 
+                                    format = formatt) 
     receptors$zagl = list(agl)
 
   } else {    # IF for simulations using satellite data
 
     peak_lat = c(lon_lat$citylat - namelist$urban_dlat, 
                  lon_lat$citylat + namelist$urban_dlat)
-    
     num_bg   = namelist$num_bg 
     num_peak = namelist$num_peak 
 
-    # make sure selTF is correct based on num_*
-    selTF = TRUE; if (is.na(num_bg) | is.na(num_peak)) selTF = FALSE
-    receptors = get.recp.sensor(timestr, obs_filter = unlist(namelist$obs_filter), 
+    # obtain receptors' locations based on satellite soundings
+    receptors = get.recp.sensor(timestr, 
+                                obs_filter = unlist(namelist$obs_filter), 
                                 obs_fn, obs_sensor, obs_path, lon_lat, 
-                                selTF, jitterTF = namelist$jitterTF, 
+                                jitterTF = namelist$jitterTF, 
                                 num_jitter = namelist$num_jitter, peak_lat, 
                                 num_bg, num_peak, agl, run_trajec, output_wd)
+                                
   } # end if
   cat(paste('Done with receptor setup...total', nrow(receptors), 'receptor(s)..\n\n'))
 
@@ -262,13 +276,15 @@ config_xstilt = function(namelist){
                           splitf = splitf, tkerd = tkerd, tkern = tkern, 
                           tlfrac = tlfrac, tout = tout, tratio = tratio, 
                           tvmix = tvmix, varsiwant = varsiwant, veght = veght,
-                          vscale = vscale, vscaleu = vscaleu, vscales = vscales, 
-                          wbbh = wbbh, wbwf = wbwf, wbwr = wbwr, winderrtf = 0, 
-                          wvert = wvert, zicontroltf = zicontroltf)
+                          vscale = vscale, vscaleu = vscaleu, 
+                          vscales = vscales, wbbh = wbbh, wbwf = wbwf, 
+                          wbwr = wbwr, winderrtf = 0, wvert = wvert, 
+                          zicontroltf = zicontroltf)
   
   # Get error stats if needed -------------------------------------------------
   # Calculating error stats for horizontal and vertical transport errors
-  errlist  = config_trans_err(namelist, site, lon_lat, timestr, xstilt_wd, simstep_namelist)
+  errlist  = config_trans_err(namelist, site, lon_lat, timestr, 
+                              xstilt_wd, simstep_namelist)
   hor_err  = errlist$hor_err 
   pbl_err  = errlist$pbl_err 
   emiss_fn = errlist$emiss_fn 
@@ -298,8 +314,11 @@ config_xstilt = function(namelist){
                        account = namelist$slurm_account, 
                        partition = namelist$slurm_partition)
   if (!is.null(namelist$mem_per_node)) slurm_options$mem = namelist$mem_per_node
-  jobname = paste0('XSTILT_', site, '_', timestr, '_', obs_sensor, '_', obs_species)
-  if (is.na(obs_sensor)) jobname = paste0('XSTILT_', site, '_', timestr, '_ideal')
+  jobname = paste0('XSTILT_', site, '_', timestr, '_', obs_sensor, 
+                   '_', obs_species)
+
+  if (is.na(obs_sensor)) 
+    jobname = paste0('XSTILT_', site, '_', timestr, '_ideal')
 
 
   # Startup messages -----------------------------------------------------------
@@ -462,7 +481,6 @@ config_xstilt = function(namelist){
                         yres2 = list(namelist$foot_res2), 
                         time_integrate2 = list(time_integrate2), 
                         foot_nhrs = namelist$foot_nhrs,
-
                         run_hor_err = run_hor_err,
                         emiss_fn = emiss_fn, 
                         ct_ver = namelist$ct_ver, 

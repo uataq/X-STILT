@@ -14,37 +14,43 @@
 # remove warn levels, DW, 07/01/2020 
 # ---------------------------------------------------------------------------- #
 
-find.overpass = function(date.range, lon.lat, oco.ver = 'b9r', oco.path, 
-                          urbanTF = F, dlon = 0.5, dlat = 0.5){ 
+find.overpass = function(date.range, lon.lat, oco.ver = 'V10r', oco.path, 
+                         urbanTF = F, dlon = 0.5, dlat = 0.5){ 
 
   library(geosphere); library(ncdf4); library(dplyr)
 
   # path and filename for storing OCO-2 info
-  all.file = list.files(pattern = 'LtCO2_', path = oco.path)
+  all.fns = list.files(pattern = 'LtCO2_', path = oco.path)
 
   # get rid of some characters
-  file.info = gsub('.nc4', '', all.file)
+  file.info = gsub('.nc4', '', all.fns)
   file.info = strsplit.to.df(file.info)
   all.timestr = file.info$V3
+  if (grepl('QTS', oco.path)) all.timestr = file.info$V5 
 
   if (grepl('7', oco.ver)) {   # for version 7r
-    all.timestr[nchar(all.timestr) == 6] = paste0('20', all.timestr[nchar(all.timestr) == 6])
-    oco.file = all.file[all.timestr >= date.range[1] & all.timestr <= date.range[2]]
-    timestr = all.timestr[all.timestr >= date.range[1] & all.timestr <= date.range[2]]
+    all.timestr[nchar(all.timestr) == 6] = 
+      paste0('20', all.timestr[nchar(all.timestr) == 6])
+
+    oco.file = all.fns[all.timestr >= date.range[1] & 
+                       all.timestr <= date.range[2]]
+
+    timestr = all.timestr[all.timestr >= date.range[1] & 
+                          all.timestr <= date.range[2]]
 
   } else if (!grepl('7', oco.ver)) {   # for version 8, 9r or even for OCO-3
     SEL.day = all.timestr >= substr(date.range[1], 3, 8) &
               all.timestr <= substr(date.range[2], 3, 8)
-    oco.file = all.file[SEL.day]
-    timestr = paste0('20', all.timestr[SEL.day])
-  } # end if
+    oco.file = all.fns[SEL.day]
+    timestr  = paste0('20', all.timestr[SEL.day])
+  } 
 
   # loop over each overpass
   result = NULL
   for (f in 1 : length(oco.file)) {
     
     if (f %% 25 == 0)
-    cat(paste('#-- ', signif(f / length(oco.file), 3) * 100, '% SEARCHED --#\n'))
+    cat(paste('#--', signif(f / length(oco.file), 3) * 100, '% SEARCHED --#\n'))
     
     dat = nc_open(file.path(oco.path, oco.file[f]))
 
@@ -62,14 +68,13 @@ find.overpass = function(date.range, lon.lat, oco.ver = 'b9r', oco.path,
     # 0=Nadir, 1=Glint, 2=Target, 3=Transition, 4=Snapshot Area Map
     mode = ncvar_get(dat, 'Sounding/operation_mode')
     obs = data.frame(lat = as.numeric(oco.lat), lon = as.numeric(oco.lon), 
-                      qf = as.numeric(qf), xco2 = as.numeric(xco2), 
-                      orbit = as.numeric(orbit), mode = mode,
-                      timestr = as.numeric(substr(id, 1, 10)), 
-                      stringsAsFactors = F) 
+                     qf = as.numeric(qf), xco2 = as.numeric(xco2), 
+                     orbit = as.numeric(orbit), mode = mode,
+                     timestr = as.numeric(substr(id, 1, 10)), 
+                     stringsAsFactors = F) 
     
     obs = obs %>% filter(lat >= lon.lat$minlat & lat <= lon.lat$maxlat &
-                          lon >= lon.lat$minlon & lon <= lon.lat$maxlon) 
-    
+                         lon >= lon.lat$minlon & lon <= lon.lat$maxlon) 
     nc_close(dat)
     
     # store results if there are soundings over
@@ -80,33 +85,36 @@ find.overpass = function(date.range, lon.lat, oco.ver = 'b9r', oco.path,
       # dplyr::count(x, ..., wt = NULL (the default), ...)
       # counts the number of rows in each group.
       tot.count = obs %>% count(orbit)
-      qf.count = obs %>% filter(qf == 0) %>% count(orbit)
+      qf.count  = obs %>% filter(qf == 0) %>% count(orbit)
       sam.count = obs %>% filter(mode == 4) %>% count(orbit)
       uni.timestr = obs %>% group_by(orbit) %>% 
                     dplyr::summarise(timestr = as.character(min(timestr)), .groups = 'drop')
 
       # merge all df, DW, 03/12/2021
-      tmp = full_join(uni.timestr, tot.count %>% rename(tot.count = n), by = 'orbit') %>% 
+      tmp = full_join(uni.timestr, 
+                      tot.count %>% rename(tot.count = n), by = 'orbit') %>% 
             left_join(sam.count %>% rename(sam.count = n), by = 'orbit') %>% 
             left_join(qf.count %>% rename(qf.count = n), by = 'orbit')
 
       # also search for soundings near city center,
       if (urbanTF) {
         urban.dat = obs %>% filter(lon >= (lon.lat$citylon - dlon),
-                                    lon <= (lon.lat$citylon + dlon),
-                                    lat >= (lon.lat$citylat - dlat),
-                                    lat <= (lon.lat$citylat + dlat))
+                                   lon <= (lon.lat$citylon + dlon),
+                                   lat >= (lon.lat$citylat - dlat),
+                                   lat <= (lon.lat$citylat + dlat))
         
         tot.count2 = urban.dat %>% count(orbit)
         qf.count2  = urban.dat %>% filter(qf == 0) %>% count(orbit)
         sam.count2 = urban.dat %>% filter(mode == 4) %>% count(orbit)
         uni.timestr2 = urban.dat %>% group_by(orbit) %>% 
-                        dplyr::summarise(timestr = as.character(min(timestr)), .groups = 'drop')
+                       dplyr::summarise(timestr = as.character(min(timestr)), .groups = 'drop')
 
         # merge all df, DW, 03/12/2021
         tmp.urban = uni.timestr2 %>% 
-                    left_join(tot.count2 %>% rename(tot.urban.count = n), by = 'orbit') %>%  
-                    left_join(qf.count2 %>% rename(qf.urban.count = n), by = 'orbit') 
+                    left_join(tot.count2 %>% rename(tot.urban.count = n), 
+                              by = 'orbit') %>%  
+                    left_join(qf.count2 %>% rename(qf.urban.count = n), 
+                              by = 'orbit') 
 
         # combine 
         tmp = tmp %>% left_join(tmp.urban, by = c('timestr', 'orbit'))

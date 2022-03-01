@@ -7,7 +7,7 @@
 #' @param ak_wgt logical flag for AK weighting, T or F 
 #' @param pwf_wgt logical flag for PW weighting, T or F 
 
-# allow for generating footprint with various horizontal resolutions, DW, 02/11/2019 
+# allow for generating foot with various horizontal resolutions, DW, 02/11/2019 
 # minor update for using OCO-3 data, i.e., change variable names, DW, 06/28/2020
 # add vertical AK weighting of TROPOMI column CO, DW, 08/25/2020 
 # if ak_wgt == FALSE, remove dependence of any satellite, DW, 09/15/2020 
@@ -37,13 +37,13 @@ before_footprint_xstilt = function() {
 
 
     # ---------------------------------------------------------------------
-    # weight trajec-level footprints using sensor-specific profiles, DW, 09/05/2020
+    # weight trajec-level foot using species specific profiles, DW, 09/05/2020
     # ---------------------------------------------------------------------
     cat('before_footprint_xstilt(): footprint weighting ')
     if ( grepl('OCO', obs_sensor) | is.na(obs_sensor)) {
 
         # ---------------------------------------------------------------------
-        # weight trajec-level footprints using OCO weighting profiles (ak_wgt = T)
+        # weight trajec-level footprints using OCO profiles (ak_wgt = T)
         # or set AK = 1 for ideal case (ak_wgt = F)
         # ---------------------------------------------------------------------
         if (ak_wgt) cat('based on OCO profiles at the nearest sounding\n')
@@ -54,7 +54,7 @@ before_footprint_xstilt = function() {
     } else if (obs_sensor == 'TROPOMI') {
         
         # ---------------------------------------------------------------------
-        # weight trajec-level footprints using TROPOMI weighting profiles (ak_wgt = T)
+        # weight trajec-level foot using TROPOMI weighting profiles (ak_wgt = T)
         # ---------------------------------------------------------------------
         cat('based on TROPOMI profiles at the nearest sounding\n')
         output = wgt.trajec.foot.tropomi(output = output, tropomi.fn = obs_fn, 
@@ -90,7 +90,8 @@ before_footprint_xstilt = function() {
 
             # use weighted output for footprint
             calc_footprint(p = output$particle, output = tmp_fn, 
-                           r_run_time = r_run_time, smooth_factor = smooth_factor,
+                           r_run_time = r_run_time, 
+                           smooth_factor = smooth_factor,
                            time_integrate = time_integrate2[f],
                            xmn = xmn, xmx = xmx, xres = as.numeric(xres2[f]),
                            ymn = ymn, ymx = ymx, yres = as.numeric(yres2[f]))

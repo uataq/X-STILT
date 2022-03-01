@@ -16,17 +16,18 @@ plot.urban.plume = function(site, site_lon, site_lat, sensor, sensor_gas,
     if (length(unique(recp_info$recp.lat)) > 1) 
       cat('***Found trajec released from multiple locations...\n')
       
-    # -------------------------------------------------------------------------    
+    # ---------------------------------------------------------------------    
     # plot trajectories within overpass duration and observations
     lab.kde = c(td, seq(0.1, 1, 0.1))
-    title = paste('Urban plume with', sensor, sensor_gas, 'data over', site, time_string)
+    title = paste('Urban plume with', sensor, sensor_gas, 
+                  'data over', site, time_string)
     p1 = map + labs(x = 'LONGITUDE', y = 'LATITUDE', title = title) + 
          geom_point(data = sel_traj, aes(lon, lat, colour = dens.level),
                     size = 0.1, alpha = 0.2) + 
          
          # plot normalized 2D kernel density (between 0 and 1) as contours
-         geom_contour(data = densf, aes(lon, lat, z = norm.prob, colour = ..level..), 
-                      breaks = lab.kde, size = 1.3) +
+         geom_contour(data = densf, aes(lon, lat, z = norm.prob, 
+                      colour = ..level..), breaks = lab.kde, size = 1.3) +
          scale_colour_gradient(name = 'Normalized\nKernel\nDensity',
                                low = 'lightblue', high = 'purple', 
                                breaks = lab.kde, labels = lab.kde,
@@ -44,19 +45,19 @@ plot.urban.plume = function(site, site_lon, site_lat, sensor, sensor_gas,
     p2 = p1 + geom_polygon(data = obs_df, aes(lons, lats, fill = val, 
                                               group = polygon, alpha = plmTF), 
                            colour = 'gray60', size = 0.2) +
-              scale_alpha_manual(name = NULL, values = alphas) + guides(alpha = F) + 
-              scale_fill_gradientn(colours = def.col(), 
+              scale_alpha_manual(name = NULL, values = alphas) + 
+              guides(alpha = F) + #ylim(c(30.5, 32.5)) + xlim(c(119.8, 122)) +
+              scale_fill_gradientn(colours = def.col(), #limits = c(412, 420), 
                                    name = paste0('X', sensor_gas, unit)) + 
               geom_polygon(data = plm_df, aes(X, Y), colour = 'gray10', 
                            fill = NA, size = 0.9, alpha = 0.5) 
-    
     if (!intersectTF) return(p2) 
 
     # ------------------------------------------------------------------------- 
-    # if there is an intersection between the satellite soundings and urban plume
+    # if there is an intersection between satellite soundings and urban plume
     # plot overlap polygon and polluted obs (only screened data), DW, 08/20/2018
     p3 = p2 + annotate('text', x = unique(recp_info$recp.lon), label = site, 
-                               y = unique(recp_info$recp.lat) - 0.05, size = 5) +
+                               y = unique(recp_info$recp.lat) - 0.05, size = 5)+
               annotate('point', x = recp_info$recp.lon, size = 2, 
                                 y = recp_info$recp.lat, shape = 17) + 
               theme(legend.position = 'right', legend.key = element_blank(),
@@ -69,19 +70,20 @@ plot.urban.plume = function(site, site_lon, site_lat, sensor, sensor_gas,
                     axis.ticks = element_line(size = font.size),
                     title = element_text(size = font.size))
     
-    # if there is background, draw the background regions and display background values 
+    # if draw the background regions and display background values 
     if (!is.null(bg_df)) {
       
       # obs within and outside the urban plume as indicated by the convex hull
       blist = select.obs.side(obs_df, sensor, bg.side = bg_side, bg_deg, 
                               perc = 0.1, bin_deg)
       obs_bg = blist$obs_bg
-      p4 = p3 + geom_polygon(data = obs_bg, aes(lons, lats, fill = val, group = polygon), 
+      p4 = p3 + geom_polygon(data = obs_bg, aes(lons, lats, fill = val, 
+                             group = polygon), 
                              color = 'gray20', alpha = 0.3, size = 0.2) 
       
-      # ------------------------------------------------------------------------- 
+      # ---------------------------------------------------------------------- 
       # plot enhanced concentrations, DW, 05/25/2021
-      # ------------------------------------------------------------------------- 
+      # ---------------------------------------------------------------------- 
       # get background stats for the right side
       bg_df = bg_df[bg_df$bg.side == bg_side, ]
       bg_na = mean(bg_df$bg.median) # bg for places outside plume and over side other than bg_side
@@ -99,7 +101,7 @@ plot.urban.plume = function(site, site_lon, site_lat, sensor, sensor_gas,
       title = paste0('Urban plume with ', sensor, ' \u0394', sensor_gas, 
                      ' over ', site, ' ', time_string, ' (', bg_side, ')')
       if (sensor_gas == 'CO' ) { minz = -10; dz = 10; ts = 1.7; signum = 2; bg.col = 'gray20'}
-      if (sensor_gas == 'NO2') { minz = -0.2; dz = 0.2; ts = 1.3; signum = 1; bg.col = 'gray30'}
+      if (sensor_gas == 'NO2') { minz = -0.2; dz = 0.2; ts = 0.7; signum = 1; bg.col = 'gray30'}
       if (sensor_gas == 'CO2') { minz = -1; dz = 1; bg.col = 'gray40'}
 
       e1 = map + labs(x = 'LONGITUDE', y = 'LATITUDE', title = title) +
@@ -110,7 +112,8 @@ plot.urban.plume = function(site, site_lon, site_lat, sensor, sensor_gas,
                         fill = NA, size = 0.9, alpha = 0.5) +
            geom_polygon(data = obs_bg, aes(lons, lats, group = polygon), 
                         fill = NA, color = bg.col, size = 0.3) +
-           scale_alpha_manual(name = NULL, values = alphas) + guides(alpha = F) + 
+           scale_alpha_manual(name = NULL, values = alphas) + 
+           guides(alpha = F) + 
            scale_fill_gradientn(colours = def.col(), 
                                 limits = c(minz, max(obs_rev$ff)), 
                                 breaks = seq(minz, max(obs_rev$ff), dz), 

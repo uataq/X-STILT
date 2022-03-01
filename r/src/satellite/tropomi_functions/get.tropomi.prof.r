@@ -6,14 +6,18 @@
 # if tropomi.fn exists, no need to provide tropomi.path or search for tropomi data
 
 # add CH4, DW, 11/09/2020
-get.tropomi.prof = function(receptor, tropomi.speci, tropomi.path = NULL, 
+get.tropomi.prof = function(receptor, 
+                            tropomi.species = c('CO', 'CH4', 'NO2')[1], 
+                            tropomi.path = NULL, 
                             tropomi.fn = NULL) {
 
   if (is.null(tropomi.fn)) {
     timestr = strftime(receptor$run_time, tz = 'UTC', format = '%Y%m%d%H')
-    lon.lat = data.frame(minlon = receptor$long - 1, maxlon = receptor$long + 1, 
-                         minlat = receptor$lati - 1, maxlat = receptor$lati + 1)
-    tropomi.info = find.tropomi(tropomi.path, substr(timestr, 1, 8), lon.lat)
+    lon_lat = data.frame(minlon = receptor$long - 1, 
+                         maxlon = receptor$long + 1, 
+                         minlat = receptor$lati - 1, 
+                         maxlat = receptor$lati + 1)
+    tropomi.info = find.tropomi(tropomi.path, substr(timestr, 1, 8), lon_lat)
     if (length(tropomi.info$fn) == 0) stop('No TROPOMI file found for this timestr\n')
     tropomi.fn = tropomi.info$fn
   } # end if
@@ -22,18 +26,19 @@ get.tropomi.prof = function(receptor, tropomi.speci, tropomi.path = NULL,
   dat = nc_open(tropomi.fn)
   indx_along_track  = ncvar_get(dat, 'PRODUCT/scanline')
   indx_across_track = ncvar_get(dat, 'PRODUCT/ground_pixel')
-  tropomi.lat       = ncvar_get(dat, 'PRODUCT/latitude')
-  tropomi.lon       = ncvar_get(dat, 'PRODUCT/longitude')
-  dimnames(tropomi.lat) = dimnames(tropomi.lon) = list(indx_across_track, indx_along_track)
+  lat  = ncvar_get(dat, 'PRODUCT/latitude')   # [across, along]
+  lon  = ncvar_get(dat, 'PRODUCT/longitude')
+  lats = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/GEOLOCATIONS/latitude_bounds') #[corner, across, along]
+  lons = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/GEOLOCATIONS/longitude_bounds')
+  dimnames(lat) = dimnames(lon) = list(indx_across_track, indx_along_track)
 
   var_array = array(  
-    data = do.call(cbind, list(tropomi.lon, tropomi.lat)), dim = c(dim(tropomi.lon), 2), 
-    dimnames = c(dimnames(tropomi.lon), list(c('lon', 'lat')))
-  )   # assuming all matrices in the list have equal dimensions
+    data = do.call(cbind, list(lon, lat)), dim = c(dim(lon), 2), 
+                   dimnames = c(dimnames(lon), list(c('lon', 'lat')))
+    )   # assuming all matrices in the list have equal dimensions
   
   var_df = dcast(melt(var_array), Var1 + Var2~Var3, value.var = 'value')
   colnames(var_df)[1:2] = c('indx_across_track', 'indx_along_track')
-
 
 
   # ----------- locate the TROPOMI grid that is most close to X-STILT receptor 
@@ -41,99 +46,118 @@ get.tropomi.prof = function(receptor, tropomi.speci, tropomi.path = NULL,
   # calculate the spherical distance between a given obs and all receptors
   # and locate the one receptor that has the shortest distance
   tmp.dist = geosphere::distCosine(var_df[, c('lon', 'lat')], 
-                                    data.frame(lon = receptor$long, lat = receptor$lati)) # in meters
-  cat(paste('get.tropomi.prof(): find a TROPOMI grid;', signif(min(tmp.dist) / 1E3, 3),
-            'km away from receptor\n'))
+                                   data.frame(lon = receptor$long, 
+                                              lat = receptor$lati)) # in meters
+  cat(paste('get.tropomi.prof(): find a TROPOMI grid;', 
+            signif(min(tmp.dist) / 1E3, 3), 'km away from receptor\n'))
   tmp.grid = var_df[tmp.dist == min(tmp.dist), ]
-  along.indx = which(indx_along_track == tmp.grid$indx_along_track)
-  across.indx = which(indx_across_track == tmp.grid$indx_across_track)
-  loc.indx = c(across.indx, along.indx) 
-
+  along_indx = which(indx_along_track == tmp.grid$indx_along_track)
+  across_indx = which(indx_across_track == tmp.grid$indx_across_track)
 
 
   # ------------ grabbing 50 TROPOMI CO vertical levels or 34 NO2 levels
   time = substr(ncvar_get(dat, 'PRODUCT/time_utc'), 1, 19)  # UTC
-  timestr = format(as.POSIXct(time, format = '%Y-%m-%dT%H:%M:%S'), format = '%Y%m%d%H%M%S')[along.indx]
+  timestr = format(as.POSIXct(time, format = '%Y-%m-%dT%H:%M:%S'), 
+                   format = '%Y%m%d%H%M%S')[along_indx]
   
   # these matrics all have dims of [across, along]
-  qa   = ncvar_get(dat, 'PRODUCT/qa_value')[across.indx, along.indx]  # quality assurances
-  hsfc = ncvar_get(dat, 'INPUT_DATA/surface_altitude')[across.indx, along.indx]
-  psfc = ncvar_get(dat, 'INPUT_DATA/surface_pressure')[across.indx, along.indx] / 100 # Pa to hPa
-  sfc_class = ncvar_get(dat, 'INPUT_DATA/surface_classification')[across.indx, along.indx]
+  qa   = ncvar_get(dat, 'PRODUCT/qa_value')[across_indx, along_indx]  # quality assurances
+  hsfc = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/INPUT_DATA/surface_altitude')[across_indx, along_indx]
+
+  psfc = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/INPUT_DATA/surface_pressure')[across_indx, along_indx] / 100 # Pa to hPa
+
+  sfc_class = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/INPUT_DATA/surface_classification')[across_indx, along_indx]
 
   ### combine all OCO-2 vertical profiles and other 1D variables
-  find.lat = tropomi.lat[across.indx, along.indx]
-  find.lon = tropomi.lon[across.indx, along.indx]
-
-
+  find_lat = lat[across_indx, along_indx]
+  find_lon = lon[across_indx, along_indx]
+  find_lats = lats[, across_indx, along_indx]
+  find_lons = lons[, across_indx, along_indx]
+  
+  # also need to add total or tropospheric column density of dry air in mol m-2 
+  g = 9.8        	         # m s-2
+  Mair = 29 / 1E3        	 # kg mol-1
+  air_vcd = 1/ g / Mair * psfc * 100
 
   # ------------- grabbing column concentrations of mol m-2 and AK profiles 
-  if (tropomi.speci == 'CO') {
+  if (tropomi.species == 'CO') {
     
-    xco = ncvar_get(dat, 'PRODUCT/carbonmonoxide_total_column')[across.indx, along.indx] # mol m-2
-    xco.uncert = ncvar_get(dat, 'PRODUCT/carbonmonoxide_total_column_precision')[across.indx, along.indx]
-    xh2o = ncvar_get(dat, 'DETAILED_RESULTS/water_total_column')[across.indx, along.indx]
+    co_vcd = ncvar_get(dat, 'PRODUCT/carbonmonoxide_total_column')[across_indx, along_indx] # mol m-2 
+    co_vcd_uncert = ncvar_get(dat, 'PRODUCT/carbonmonoxide_total_column_precision')[across_indx, along_indx]
+    h2o_vcd = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/DETAILED_RESULTS/water_total_column')[across_indx, along_indx]
 
     # Pressure at bottom of layer in hPa, from TOA to the surface
-    lower.pres = ncvar_get(dat, 'DETAILED_RESULTS/pressure_levels')[, across.indx, along.indx] / 100 
+    lower_pres = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/DETAILED_RESULTS/pressure_levels')[, across_indx, along_indx] / 100 
     
     # compute pressure for upper level in hPa, press from TOA to sfc
-    upper.pres = c(lower.pres[1] * lower.pres[1] / lower.pres[2], 
-                    lower.pres[1 : length(lower.pres) - 1] )	
+    upper_pres = c(lower_pres[1] * lower_pres[1] / lower_pres[2], 
+                   lower_pres[1 : length(lower_pres) - 1] )	
 
     # zagl in meters
     zagl = as.numeric(ncvar_get(dat, 'PRODUCT/layer'))  
 
     # column AK in meter, 
-    ak.co = ncvar_get(dat, 'DETAILED_RESULTS/column_averaging_kernel')[, across.indx, along.indx]
+    ak.co = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/DETAILED_RESULTS/column_averaging_kernel')[, across_indx, along_indx]
 
-    # store as a list
-    all.info = list(tropomi.lat = find.lat, tropomi.lon = find.lon, ak = ak.co, 
-                     lower.pres = lower.pres, upper.pres = upper.pres, agl = zagl, 
-                     tropomi.zsfc = hsfc, tropomi.psfc = psfc, xco = xco, 
-                     xco.uncert = xco.uncert, xh2o = xh2o)
-  
+    # convert column density to mixing ratio in ppb
+    xco = co_vcd / air_vcd * 1E9
+    xco_uncert = co_vcd_uncert / air_vcd * 1E9
 
-  } else if (tropomi.speci == 'CH4') {  # grab CH4
+    # store as a list, mol m-2 for VCD or ppb for mixing ratio
+    all_info = list(tropomi_lat = find_lat, tropomi_lon = find_lon, 
+                    tropomi_lats = find_lats, tropomi_lons = find_lons, 
+                    ak = ak.co, lower_pres = lower_pres, 
+                    upper_pres = upper_pres, agl = zagl, tropomi_zsfc = hsfc, 
+                    tropomi_psfc = psfc, co_vcd = co_vcd, 
+                    co_vcd_uncert = co_vcd_uncert, h2o_vcd = h2o_vcd, 
+                    air_vcd = air_vcd, xco = xco, xco_uncert = xco_uncert) 
+
+  } else if (tropomi.species == 'CH4') {  # grab CH4
     
     # XCH4 with unit of 1E-9 which is ppb
-    xch4 = ncvar_get(dat, 'PRODUCT/methane_mixing_ratio')[across.indx, along.indx] # 1E-9 = ppb
-    xch4.bc = ncvar_get(dat, 'PRODUCT/methane_mixing_ratio_bias_corrected')[across.indx, along.indx]
-    xch4.se = ncvar_get(dat, 'PRODUCT/methane_mixing_ratio_precision')[across.indx, along.indx] # standard error
-    xh2o = ncvar_get(dat, 'DETAILED_RESULTS/water_total_column')[across.indx, along.indx]  # mol m-2
+    xch4 = ncvar_get(dat, 'PRODUCT/methane_mixing_ratio')[across_indx, along_indx] # 1E-9 = ppb
+    xch4_bc = ncvar_get(dat, 'PRODUCT/methane_mixing_ratio_bias_corrected')[across_indx, along_indx]
+    xch4.se = ncvar_get(dat, 'PRODUCT/methane_mixing_ratio_precision')[across_indx, along_indx] # standard error
+    h2o_vcd = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/DETAILED_RESULTS/water_total_column')[across_indx, along_indx]  # mol m-2
 
     # for pressure coordinate with even p spacing (from Pa to hPa), 12 layers, 13 levels
-    dp = ncvar_get(dat, 'INPUT_DATA/pressure_interval')[across.indx, along.indx] / 100
-    psfc = ncvar_get(dat, 'INPUT_DATA/surface_pressure')[across.indx, along.indx] / 100
+    dp = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/INPUT_DATA/pressure_interval')[across_indx, along_indx] / 100   # in mb
+
+    psfc = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/INPUT_DATA/surface_pressure')[across_indx, along_indx] / 100   # in mb
    
     # grab altitudes and their associated AK, from TOA to sfc
-    zsfc = ncvar_get(dat, 'INPUT_DATA/surface_altitude')[across.indx, along.indx] # in meter
-    zlvl = ncvar_get(dat, 'INPUT_DATA/altitude_levels')[, across.indx, along.indx] # in meter
+    zsfc = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/INPUT_DATA/surface_altitude')[across_indx, along_indx] # in meter
+
+    zlvl = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/INPUT_DATA/altitude_levels')[, across_indx, along_indx] # in meter
+
     zmid = zoo::rollmean(zlvl, 2)    # middle point for a layer
-    ak = ncvar_get(dat, 'DETAILED_RESULTS/column_averaging_kernel')[, across.indx, along.indx]
+
+    ak = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/DETAILED_RESULTS/column_averaging_kernel')[, across_indx, along_indx]
     
     plvl = seq(0, psfc, dp)
-    lower.pres = plvl[-1]
-    upper.pres = plvl[-length(plvl)]
-    
-    all.info = list(tropomi.lat = find.lat, tropomi.lon = find.lon, ak = ak, 
-                     lower.pres = lower.pres, upper.pres = upper.pres, 
-                     zagl = zlvl, zmid = zmid, tropomi.zsfc = zsfc, 
-                     tropomi.psfc = psfc, xch4 = xch4, xch4.bc = xch4.bc, 
-                     xch4.uncert = xch4.se, xh2o = xh2o)
+    lower_pres = plvl[-1]
+    upper_pres = plvl[-length(plvl)]
 
-  } else if (tropomi.speci == 'NO2') {  # grab NO2
+    all_info = list(tropomi_lat = find_lat, tropomi_lon = find_lon, 
+                    tropomi_lats = find_lats, tropomi_lons = find_lons, 
+                    ak = ak, lower_pres = lower_pres, upper_pres = upper_pres, 
+                    zagl = zlvl, zmid = zmid, tropomi_zsfc = zsfc, 
+                    tropomi_psfc = psfc, xch4 = xch4, xch4_bc = xch4_bc, 
+                    xch4_uncert = xch4.se, h2o_vcd = h2o_vcd, air_vcd = air_vcd)
 
-    xno2.tropo = ncvar_get(dat, 'PRODUCT/nitrogendioxide_tropospheric_column')[across.indx, along.indx]
-    xno2.tropo.uncert = ncvar_get(dat, 'PRODUCT/nitrogendioxide_tropospheric_column_precision')[across.indx, along.indx]
+  } else if (tropomi.species == 'NO2') {  # grab NO2
+
+    # column density of tropospheric NO2 in mol m-2
+    no2_vcd_tropo = ncvar_get(dat, 'PRODUCT/nitrogendioxide_tropospheric_column')[across_indx, along_indx]
+    no2_vcd_tropo_uncert = ncvar_get(dat, 'PRODUCT/nitrogendioxide_tropospheric_column_precision')[across_indx, along_indx]
 
     # read air mass factor 
-    amf_tot  = ncvar_get(dat, 'PRODUCT/air_mass_factor_total')[across.indx, along.indx]
-    amf_tropo = ncvar_get(dat, 'PRODUCT/air_mass_factor_troposphere')[across.indx, along.indx]
+    amf_tot  = ncvar_get(dat, 'PRODUCT/air_mass_factor_total')[across_indx, along_indx]
+    amf_tropo = ncvar_get(dat, 'PRODUCT/air_mass_factor_troposphere')[across_indx, along_indx]
     
     # Water vapor and water liquid slant column density, in mol m-2
-    xh2ov.slant = ncvar_get(dat, 'DETAILED_RESULTS/water_slant_column_density')[across.indx, along.indx]
-    xh2ol.slant = ncvar_get(dat, 'DETAILED_RESULTS/water_liquid_slant_column_density')[across.indx, along.indx]
+    h2ov_vcd_slant = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/DETAILED_RESULTS/water_slant_column_density')[across_indx, along_indx]
+    h2ol_vcd_slant = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/DETAILED_RESULTS/water_liquid_slant_column_density')[across_indx, along_indx]
 
     ### compute 34 TROPOMI pressure levels using hybrid_sigma_pressure_coordinate
     # p(t, k, j, i, l) = ap(k, l) + b(k, l) *  ps(t, j, i); i, j for locations
@@ -150,49 +174,57 @@ get.tropomi.prof = function(receptor, tropomi.speci, tropomi.path = NULL,
     k = ncvar_get(dat, 'PRODUCT/layer')      
     
     # "TM5 layer index of the highest layer in the tropopause"
-    tropo_indx = ncvar_get(dat, 'PRODUCT/tm5_tropopause_layer_index')[across.indx, along.indx]
+    tropo_indx = ncvar_get(dat, 'PRODUCT/tm5_tropopause_layer_index')[across_indx, along_indx]
 
     # vertices: lower or upper pressure level boundaries, v = 0 for lower level
     v = ncvar_get(dat, 'PRODUCT/vertices')  
 
     # finally compute pressures for lower and upper level boundaries, in hPa now
     pres = (a + b * psfc); dimnames(pres) = list(c('lower', 'upper'), k)  
-    pres.df = as.data.frame(t(pres))
+    pres_df = as.data.frame(t(pres)) %>% mutate(k = as.numeric(k))
 
-    # NO2 averaging kernel from TOA to surface, unitless, no need for any conversion
-    ak.norm.no2 = ncvar_get(dat, 'PRODUCT/averaging_kernel')[, across.indx, along.indx]
+    # calculate the pressures for tropopause, matrix of [34, 2] 
+    # for pressure of upper [smaller p] and lower [higher p] boundary
+    tropo_lower_pres = (pres_df %>% filter(k == tropo_indx))$lower
+    #print(tropo_lower_pres)
+
+    # so for tropospheric atmosphere, use both lower bound of tropopause layer
+    # and the lower bound for the surface layer
+    # *** DW, 03/09/2021, no VCD of H2O vapor, only slant column density, 
+    # ignore H2Ov, which is not a perfect idea, need to fix it in the future ***
+    air_vcd_tropo = 1 / g / Mair * (psfc - tropo_lower_pres) * 100
+    
+    # NO2 AK from TOA to surface, unitless, no need for any conversion
+    ak_no2 = ncvar_get(dat, 'PRODUCT/averaging_kernel')[, across_indx, along_indx]
     
     # The tropospheric averaging kernel can be obtained by scaling the kernel by
     # M/Mtrop (see [RD20]) and setting all elements of the kernel to zero above 
     # the tropopause layer, i.e. for l > l_TM5_tp, based on user manual, 2019
-    ak.norm.no2.tp = c( ak.norm.no2[k <= tropo_indx] * amf_tot / amf_tropo, 
-                         rep(0, length(k[k > tropo_indx])) )
+    ak_no2_tropo = c( ak_no2[k <= tropo_indx] * amf_tot / amf_tropo, 
+                      rep(0, length(k[k > tropo_indx])) )
+
+    # convert column density to mixing ratio in ppb
+    no2_tropo = no2_vcd_tropo / air_vcd_tropo * 1E9
+    no2_tropo_uncert = no2_vcd_tropo_uncert / air_vcd_tropo * 1E9
 
     # store as a list
     # reverse TROPOMI NO2 pressure levels, now from TOA to sfc
-    all.info = list(tropomi.lat = find.lat, tropomi.lon = find.lon, 
-                     ak = rev(ak.norm.no2), ak.tropo = rev(ak.norm.no2.tp), 
-                     lower.pres = rev(pres.df$lower), upper.pres = rev(pres.df$upper), 
-                     tropomi.zsfc = hsfc, tropomi.psfc = psfc, 
-                     xno2.tropo = xno2.tropo, xno2.tropo.uncert = xno2.tropo.uncert, 
-                     xh2ov.slant = xh2ov.slant, xh2ol.slant = xh2ol.slant)
+    all_info = list(tropomi_lat = find_lat, tropomi_lon = find_lon, 
+                    tropomi_lats = find_lats, tropomi_lons = find_lons, 
+                    ak = rev(ak_no2), ak_tropo = rev(ak_no2_tropo), 
+                    lower_pres = rev(pres_df$lower), 
+                    upper_pres = rev(pres_df$upper), 
+                    tropomi_zsfc = hsfc, tropomi_psfc = psfc, 
+                    no2_vcd_tropo = no2_vcd_tropo, 
+                    no2_vcd_tropo_uncert = no2_vcd_tropo_uncert, 
+                    h2ov_vcd_slant = h2ov_vcd_slant, 
+                    h2ol_vcd_slant = h2ol_vcd_slant, 
+                    air_vcd = air_vcd, air_vcd_tropo = air_vcd_tropo, 
+                    tno2 = no2_tropo, tno2_uncert = no2_tropo_uncert)
 
-  } else {
-    stop('get.tropomi.prof(): please add codes for grabbing other TROPOMI species other than CO and NO2\n')
-  }
+  } else stop('get.tropomi.prof(): please add codes for grabbing other TROPOMI species other than CO and NO2\n')
 
   nc_close(dat)
-  all.info      # return both profiles and other retrivals
+  all_info      # return both profiles and other retrivals
   
 } # end of subroutine
-
-
-
-if (F) {
-
-  # load additional variables 
-
-  albedo = ncvar_get(dat, 'INPUT_DATA/surface_albedo')[across.indx, ]
-
-
-}

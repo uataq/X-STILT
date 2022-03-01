@@ -25,7 +25,8 @@ get.oco.info = function(oco.path, receptor, oco.fn = NA, diff.td = 1E-4){
     if (length(oco.file) == 0) stop('No OCO file found for this timestr\n')
     fn = file.path(oco.path, oco.file)
   } else fn = oco.fn 
-
+  print(fn)
+  
   oco.dat = nc_open(fn)
 
   # grabbing OCO-2 levels, lat, lon
@@ -105,11 +106,12 @@ get.oco.info = function(oco.path, receptor, oco.fn = NA, diff.td = 1E-4){
     attributes(ak.norm)$names = oco.lev
 
     ### combine all OCO-2 vertical profiles and other 1D variables
-    all.info = list(oco.id = find.id, oco.orbit = oco.orbit, oco.lat = find.lat, 
-                     oco.lon = find.lon, ak.norm = ak.norm, pwf = pwf, 
-                     pres = pres, ap = ap, oco.grdhgt = grdhgt, oco.psfc = psfc, 
-                     oco.foot = footprint, oco.xco2 = xco2, 
-                     oco.xco2.uncert = xco2.uncert, oco.xh2o = xh2o)
+    all.info = list(oco.id = find.id, oco.orbit = oco.orbit, 
+                    oco.lat = find.lat, oco.lon = find.lon, 
+                    ak.norm = ak.norm, pwf = pwf, pres = pres, ap = ap, 
+                    oco.grdhgt = grdhgt, oco.psfc = psfc, 
+                    oco.foot = footprint, oco.xco2 = xco2, 
+                    oco.xco2.uncert = xco2.uncert, oco.xh2o = xh2o)
     
     nc_close(oco.dat)
     all.info      # return both profiles and other retrivals

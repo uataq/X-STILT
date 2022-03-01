@@ -20,20 +20,21 @@ get.recp.sensor = function(timestr, obs_filter = NULL, obs_fn, obs_sensor,
 
   # grab OCO or TROPOMI data
   qfTF = FALSE
-  if (!is.null(obs_filter)) { qfTF = TRUE; tropomi_qa = as.numeric(obs_filter[2]) } 
+  if (!is.null(obs_filter)) { qfTF = T; tropomi_qa = as.numeric(obs_filter[2]) }
 
   # make sure selTF is correct based on num_*
   selTF = TRUE; if (is.na(num_bg) | is.na(num_peak)) selTF = FALSE
-
   obs_dat = get.sensor.obs(site, timestr, sensor = obs_sensor, 
                            sensor_gas = obs_species, sensor_fn = obs_fn, 
                            sensor_path = obs_path, qfTF, tropomi_qa, lon_lat) 
   
   if (obs_sensor == 'TROPOMI') 
-    obs_dat = obs_dat %>% rename(lon = center_lon, lat = center_lat, vertices = corner)
+    obs_dat = obs_dat %>% rename(lon = center_lon, 
+                                 lat = center_lat, 
+                                 vertices = corner)
 
   # remove vertices cordinate 
-  uni_dat = obs_dat %>% dplyr::select(-c('lons', 'lats', 'vertices')) %>% unique()
+  uni_dat = obs_dat %>% dplyr::select(-c('lons', 'lats', 'vertices'))%>%unique()
 
 
   # ------------------- Step 2. SET UP the STILT receptors ----------------- #
@@ -53,23 +54,30 @@ get.recp.sensor = function(timestr, obs_filter = NULL, obs_fn, obs_sensor,
     # -------------------------------------------------------------------------
     # use OCO soundings as receptor locations and TROPOMI overpass time
     # for setting up receptors
-    if (combine_locTF & obs_sensor == 'TROPOMI') {  
+    if ( combine_locTF == TRUE & obs_sensor == 'TROPOMI' ) {  
       
       cat('get.recp.sensor(): since combine_locTF == TRUE, use OCO loc and TROPOMI time for receptors...\n')
       oco_dat = get.sensor.obs(site, timestr, sensor = 'OCO-3', 
                                sensor_gas = 'CO2', sensor_fn = NULL, 
                                sensor_path = oco_path, qfTF, lon_lat = lon_lat) 
+      
       if (nrow(oco_dat) == 0) 
         stop('get.recp.sensor(): NO OCO loc found for placing receptors with TROPOMI time')
       oco_dat = oco_dat %>% dplyr::select(-c('lons', 'lats', 'vertices')) %>% unique()
       
       # place denser receptors within lat range with high XCO2
-      oco_sel = sel.obs4recp(obs = oco_dat, peak_lat, lon_lat, num_bg, num_peak)
-
+      if (selTF) {
+        oco_sel = sel.obs4recp(obs = oco_dat, peak_lat, lon_lat, 
+                               num_bg, num_peak)
+      } else oco_sel = oco_dat
+      
       # replace OCO receptor time with TROPOMI time 
-      trp_sel = uni_dat %>% filter(lat >= min(oco_sel$lat), lat <= max(oco_sel$lat), 
-                                   lon >= min(oco_sel$lon), lon <= max(oco_sel$lon))
-      trp_time = seq(min(trp_sel$datestr), max(trp_sel$datestr), length = nrow(oco_sel))
+      trp_sel = uni_dat %>% filter(lat >= min(oco_sel$lat), 
+                                   lat <= max(oco_sel$lat), 
+                                   lon >= min(oco_sel$lon), 
+                                   lon <= max(oco_sel$lon))
+      trp_time = seq(min(trp_sel$datestr), max(trp_sel$datestr), 
+                     length = nrow(oco_sel))
       recp_info = oco_sel %>% arrange(lat) %>% mutate(datestr = trp_time)
 
     } else {
@@ -82,6 +90,7 @@ get.recp.sensor = function(timestr, obs_filter = NULL, obs_fn, obs_sensor,
         
         # create more recptors around centered lat/lon for a given satellite sounding
         # works for either OCO and TROPOMI
+        cat('get.recp.sensor(): jittering option turned on...\n')
         recp_info = jitter.obs4recp(obs_dat, num_jitter)
 
       } else recp_info = uni_dat        # use all obs around site

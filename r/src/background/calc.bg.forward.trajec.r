@@ -17,17 +17,20 @@
 #   and grant update to the background code, DW, 03/04/2021
 
 #' @param timestr can be in format of YYYYMMDD, but satellite data required!!
-calc.bg.forward.trajec = function(site, timestr, sensor, sensor_path, sensor_gas, 
-                                  sensor_qa = 0.5, qfTF = T, store_path, met, 
-                                  td = 0.1, bg_deg = 0.5, bin_deg = 0.5, zoom = 8, 
+calc.bg.forward.trajec = function(site, timestr, sensor, sensor_path,   
+                                  sensor_gas, sensor_ver = NA, sensor_qa = 0.5, 
+                                  qfTF = T, store_path, met, td = 0.1, 
+                                  bg_deg = 0.5, bin_deg = 0.5, zoom = 8, 
                                   rm_outlierTF = T, api.key, lon_lat = NULL, 
-                                  font.size = rel(1.0), pp_fn = NULL){
+                                  font.size = rel(1.0), pp_fn = NULL, 
+                                  bg_side = NA){
   
   library(ggpubr); register_google(key = api.key)
 
   # figure name --
   traj_path = file.path(store_path, 'out_forward')
-  plot_path = file.path(traj_path, 'plot'); dir.create(plot_path, showWarnings = F)
+  plot_path = file.path(traj_path, 'plot', sensor_ver)
+  dir.create(plot_path, showWarnings = F)
 
   cat(paste('\n\n# --------------------------------- #\n',
       'calc.bg.forward.trajec(): loading satellite obs and forward trajec for', 
@@ -43,18 +46,22 @@ calc.bg.forward.trajec = function(site, timestr, sensor, sensor_path, sensor_gas
 
   # revise column names for OCO data ------------------------------------------
   if ( grepl('OCO', sensor) ) 
-    obs_df = obs_df %>% rename(val = xco2, val_uncert = xco2.uncert, time_utc = timestr) 
+    obs_df = obs_df %>% rename(val = xco2, val_uncert = xco2.uncert, 
+                               time_utc = timestr) 
   
   # rename columne names for TROPOMI data -------------------------------------
   if ( grepl('TROPOMI', sensor)) {
     obs_df = obs_df %>% rename(lon = center_lon, lat = center_lat) %>% 
                         mutate(time_utc = substr(time_utc, 1, 10))
-    if (sensor_gas == 'CO' ) obs_df = obs_df %>% rename(val = xco, val_uncert = xco_uncert)
-    if (sensor_gas == 'NO2') obs_df = obs_df %>% rename(val = tno2, val_uncert = tno2_uncert)
-    if (sensor_gas == 'CH4') obs_df = obs_df %>% rename(val = ch4_bc, val_uncert = ch4_uncert)
+    if (sensor_gas == 'CO' ) 
+      obs_df = obs_df %>% rename(val = xco, val_uncert = xco_uncert)
+    if (sensor_gas == 'NO2') 
+      obs_df = obs_df %>% rename(val = tno2, val_uncert = tno2_uncert)
+    if (sensor_gas == 'CH4') 
+      obs_df = obs_df %>% rename(val = ch4_bc, val_uncert = ch4_uncert)
 
     # change to use orbit as ref, instead of timestr, DW, 05/25/2021
-    # since TROPOMI does not have orbit like OCO, create fake 'orbit' based on timestr
+    # as TROPOMI does not have swath, create fake 'orbit' based on timestr
     uni_time = obs_df %>% distinct(time_utc) %>% mutate(orbit = row_number())
     obs_df = obs_df %>% left_join(uni_time, by = 'time_utc')
   }  # end if
@@ -68,7 +75,8 @@ calc.bg.forward.trajec = function(site, timestr, sensor, sensor_path, sensor_gas
   for ( tt in 1 : length(orbit) ) {
 
     if (length(orbit) > 1) 
-      cat(paste('\n\nFound multiple orbits in a day => working on orbit #', orbit[tt], '\n'))
+      cat(paste('\n\nFound multiple orbits in a day => working on orbit #', 
+                orbit[tt], '\n'))
 
     # change to use orbit as ref, instead of timestr, DW, 05/25/2021
     #obs_tmp = obs_df %>% filter(time_utc == timestr[tt])
@@ -87,7 +95,7 @@ calc.bg.forward.trajec = function(site, timestr, sensor, sensor_path, sensor_gas
     # recp_info - df of receptor info (e.g., lat, lon, time, numpar, etc.)
     # sel_traj - df of trajectories during overpass duration
     # densf  - df of fitted 2D kernel density of the particles distribution
-    # obs_tmp - df of modified obs with @param plmTF for those within urban plume 
+    # obs_tmp - df of modified obs with plmTF for those within urban plume 
     # plm_df - df of lat/lon coordinates of urban plume
     recp_box  = plm_list$recp_box
     recp_info = plm_list$recp_info
@@ -110,27 +118,32 @@ calc.bg.forward.trajec = function(site, timestr, sensor, sensor_path, sensor_gas
     # 3. if there is an intersect, calculate the background over upwind region
     if (intersectTF) {
       rds_fn = paste0('obs_plume_', site, '_', timestr_tmp, '_', sensor, 
-                      '_', sensor_gas, '_qf', qfTF, '.rds')
+                      '_', sensor_gas, '_', sensor_ver, '_qf', qfTF, '.rds')
+      if (sensor == 'TROPOMI') 
+        rds_fn = paste0('obs_plume_', site, '_', timestr_tmp, '_', sensor, 
+                        '_', sensor_gas, '_qf', qfTF, '.rds')
       saveRDS(obs_tmp, file = file.path(traj_path, rds_fn)) 
 
       # get background values
       bg_tmp = calc.bg.upwind(site_lon, site_lat, obs_df = obs_tmp, sensor, 
                               sensor_gas, bg_deg, perc = 0.1, bin_deg, 
                               rm_outlierTF, plotTF = T, plot_path, map) 
-      if (!is.null(bg_tmp)) bg_tmp = bg_tmp %>% mutate(timestr = timestr_tmp) %>% 
-                                                relocate(timestr, .before = swath)                         
+      if (!is.null(bg_tmp)) 
+        bg_tmp = bg_tmp %>% mutate(timestr = timestr_tmp) %>% 
+                 relocate(timestr, .before = swath)                         
     } else bg_tmp = NULL
 
 
     # ----------------------------------------------------------------------- #
     # 4. call plot.urban.plume to generate figure 
-    picname = file.path(plot_path, paste0('forward_plume_', site, '_', timestr_tmp, '_', 
-                                          met, '_', sensor, '_', sensor_gas, '.png'))
+    picname = paste0('forward_plume_', site, '_', timestr_tmp, '_', met, '_', 
+                      sensor, '_', sensor_gas, '.png')
+    picname = file.path(plot_path, picname)
     
     p1 = plot.bg(site, site_lon, site_lat, sensor, sensor_gas, recp_box, 
                  recp_info, sel_traj, densf, obs_df = obs_tmp, plm_df, 
-                 intersectTF, bg_df = bg_tmp, bg_deg, bin_deg, map, td, 
-                 picname, font.size, pp_fn) 
+                 intersectTF, bg_df = bg_tmp, bg_side, bg_deg, bin_deg, map, 
+                 td, picname, font.size, pp_fn) 
     
     # store all background info
     bg_df = rbind(bg_df, bg_tmp)

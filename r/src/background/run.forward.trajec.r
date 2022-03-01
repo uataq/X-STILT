@@ -156,7 +156,7 @@ run.forward.trajec = function(site, site_lon, site_lat, timestr,
   # parasm for getting error stats ----------------------------------
   namelist = list(run_hor_err = run_hor_err, run_ver_err = run_ver_err, 
                   run_wind_err = run_wind_err, zisf = zisf, odiac_path = NULL, 
-                  raob_path = raob_path, nhrs = nhrs, met = met, 
+                  raob_path = raob_path, nhrs = nhrs, numpar = numpar, met = met, 
                   met_path = met_path, met_file_format = met_file_format, 
                   agl = c(0, 100), store_path = store_path)
 

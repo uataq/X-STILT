@@ -119,7 +119,8 @@ get.wgt.oco.func = function(output, oco.path, oco.fn = NA) {
 
 	# dry air column density in mol m-2, 100 for converting pres from hPa to Pa
 	xdry.tot = 1 / g / Mdry * oco.psfc * 100 - oco.xh2o   
-	sel.p = sel.p %>% mutate(xdry = (1 - q) / g / Mdry * dp * 100, pwf = xdry / xdry.tot)
+	sel.p = sel.p %>% mutate(xdry = (1 - q) / g / Mdry * dp * 100, 
+							 pwf = xdry / xdry.tot)		# xdry for total column
 
 	# lastly locate the OCO-2 levels that above the STILT particles 
 	min.pres.xstilt = min(sel.p$xpres)
@@ -132,8 +133,10 @@ get.wgt.oco.func = function(output, oco.path, oco.fn = NA) {
 
 
     ## ----- Combine all interpolated OCO-2 profiles and calculating AK_norm *PWF
-	lower.df = sel.p %>% dplyr::select(ak.norm, pwf, xpres, ap, indx) %>% rename(pres = xpres)
-	combine.prof = rbind(lower.df, upper.oco.df) %>% mutate(ak.pwf = ak.norm * pwf)
+	lower.df = sel.p %>% dplyr::select(ak.norm, pwf, xpres, ap, indx) %>% 
+			   rename(pres = xpres)
+	combine.prof = rbind(lower.df, upper.oco.df) %>% 
+				   mutate(ak.pwf = ak.norm * pwf)
 
 
 	# NOW ALL PROFILES CONTAIN--pressure, pressure weighting, normalized ak,

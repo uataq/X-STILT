@@ -13,9 +13,9 @@
 # add PW and Ak weighting for trajec with error and fix a bug, DW, 10/21/2018
 # minor bug and typo fixed for weighting trajec with error, DW, 02/21/2019 
 # minor update for using OCO-3 data, i.e., change variable names, DW, 06/28/2020
-# stop generating a new "wgttraj.rds", merge two columns of footprint in one file
+# stop generating a new "wgttraj.rds", merge two columns of footprint in 1 file
 #    to reduce the storage, DW, 07/03/2020 
-# interpolate vertical profiles onto each particle instead of each release level, 
+# interpolate vertical profiles to each particle instead of each release level, 
 #    due to changes in HYSPLIT compiler, DW, 07/07/2020
 
 # oco.fn can be NA for ideal simulation by setting ak.wgt as FALSE (AK = 1), DW, 12/06/2020
@@ -36,7 +36,7 @@ wgt.trajec.foot = function(output, oco.fn = NA, ak.wgt = T, pwf.wgt = T){
 	# ------------------------------------------------------------------------ #
 	# double check to see if 'foot_before_weight' exists, DW, 07/03/2020
 	# if TRUE, it means that footprint has been weighted by AK and PW, 
-	# so, use 'foot_before_weight' as initial footprint ('foot') to redo the weighting
+	# use 'foot_before_weight' as initial footprint ('foot') to redo weighting
 	if ( 'foot_before_weight' %in% colnames(trajdat) ) 
 		trajdat = trajdat %>% dplyr::select(-starts_with('ak.norm'), 
 											-starts_with('pwf'), 
@@ -52,16 +52,15 @@ wgt.trajec.foot = function(output, oco.fn = NA, ak.wgt = T, pwf.wgt = T){
 		trajdat.err = output$particle_error %>% arrange(abs(time)) 
 
 		if ( 'foot_before_weight' %in% colnames(trajdat.err) ) 
-			trajdat.err = trajdat.err %>% dplyr::select(-starts_with('ak.norm'), 
-														-starts_with('pwf'), 
-														-starts_with('ap'), 
-														-starts_with('ak.pwf'), 
-														-starts_with('wgt'), 
-														-c('foot', 'stiltTF')) %>% 
-				  			  			  dplyr::rename(foot = foot_before_weight)
+			trajdat.err = trajdat.err %>% 
+						  dplyr::select(-starts_with('ak.norm'), 
+										-starts_with('pwf'), 
+										-starts_with('ap'), 
+										-starts_with('ak.pwf'), 
+										-starts_with('wgt'), 
+										-c('foot', 'stiltTF')) %>% 
+				  		  rename(foot = foot_before_weight)
 
-			#trajdat.err[, c('foot', 'ak.norm', 'pwf', 'ap', 'ak.pwf', 'stiltTF', 'wgt')] = NULL
-			#trajdat.err = trajdat.err %>% dplyr::rename(foot = foot_before_weight)
 	}	# end if errTF
 
 
@@ -73,7 +72,8 @@ wgt.trajec.foot = function(output, oco.fn = NA, ak.wgt = T, pwf.wgt = T){
 	# if ak.wgt == TRUE, keep OCO dependence, DW, 09/15/2020 
 	# use retrieved surface pressure and height for pressure weighting
 	# use retrieved Ak for AK weighting
-	if (ak.wgt) xstilt.prof = get.wgt.oco.func(output = output, oco.fn = oco.fn) %>% 
+	if (ak.wgt) xstilt.prof = get.wgt.oco.func(output = output, 
+											   oco.fn = oco.fn) %>% 
 				    		  dplyr::select(c('indx', 'ak.norm', 'pwf', 'ap', 
 							   				  'ak.pwf', 'stiltTF')) %>% 
 							  filter(stiltTF == TRUE)
@@ -84,7 +84,7 @@ wgt.trajec.foot = function(output, oco.fn = NA, ak.wgt = T, pwf.wgt = T){
 	# need to multiple PWF for model levels with number of particles 
 	# since calc_footprint() calculates the average spatial foot based on trajec-level foot
 	
-	# perform weighting for each particle or level, so merge xstilt.prof with trajdat 
+	# perform weighting for each particle or level
 	npar = max(trajdat$indx)
 	trajdat.wgt = trajdat %>% left_join(xstilt.prof, by = 'indx') 
 	if (ak.wgt == T & pwf.wgt == T) trajdat.wgt$wgt = trajdat.wgt$ak.pwf * npar
@@ -97,9 +97,12 @@ wgt.trajec.foot = function(output, oco.fn = NA, ak.wgt = T, pwf.wgt = T){
 
 	if (errTF) {
 		trajdat.err.wgt = trajdat.err %>% left_join(xstilt.prof, by = 'indx') 
-		if (ak.wgt == T & pwf.wgt == T) trajdat.err.wgt$wgt = trajdat.err.wgt$ak.pwf * npar
-		if (ak.wgt == F & pwf.wgt == T) trajdat.err.wgt$wgt = trajdat.err.wgt$pwf * npar 
-		if (ak.wgt == T & pwf.wgt == F) trajdat.err.wgt$wgt = trajdat.err.wgt$ak.norm 
+		if (ak.wgt == T & pwf.wgt == T) 
+			trajdat.err.wgt$wgt = trajdat.err.wgt$ak.pwf * npar
+		if (ak.wgt == F & pwf.wgt == T) 
+			trajdat.err.wgt$wgt = trajdat.err.wgt$pwf * npar 
+		if (ak.wgt == T & pwf.wgt == F) 
+			trajdat.err.wgt$wgt = trajdat.err.wgt$ak.norm 
 		trajdat.err.wgt = trajdat.err.wgt %>% mutate(foot_wgt = foot * wgt) %>% 
 						  rename(foot_before_weight = foot, foot = foot_wgt)
 		output$particle_error = trajdat.err.wgt

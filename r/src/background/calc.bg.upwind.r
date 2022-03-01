@@ -124,7 +124,8 @@ get.plm.stat = function(obs_df, perc) {
 # --------------------------------------------------------------------------- #
 # inner function to subset observations
 # if for TROPOMI (no swath available), create mini lat/lon bins
-select.obs.side = function(obs_df, sensor, bg.side, bg_deg, perc = 0.1, bin_deg = 0.3) {
+select.obs.side = function(obs_df, sensor, bg.side, bg_deg, perc = 0.1, 
+                           bin_deg = 0.3) {
     
     # for northern or southern bg, bin up longitudes --------------------------
     if ( bg.side %in% c('north', 'south') & sensor == 'TROPOMI' ) {
