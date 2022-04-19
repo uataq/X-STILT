@@ -25,7 +25,7 @@ ggmap.xfoot.obs <- function(mm, site, oco.ver = NULL, oco.path = NULL, timestr,
 
   if (!is.null(oco.path)) {
     cat('Reading satellite data according to the spatial domain of ggmap...\n')
-    obs <- grab.oco(oco.path, timestr, lon.lat = map.ext, oco.ver)
+    obs <- grab.oco(oco.path, timestr, lon.lat = map.ext)
     if (qfTF) obs <- obs %>% filter(qf == 0)
   }
 
