@@ -98,10 +98,10 @@ find.overpass = function(date.range, lon.lat, oco.ver = 'V10r', oco.path,
 
       # also search for soundings near city center,
       if (urbanTF) {
-        urban.dat = obs %>% filter(lon >= (lon.lat$citylon - dlon),
-                                   lon <= (lon.lat$citylon + dlon),
-                                   lat >= (lon.lat$citylat - dlat),
-                                   lat <= (lon.lat$citylat + dlat))
+        urban.dat = obs %>% filter(lon >= (lon.lat$site_lon - dlon),
+                                   lon <= (lon.lat$site_lon + dlon),
+                                   lat >= (lon.lat$site_lat - dlat),
+                                   lat <= (lon.lat$site_lat + dlat))
         
         tot.count2 = urban.dat %>% count(orbit)
         qf.count2  = urban.dat %>% filter(qf == 0) %>% count(orbit)

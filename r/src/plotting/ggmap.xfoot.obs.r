@@ -71,7 +71,7 @@ ggmap.xfoot.obs <- function(mm, site, oco.ver = NULL, oco.path = NULL, timestr,
       p2 <- p2 + facet_wrap(~ fac, nrow = facet.nrow) +
                  theme(strip.text = element_text(size = font.size))
 
-  # draw a rectangle around the city
+  # draw a rectangle around the site_
   #lon.lat <- get.lon.lat(site, dlon = 0.25, dlat = 0.25)
   #d <- data.frame(x = c(lon.lat$minlon, rep(lon.lat$maxlon, 2), lon.lat$minlon),
   #                y = c(rep(lon.lat$minlat, 2), rep(lon.lat$maxlat, 2)))

@@ -8,8 +8,8 @@
 
 ggmap.obs.xco2 <- function(site, timestr, oco.sensor = c('OCO-2', 'OCO-3')[2], 
                            oco.ver, oco.path, lon.lat, plotdir, zoom = 8, 
-                           qfTF = F, box.dlat = 0.5, box.dlon = 0.5, size = 0.8, 
-                           font.size = rel(0.9)){
+                           qfTF = F, box.dlat = 0.5, box.dlon = 0.5, 
+                           size = 0.8, font.size = rel(0.9)){
 
   library(ggmap); library(ggplot2); library(ggpubr)
   obs.all <- grab.oco(oco.path, timestr, lon.lat)
@@ -21,19 +21,21 @@ ggmap.obs.xco2 <- function(site, timestr, oco.sensor = c('OCO-2', 'OCO-3')[2],
   
   # plot google map
   alpha <- 1; col <- def.col()
-  m1 <- ggplot.map(map = 'ggmap', zoom = zoom, center.lat = lon.lat$citylat,
-                   center.lon = lon.lat$citylon)[[1]]
+  m1 <- ggplot.map(map = 'ggmap', zoom = zoom, center.lat = lon.lat$site_lat,
+                   center.lon = lon.lat$site_lon)[[1]]
 
   if (qfTF) {
     #c1 <- m1 + geom_point(data = qf.obs, aes(lon, lat, colour = xco2), size = size)
-    c1 <- m1 + geom_polygon(data = qf.obs, aes(lons, lats, fill = xco2, group = indx), 
+    c1 <- m1 + geom_polygon(data = qf.obs, aes(lons, lats, fill = xco2, 
+                                               group = indx), 
                             alpha = 0.9, color = NA, size = 0.5)
     min.y <- min(qf.obs$xco2, na.rm = T)
     max.y <- max(qf.obs$xco2, na.rm = T)
 
   } else {
     #c1 <- m1 + geom_point(data = obs.all, aes(lon, lat, colour = xco2), size = size)
-    c1 <- m1 + geom_polygon(data = obs.all, aes(lons, lats, fill = xco2, group = indx), 
+    c1 <- m1 + geom_polygon(data = obs.all, aes(lons, lats, fill = xco2, 
+                                                group = indx), 
                             alpha = 0.9, color = NA, size = 0.5)
     min.y <- min(obs.all$xco2, na.rm = T)
     max.y <- max(obs.all$xco2, na.rm = T)
@@ -43,16 +45,18 @@ ggmap.obs.xco2 <- function(site, timestr, oco.sensor = c('OCO-2', 'OCO-3')[2],
   c1 <- c1 + theme_bw() + 
         labs(x = 'LONGITUDE', y = 'LATITUDE', 
              title = paste(oco.sensor, 'XCO2 [ppm] for', site, 'on', timestr)) +
-        scale_fill_gradientn(name = paste(oco.sensor, 'XCO2 [ppm]'), colours = col,
+        scale_fill_gradientn(name = paste(oco.sensor, 'XCO2 [ppm]'), 
+                             colours = col,
                              limits = c(max(390, min.y), max.y), 
-                             breaks = seq(380, 450, 2), labels = seq(380, 450, 2)) 
+                             breaks = seq(380, 450, 2), 
+                             labels = seq(380, 450, 2)) 
 
-  # draw a rectangle around the city
-  d <- data.frame(x = c(lon.lat$citylon - box.dlon, 
-                        rep(lon.lat$citylon + box.dlon, 2), 
-                        lon.lat$citylon - box.dlon),
-                  y = c(rep(lon.lat$citylat - box.dlat, 2), 
-                        rep(lon.lat$citylat + box.dlat, 2)))
+  # draw a rectangle around the site_
+  d <- data.frame(x = c(lon.lat$site_lon - box.dlon, 
+                        rep(lon.lat$site_lon + box.dlon, 2), 
+                        lon.lat$site_lon - box.dlon),
+                  y = c(rep(lon.lat$site_lat - box.dlat, 2), 
+                        rep(lon.lat$site_lat + box.dlat, 2)))
 
   d <- rbind(d, d[1,])
   c2 <- c1 + geom_path(data = d, aes(x, y), linetype = 2, size = 0.5,
@@ -70,7 +74,9 @@ ggmap.obs.xco2 <- function(site, timestr, oco.sensor = c('OCO-2', 'OCO-3')[2],
                    title = element_text(size = font.size))
 
   # plot on latitude-series
-  l1 <- ggplot() + theme_bw() + labs(y = paste(oco.sensor, 'XCO2 [ppm]'), x = 'LATITUDE')
+  l1 <- ggplot() + theme_bw() + 
+        labs(y = paste(oco.sensor, 'XCO2 [ppm]'), x = 'LATITUDE')
+        
   if (qfTF) {
     l1 <- l1 + geom_point(data = qf.obs, aes(lat, xco2), size = size + 0.5, 
                           colour = 'black', shape = 17)

@@ -5,11 +5,17 @@
 #' A. run_trajec == T or run_foot == T: run trajectory or footprint, simulations
 #' A1. if run_hor_err == T or run_ver_err == T 
 #'     X-STILT generates trajec with perturbations from wind or PBL errors.
-#'         along with traj-level CO2 and its error statistics to info.rds files
+#'     along with traj-level CO2 and its error statistics (see AA1 for stats)
+# -----------------------------------------------------------------------------
+#' AA1. if run_hor_err == T & run_wind_err == T
+#'      X-STILT calculates wind uncertainties and biases using NOAA radiosonde
+#'      data, one needs to download FSL data from https://ruc.noaa.gov/raobs/
+#'      and put data under @param raob_path as @param raob_fn
+# -----------------------------------------------------------------------------
 #' A2. if run_emiss_err == T 
 #'     X-STILT generates trajec and footprint with a resolution of 0.1deg, 
 #'     since the absolute emission error has res of 0.1deg. 
-#'
+#' -----------------------------------------------------------------------------
 #' B. run_trajec == F & run_foot == F & run_sim = T: requires trajec and foot
 #'    X-STILT models XCO2 enhancements based on FFCO2 emission from 1km ODIAC;
 #'                or XCO2 errors due to emission errors (run_emiss_err == T);
@@ -20,7 +26,7 @@
 #' *** PW is calculated using modeled met variables (@param pwf_wgt == TRUE)
 #' *** The user NEEDS to provide a txt or csv file for receptor locations
 #' *** correct file should include long, lat, and time (optional, YYYYMMDDHH). 
-#' *** You can also assign your receptor time to @param timestr. HOWEVER it'll 
+#' *** You can also assign your receptor time to @param timestr . HOWEVER it'll 
 #' *** overwrite the existing time column in the receptor file if there is. 
 # ---------------------------------------------------------------------------
 # 
@@ -40,6 +46,8 @@
 #' stop passing @param sensor.ver to config_xstilt, as it was used for OCO 
 # warn levels in OCO-2 v7r or v8r, DW, 07/23/2021
 
+#' update functions for carrying out transport error for XCO2 or tNO2, DW, 04/23/2022 (see A1 and AA1 above)
+
 
 # ----------- Dependencies and API key for geolocation (must-have) ---------- #
 ## go to X-STILT dir and source functions and libraries
@@ -47,19 +55,19 @@ homedir   = '/central/home/dienwu'
 xstilt_wd = file.path(homedir, 'models/X-STILT') 
 setwd(xstilt_wd); source('r/dependencies.r')
 
-# ------------------------ City params (must-have) -------------------------- #
-cat('Enter your city name: ')
+# --------------------- Site location params (must-have) --------------------- #
+cat('Enter your site name: ')
 site = readLines('stdin', n = 1); print(site)
 
 # define entire- and inner urban- domain (affect receptor # if num_* is not NA)
 dlon = 1           # e.g., dlon of 0.5 means 1 x 1 degree box around the site
 dlat = 1       
-urban_dlon = 0.3     # urban box defined as city.lat +/- dlat, city.lon +/- dlon
+urban_dlon = 0.3     # urban box defined as site.lat +/- dlat, site.lon +/- dlon
 urban_dlat = 0.3     # dlat/dlon in degrees 
 
-# automatically obtain the city lat/lon (requires Google API key)
-# OR mannually insert coordinates, set city.loc = data.frame(lon = , lat = )
-lon_lat = get.lon.lat(site, dlon, dlat, city.loc = NULL)
+# automatically obtain the site lat/lon (requires Google API key)
+# OR mannually insert coordinates, set site.loc = data.frame(lon = , lat = )
+lon_lat = get.lon.lat(site, dlon, dlat, site.loc = NULL)
 
 
 # ------------------------ I/O params (must-have) --------------------------- #
@@ -71,7 +79,6 @@ store_path  = file.path(input_path, 'XSTILT_output', site)
 obs_sensor  = c('OCO-2', 'OCO-3', 'TROPOMI', NA)[3]
 obs_ver     = c('V10r', 'VEarlyR', NA)[3]       # retrieval algo ver if there is
 obs_species = c('CO2', 'CO', 'NO2', 'CH4')[4]   # only allow 1 species at 1 time
-
 oco_path = file.path(input_path, obs_sensor, paste0('L2_Lite_FP_', obs_ver))
 sif_path = file.path(input_path, obs_sensor, paste0('L2_Lite_SIF_', obs_ver))
 trp_path = file.path(input_path, obs_sensor, obs_species)
@@ -91,7 +98,8 @@ if (is.na(obs_sensor)) {                # X-simulations WOUT satellite data
 }
 
 # paths for radiosonde, ODIAC, chemical transport model (optional) -------------
-raob_path  = file.path(input_path, 'RAOB', site)  # NOAA radiosonde
+raob_path = file.path(input_path, 'XSTILT_dep/RAOB')  # NOAA radiosonde
+raob_fn   = list.files(raob_path, '.tmp', full.names = T)
 odiac_ver  = c('2019', '2020')[2]         # ODIAC version
 odiac_path = file.path(input_path, 'ODIAC', paste0('ODIAC', odiac_ver))  
 
@@ -181,8 +189,8 @@ ak_wgt  = TRUE         # *** if obs_sensor is NA, ak_wgt is forced as FALSE
 pwf_wgt = TRUE
 if (is.na(obs_sensor)) ak_wgt = FALSE 
 
-# footprint spatial domain defined as city.lat +/- foot_dlat and 
-# city.lon +/- foot_dlon in degrees, 10 here meaning 20 x 20deg box around city
+# footprint spatial domain defined as site.lat +/- foot_dlat and 
+# site.lon +/- foot_dlon in degrees, 10 here meaning 20 x 20deg box around site
 foot_dlat = 10     
 foot_dlon = 10 
 
@@ -273,7 +281,7 @@ namelist = list(ak_wgt = ak_wgt, ct_ver = ct_ver, ctflux_path = ctflux_path,
                 obs_sensor = obs_sensor, obs_species = obs_species, 
                 odiac_path = odiac_path, odiac_ver = odiac_ver, 
                 projection = projection, pwf_wgt = pwf_wgt, 
-                raob_path = raob_path, recp_fn = recp_fn, 
+                raob_fn = raob_fn, recp_fn = recp_fn, 
                 run_emiss_err = run_emiss_err, run_foot = run_foot, 
                 run_hor_err = run_hor_err, run_sim = run_sim, 
                 run_trajec = run_trajec, run_ver_err = run_ver_err, 
@@ -284,8 +292,7 @@ namelist = list(ak_wgt = ak_wgt, ct_ver = ct_ver, ctflux_path = ctflux_path,
                 time_integrate = time_integrate, 
                 time_integrate2 = list(time_integrate2), 
                 timeout = timeout, timestr = timestr, urban_dlat = urban_dlat, 
-                varstrajec = varstrajec, xstilt_wd = xstilt_wd, 
-                zisf = zisf)      
+                varstrajec = varstrajec, xstilt_wd = xstilt_wd, zisf = zisf)
 cat('Done with creating namelist...Configuring\n\n')
 config_xstilt(namelist)  # start X-STILT, either calc traj, foot or simulation
 q('no')

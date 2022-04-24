@@ -42,9 +42,10 @@ plot.urban.plume = function(site, site_lon, site_lat, sensor, sensor_gas,
     # and the outmost curve of interpolated urban plume with black line
     if (grepl('OCO', sensor)) { alphas = c(0.5, 0.9); unit = ' [ppm]' }
     if (grepl('TROPOMI', sensor)) { alphas = c(0.4, 0.8); unit = ' [ppb]' }
+    if (sensor == 'OCO-2') { sz = 0.05 } else sz = 0.2
     p2 = p1 + geom_polygon(data = obs_df, aes(lons, lats, fill = val, 
                                               group = polygon, alpha = plmTF), 
-                           colour = 'gray60', size = 0.2) +
+                           colour = 'gray60', size = sz) +
               scale_alpha_manual(name = NULL, values = alphas) + 
               guides(alpha = F) + #ylim(c(30.5, 32.5)) + xlim(c(119.8, 122)) +
               scale_fill_gradientn(colours = def.col(), #limits = c(412, 420), 
@@ -79,7 +80,7 @@ plot.urban.plume = function(site, site_lon, site_lat, sensor, sensor_gas,
       obs_bg = blist$obs_bg
       p4 = p3 + geom_polygon(data = obs_bg, aes(lons, lats, fill = val, 
                              group = polygon), 
-                             color = 'gray20', alpha = 0.3, size = 0.2) 
+                             color = 'gray20', alpha = 0.3, size = sz) 
       
       # ---------------------------------------------------------------------- 
       # plot enhanced concentrations, DW, 05/25/2021
@@ -107,11 +108,11 @@ plot.urban.plume = function(site, site_lon, site_lat, sensor, sensor_gas,
       e1 = map + labs(x = 'LONGITUDE', y = 'LATITUDE', title = title) +
            geom_polygon(data = obs_rev, aes(lons, lats, fill = ff, 
                                            group = polygon, alpha = plmTF), 
-                        colour = 'gray60', size = 0.2) +
+                        colour = 'gray60', size = sz) +
            geom_polygon(data = plm_df, aes(X, Y), colour = 'gray10', 
                         fill = NA, size = 0.9, alpha = 0.5) +
            geom_polygon(data = obs_bg, aes(lons, lats, group = polygon), 
-                        fill = NA, color = bg.col, size = 0.3) +
+                        fill = NA, color = bg.col, size = sz) +
            scale_alpha_manual(name = NULL, values = alphas) + 
            guides(alpha = F) + 
            scale_fill_gradientn(colours = def.col(), 

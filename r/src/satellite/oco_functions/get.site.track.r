@@ -89,7 +89,7 @@ get.site.track = function(site, oco.sensor, oco.ver, oco.path, searchTF = FALSE,
     # track selection, whether to remove summtertime tracks
     if (rmTF) {
 
-      if (lon.lat$citylat > 0) {    # northern Hemi
+      if (lon.lat$site_lat > 0) {    # northern Hemi
         oco.track = oco.track %>% filter(substr(timestr, 5, 6) < '05' | 
                                          substr(timestr, 5, 6) > '08')
       } else oco.track = oco.track %>% filter(substr(timestr, 5, 6) < '12' & 

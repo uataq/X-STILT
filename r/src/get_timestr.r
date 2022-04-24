@@ -65,7 +65,7 @@ get_timestr = function(site, lon_lat, obs_sensor, obs_ver = 'V10r', obs_path,
 
     } else if ( grepl('TROPOMI', obs_sensor) ) {
 
-        # Since TROPOMI has daily coverage, no need to look for overpass info for a city
+        # as TROPOMI has daily coverage, no need to look for overpass info for your site
         # *** NOW choose the timestr that you'd like to work on..
         cat('\n\nSince TROPOMI possesses daily coverage, no need to search for overpass info\n')
         cat('Instead please enter the TROPOMI overpass time in format of YYYYMMDD:\n')
@@ -79,6 +79,6 @@ get_timestr = function(site, lon_lat, obs_sensor, obs_ver = 'V10r', obs_path,
     #    timestr = readLines('stdin', n = 1)#as.numeric()
     #}   
 
-    #cat(paste('Working on:', timestr, 'for city/region:', site, '...\n\n'))
+    #cat(paste('Working on:', timestr, 'for site/region:', site, '...\n\n'))
     #return(timestr)
 }

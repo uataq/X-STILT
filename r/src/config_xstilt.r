@@ -70,10 +70,10 @@ config_xstilt = function(namelist){
   met_subgrid_levels = namelist$met_subgrid_levels
 
   # Footprint params ----------------------------------------------------------
-  xmn  = round(lon_lat$citylon) - namelist$foot_dlon
-  xmx  = round(lon_lat$citylon) + namelist$foot_dlon
-  ymn  = round(lon_lat$citylat) - namelist$foot_dlat
-  ymx  = round(lon_lat$citylat) + namelist$foot_dlat
+  xmn  = round(lon_lat$site_lon) - namelist$foot_dlon
+  xmx  = round(lon_lat$site_lon) + namelist$foot_dlon
+  ymn  = round(lon_lat$site_lat) - namelist$foot_dlat
+  ymx  = round(lon_lat$site_lat) + namelist$foot_dlat
   xres = namelist$foot_res
   yres = namelist$foot_res
   xres2 = namelist$foot_res2
@@ -100,7 +100,7 @@ config_xstilt = function(namelist){
 
   # Compute XCO2 using existing traj & foot ------------------------------------
   # calculate XCO2 concentration and its error (need trajec and footprint ready)
-  if ( !run_trajec & !run_foot & run_sim & obs_species == 'CO2') {
+  if ( !run_trajec & !run_foot & run_sim & obs_species == 'CO2' ) {
 
     # ------------------------  Horizontal trans error ---------------------- #
     ### simulate transport error in XCO2 due to met errors, DW, 07/25/2018
@@ -163,8 +163,8 @@ config_xstilt = function(namelist){
 
   } else {    # IF for simulations using satellite data
 
-    peak_lat = c(lon_lat$citylat - namelist$urban_dlat, 
-                 lon_lat$citylat + namelist$urban_dlat)
+    peak_lat = c(lon_lat$site_lat - namelist$urban_dlat, 
+                 lon_lat$site_lat + namelist$urban_dlat)
     num_bg   = namelist$num_bg 
     num_peak = namelist$num_peak 
 
@@ -253,7 +253,9 @@ config_xstilt = function(namelist){
   wvert       = FALSE
   w_option    = 0
   zicontroltf = 0
-  z_top       = 25000; if (toupper(met) == 'NARR') z_top = 15000 
+  z_top       = 25000
+  if (toupper(met) == 'NARR') z_top = 15000 
+  
 
   # Aggregate STILT/HYSPLIT namelist
   simstep_namelist = list(capemin = capemin, cmass = cmass, conage = conage,
@@ -283,8 +285,9 @@ config_xstilt = function(namelist){
   
   # Get error stats if needed -------------------------------------------------
   # Calculating error stats for horizontal and vertical transport errors
-  errlist  = config_trans_err(namelist, site, lon_lat, timestr, 
-                              xstilt_wd, simstep_namelist)
+  errlist = config_trans_err(namelist, site, lon_lat, timestr, xstilt_wd, 
+                             simstep_namelist)
+  
   hor_err  = errlist$hor_err 
   pbl_err  = errlist$pbl_err 
   emiss_fn = errlist$emiss_fn 
@@ -332,10 +335,9 @@ config_xstilt = function(namelist){
   source('r/dependencies.r')
 
 
-  # Structure out directory ------------------------------------------------------
+  # Structure out directory ----------------------------------------------------
   # Outputs are organized in three formats. by-id contains simulation files by
-  # unique simulation identifier. particles and footprints contain symbolic links
-  # to the particle trajectory and footprint files in by-id
+  # unique simulation identifier. particles and footprints contain symbolic links to the particle trajectory and footprint files in by-id
   system(paste0('rm -r ', output_wd, '/footprints'), ignore.stderr = T)
   if (run_trajec) {
     system(paste0('rm -r ', output_wd, '/by-id'), ignore.stderr = T)

@@ -18,10 +18,10 @@ api.key = readLines('insert_ggAPI.csv'); register_google(key = api.key)
 
 
 #------------------------------ STEP 1 --------------------------------------- #
-site      = 'SanFrancisco'  # insert target city
+site      = 'SanFrancisco'  # insert target site
 lon_lat   = get.lon.lat(site = site, dlon = 1, dlat = 2)
-site_lon  = lon_lat$citylon
-site_lat  = lon_lat$citylat
+site_lon  = lon_lat$site_lon
+site_lat  = lon_lat$site_lat
 
 # time string in format of YYYYMMDDHH or YYYYMMDD, can be a vector
 # If HH is NOT provided, one can provide the satellite path/file
@@ -54,11 +54,11 @@ siguverr     = 3            # if run_wind_err == F, specify wind RMSE value, m s
 # set zisf = 1 if run_ver_err = F
 zisf = c(0.6, 0.8, 1.0, 1.2, 1.4)[3]; if (!run_ver_err) zisf = 1.0       
 
-# release particles from a box around the city center -------------------------
+# release particles from a box around the site -------------------------
 # dxyp: if > 0, randomized horizontal release locations for this receptor 
 #       (xp +/- dxyp, yp +/- dxyp instead of xp, yp) in units of x, y-grid lengths
 # Final box length = 2 * dxyp * met.res, DW, 06/30/2020
-# default box.len = 0.5 meaning 0.5 deg x 0.5 deg box around city center
+# default box.len = 0.5 meaning 0.5 deg x 0.5 deg box around site
 box.len = 0.3                   # specify the desired box size for recp in deg
 
 # time window for continuously release particles ------------------------------  

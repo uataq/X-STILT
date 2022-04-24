@@ -18,7 +18,7 @@
 # can work on multiple orbits, DW, 04/30/2021
 convert.timestr2ident = function(timestr, dtime, site_lon, site_lat, agl, numpar, dxyp) {
   
-  # get lat/lon for city center as well as time string
+  # get lat/lon for site_ center as well as time string
   clon = signif(site_lon, 6)
   clat = signif(site_lat, 6)
   lonstr = ifelse(clon > 0, paste0(clon, 'E'), paste0(abs(clon), 'W'))
@@ -65,7 +65,7 @@ find.all.metfiles = function(timestr, dtime, met_file_format, met_path, nhrs) {
                                              n_hours = nhrs, met_path = met_path))
   met.files = basename(unique(met.files))
   if (length(met.files) == 0) {
-    cat('find.all.metfiles(): No meteo fields found...please check\n'); return()}
+    cat('find.all.metfiles(): No meteo fields found...please check\n');return()}
 
   return(met.files)
 } # end of find.all.met.files
@@ -113,12 +113,13 @@ run.forward.trajec = function(site, site_lon, site_lat, timestr,
                 timestr, '; it takes a while\n'))
       
       # define spatial domain for grabbing satellite observations
-      lon_lat = data.frame(citylon = site_lon, citylat = site_lat, 
+      lon_lat = data.frame(site_lon = site_lon, site_lat = site_lat, 
                            minlon = site_lon - 1, maxlon = site_lon + 1, 
                            minlat = site_lat - 1, maxlat = site_lat + 1)
 
-      obs_df = get.sensor.obs(site, timestr, sensor, sensor_gas, sensor_fn = NULL,
-                              sensor_path, qfTF = F, tropomi_qa = 0, lon_lat)
+      obs_df = get.sensor.obs(site, timestr, sensor, sensor_gas, 
+                              sensor_fn = NULL, sensor_path, qfTF = F, 
+                              tropomi_qa = 0, lon_lat)
       
       if ( is.null(obs_df) ) return()
       if ( grepl('OCO', sensor) ) obs_df = obs_df %>% rename(time_utc = timestr)
@@ -141,7 +142,7 @@ run.forward.trajec = function(site, site_lon, site_lat, timestr,
   # for more info, please see get.uverr.r
   
   # define spatial domain for calculating wind error or grabbing overpass hours
-  err.lon.lat = data.frame(citylon = site_lon, citylat = site_lat, 
+  err.lon.lat = data.frame(site_lon = site_lon, site_lat = site_lat, 
                            minlon = site_lon - 5, maxlon = site_lon + 5, 
                            minlat = site_lat - 5, maxlat = site_lat + 5)
 

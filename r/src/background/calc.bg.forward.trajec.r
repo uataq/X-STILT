@@ -30,7 +30,7 @@ calc.bg.forward.trajec = function(site, timestr, sensor, sensor_path,
   # figure name --
   traj_path = file.path(store_path, 'out_forward')
   plot_path = file.path(traj_path, 'plot', sensor_ver)
-  dir.create(plot_path, showWarnings = F)
+  dir.create(plot_path, recursive = T, showWarnings = F)
 
   cat(paste('\n\n# --------------------------------- #\n',
       'calc.bg.forward.trajec(): loading satellite obs and forward trajec for', 
@@ -39,7 +39,7 @@ calc.bg.forward.trajec = function(site, timestr, sensor, sensor_path,
   # -------------------------------------------------------------------------- #
   # 1. call get.sensor.obs() to get satellite data, currently available include
   # OCO-2, OCO-3, TROPOMI CO, CH4, and NO2, DW, 07/06/2021
-  if (is.null(lon_lat)) lon_lat = get.lon.lat(site, dlat = 1.5, dlon = 1.5)
+  if (is.null(lon_lat)) lon_lat = get.lon.lat(site, 1.5, 1.5, api.key = api.key)
   obs_df = get.sensor.obs(site, timestr, sensor, sensor_gas, sensor_fn = NULL,
                           sensor_path, qfTF, tropomi_qa = sensor_qa, lon_lat)
   if ( is.null(obs_df) ) return()
@@ -105,8 +105,8 @@ calc.bg.forward.trajec = function(site, timestr, sensor, sensor_path,
     plm_df    = plm_list$plm_df
     td        = plm_list$td            # td may be updated
     intersectTF = plm_list$intersectTF
-    site_lon = lon_lat$citylon
-    site_lat = lon_lat$citylat
+    site_lon = lon_lat$site_lon
+    site_lat = lon_lat$site_lat
 
     # ----------------------------------------------------------------------- #
     # make google map for plotting

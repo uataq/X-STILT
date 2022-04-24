@@ -2,13 +2,13 @@
 # DW, 03/04/2021
 
 
-# ------------------------------------------------------------------------------ 
+# ---------------------------------------------------------------------------- 
 # td for threshold of normalized kernel density
 # dx, dy - larger the number, the urban plume appears to be less curvy
 fit.kde.plume = function(site, timestr, traj_path, obs_df, sensor, 
                          dx = 0.1, dy = 0.15, td = 0.15) {
 
-  # ---------------------------------------------------------------------------- 
+  # -------------------------------------------------------------------------- 
   # load trajec directories
   tlist = load_forward_traj(traj_path, sensor, timestr)
   trajdat = tlist$trajdat
@@ -121,8 +121,8 @@ fit.kde.plume = function(site, timestr, traj_path, obs_df, sensor,
     plm_df = plm_df[plg.xy, ]
   }  # end if multiple polygons
 
-
-  # ---------------------------------------------------------------------------- 
+  
+  # -------------------------------------------------------------------------- 
   # treat both OCO and TROPOMi grid as polygons, not points
   # select soundings whose polygon centers fall within the urban plume
   # use point.in.polygon, DW, 03/08/2021
@@ -135,7 +135,7 @@ fit.kde.plume = function(site, timestr, traj_path, obs_df, sensor,
   obs_df = obs_df %>% mutate(plmTF = polygon %in% uni_polygon)
 
 
-  # ---------------------------------------------------------------------------- 
+  # -------------------------------------------------------------------------- 
   # store intermediate figure even if there is no intersection
   # check to if there is any valid obs falling within the urban plume
   intersectTF = FALSE; if ('TRUE' %in% obs_df$plmTF) intersectTF = TRUE

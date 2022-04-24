@@ -13,8 +13,8 @@ ggmap.obs.sif <- function(site, timestr, oco.sensor, oco.ver, sif.path, lon.lat,
   font.size <- rel(1.0); col <- def.col()
 
   # plot google map
-  m1 <- ggplot.map(map = 'ggmap', zoom = zoom, center.lat = lon.lat$citylat,
-                   center.lon = lon.lat$citylon)[[1]] + theme_bw() + 
+  m1 <- ggplot.map(map = 'ggmap', zoom = zoom, center.lat = lon.lat$site_lat,
+                   center.lon = lon.lat$site_lon)[[1]] + theme_bw() + 
         labs(x = 'LONGITUDE', y = 'LATITUDE') + 
         theme(legend.position = 'right', legend.key = element_blank(), 
                    legend.text = element_text(size = font.size),

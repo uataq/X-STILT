@@ -39,7 +39,6 @@ if (!idealTF) {
 meanTF = TRUE 
 indx   = 35       # if plotting foot from one receptor, give it an index
 
-
 if (meanTF) {   # 1) If you wanna plot spatial mean footprint -----------------
 
     # load all footprints
@@ -47,7 +46,8 @@ if (meanTF) {   # 1) If you wanna plot spatial mean footprint -----------------
 
     # take spatial average, this could take a while given large # of receptors
     foot.rt = mean(foot.stk)  
-    picname = file.path(store.path, paste0('footprint_', site, '_', timestr, '_mean.png'))
+    picname = file.path(store.path, 
+                        paste0('footprint_', site, '_', timestr, '_mean.png'))
     recp.lat = recp.lon = NULL 
 
     # load map
@@ -61,8 +61,8 @@ if (meanTF) {   # 1) If you wanna plot spatial mean footprint -----------------
     foot.rt  = raster(foot.fns[indx])
     recp.lat = as.numeric(recp.info$V3[indx])
     recp.lon = as.numeric(recp.info$V2[indx])
-    picname = file.path(store.path, paste0('footprint_', site, '_', timestr, '_', 
-                                            recp.lat, '_', recp.lon, '.png'))
+    picname = file.path(store.path, paste0('footprint_', site, '_', timestr, 
+                                           '_', recp.lat, '_', recp.lon,'.png'))
     
     mm = ggplot.map(map = 'ggmap', maptype = 'roadmap', zoom = 7, 
                     center.lat = recp.lat, center.lon = recp.lon)
@@ -73,7 +73,6 @@ if (meanTF) {   # 1) If you wanna plot spatial mean footprint -----------------
 # plot footprint -------------------------------------------------
 # convert footprint from rasterLayer to data frame and rename it
 foot = as.data.frame(foot.rt, xy = T); colnames(foot) = c('lon', 'lat', 'foot')
-
 
 # ggmap.xfoot.obs will automatically store figures in store.path 
 title = paste('Spatial footprint for', site, 'on', timestr)

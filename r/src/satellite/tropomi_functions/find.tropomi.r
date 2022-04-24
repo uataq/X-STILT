@@ -12,7 +12,7 @@ find.tropomi = function(tropomi_path, timestr, lon_lat, bufferTF = F) {
         YYYYMMDD = substr(timestr, 1, 8)
         HH = substr(timestr, 9, nchar(timestr))
     } else { YYYYMMDD = timestr; HH = NA } 
-
+    
     fns = list.files(tropomi_path, paste0('___', YYYYMMDD), 
                      full.names = T, recursive = T)
     if (length(fns) == 0) { 

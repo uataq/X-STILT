@@ -57,6 +57,7 @@ get.met.vars <- function(namelist, output, met_file_format, met_path,
                              n_hours = tmp.nhrs, output = tmp.output, 
                              rm_dat = T, timeout = 600, w_option = 0, 
                              z_top = z_top) 
+                             
     if (is.null(tmp.p)) stop(paste('get.met.vars(): no trajec generated\n',
                              '*** Likely the current @param z_top of', z_top, 
                              'm is too high for the met field you adopted\n', 

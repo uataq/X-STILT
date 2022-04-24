@@ -31,6 +31,8 @@ create.outwd = function(timestr, obs_species, obs_sensor, obs_path, lon_lat,
     cat(paste('\n\n --- Obtaining', obs_sensor, obs_species, 'info --- \n'))
     obs_fn = list.files(obs_path, paste0('_', substr(timestr, 3, 8), '_'), 
                         full.names = T, recursive = T)
+    if (length(obs_fn) == 0) stop('Please check your obs setting\n')
+
     obs_info = data.frame(timestr = timestr, fn = obs_fn, stringsAsFactors = F)
 
     # path for storing trajec, foot for OCO-2/3, DW, 07/31/2018

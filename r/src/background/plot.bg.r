@@ -5,7 +5,8 @@ plot.bg = function(site, site_lon, site_lat, sensor, sensor_gas, recp_box,
                    font.size, pp_fn = NULL) {
     
     # plot map first 
-    uni_sides = unique(bg_df$bg.side); print(uni_sides)
+    uni_sides = unique(bg_df$bg.side)
+    print(uni_sides)
     if (!is.na(bg_side)) uni_sides = bg_side
     width = 9; height = 9
 

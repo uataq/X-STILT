@@ -79,15 +79,17 @@ config_trans_err = function(namelist, site, lon_lat, timestr, xstilt_wd,
         zicontroltf = 0
         z_top       = 25000
         if (toupper(namelist$met) == 'NARR') z_top = 15000 
-        namelist$varsiwant = c('time', 'indx', 'long', 'lati', 'zagl', 'zsfc', 'foot', 
-                               'mlht', 'dens', 'samt', 'sigw', 'tlgr', 'temp', 'pres')
+        namelist$varsiwant = c('time', 'indx', 'long', 'lati', 'zagl', 'zsfc', 
+                               'foot', 'mlht', 'dens', 'samt', 'sigw', 'tlgr', 
+                               'temp', 'pres')
 
         # Aggregate STILT/HYSPLIT namelist
-        simstep_namelist = list(capemin = capemin, cmass = cmass, conage = conage,
-                                cpack = cpack, delt = delt, dxf = dxf, dyf = dyf,
-                                dzf = dzf, efile = efile, frhmax = frhmax, 
-                                frhs = frhs, frme = frme, frmr = frmr, frts = frts, 
-                                frvs = frvs, hnf_plume = namelist$hnf_plume, 
+        simstep_namelist = list(capemin = capemin, cmass = cmass, 
+                                conage = conage, cpack = cpack, delt = delt, 
+                                dxf = dxf, dyf = dyf, dzf = dzf, efile = efile, 
+                                frhmax = frhmax, frhs = frhs, frme = frme, 
+                                frmr = frmr, frts = frts, frvs = frvs, 
+                                hnf_plume = namelist$hnf_plume, 
                                 hscale = hscale, ichem = ichem, idsp = idsp, 
                                 initd = initd, k10m = k10m, kagl = kagl, 
                                 kbls = kbls, kblt = kblt, kdef = kdef, 
@@ -104,37 +106,37 @@ config_trans_err = function(namelist, site, lon_lat, timestr, xstilt_wd,
                                 splitf = splitf, tkerd = tkerd, tkern = tkern, 
                                 tlfrac = tlfrac, tout = tout, tratio = tratio,
                                 tvmix = tvmix, varsiwant = namelist$varsiwant, 
-                                veght = veght, vscale = vscale, vscaleu = vscaleu, 
-                                vscales = vscales, wbbh = wbbh, wbwf = wbwf, 
-                                wbwr = wbwr, winderrtf = 0, wvert = wvert, 
+                                veght = veght, vscale = vscale, 
+                                vscaleu = vscaleu, vscales = vscales, 
+                                wbbh = wbbh, wbwf = wbwf, wbwr = wbwr, 
+                                winderrtf = 0, wvert = wvert, 
                                 zicontroltf = zicontroltf)
     }   # end if
 
 
     # Transport and dispersion settings, use default setting in STILT-R v2
     # Calculating error stats for horizontal and vertical transport errors
-    hor_err = get.uverr(namelist$run_hor_err, site, timestr, xstilt_wd, 
+    hor_err = get.uverr(run_hor_err = namelist$run_hor_err, 
+                        site, timestr, xstilt_wd, 
                         run_wind_err = namelist$run_wind_err, 
-                        simstep_namelist, 
-                        raob.path = namelist$raob_path, 
-                        raob.format = 'fsl', 
-                        nhrs = namelist$nhrs, 
-                        met = namelist$met, 
-                        met_path = namelist$met_path, 
+                        simstep_namelist = simstep_namelist, 
+                        raob_fn = namelist$raob_fn, nhrs = namelist$nhrs, 
+                        met = namelist$met, met_path = namelist$met_path, 
                         met_file_format = namelist$met_file_format, 
-                        lon.lat = lon_lat, 
-                        agl = namelist$agl, 
-                        err.path = file.path(namelist$store_path, 'wind_err'))
-    #print(hor_err)
+                        lon_lat, maxagl = namelist$maxagl, 
+                        err_path = file.path(namelist$store_path, 'wind_err') )
+    
     pbl_err = get.zierr(namelist$run_ver_err, 
                         nhrs.zisf = abs(namelist$nhrs), 
                         const.zisf = namelist$zisf)
 
     # and prepare ODIAC based on footprint domain 
-    if (namelist$run_hor_err & !is.null(namelist$odiac_path)) {
-        foot.ext = extent(lon_lat$minlon, lon_lat$maxlon, lon_lat$minlat, lon_lat$max.at)
+    if ( namelist$run_hor_err & !is.null(namelist$odiac_path) &
+         namelist$run_sim ) {
+        ext = extent(lon_lat$minlon, lon_lat$maxlon, 
+                     lon_lat$minlat, lon_lat$maxlat)
         emiss_fn = tif2nc.odiacv3(site, timestr, vname = namelist$odiac_ver, 
-                                  workdir = xstilt_wd, foot.ext = foot.ext, 
+                                  workdir = xstilt_wd, foot.ext = ext, 
                                   tiff.path = namelist$odiac_path, gzTF = F)
     } else emiss_fn = NA
 
