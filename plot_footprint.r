@@ -78,6 +78,6 @@ foot = as.data.frame(foot.rt, xy = T); colnames(foot) = c('lon', 'lat', 'foot')
 title = paste('Spatial footprint for', site, 'on', timestr)
 f1 = ggmap.xfoot.obs(mm, site, oco.ver, oco.path, timestr, recp.lon, recp.lat, 
                      foot, min.foot.sig = 1E-8, max.foot.sig = 1E-2, qfTF = T, 
-                     title, picname, storeTF = T, width = 7, height = 7, 
+                     dxco2 = 2, title, picname, storeTF = T, width = 7, height = 7, 
                      leg.pos = 'bottom', scale.coord = 1.5)
 
