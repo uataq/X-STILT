@@ -62,10 +62,10 @@ cal.wind.err = function(err_file, met, met_path, met_file_format, xstilt_wd,
   # ------------------------------------------------------------------------
 
   # write header to txt file that stores wind error statistics
-  header = c('timestr', 'lat', 'lon', 'elev', 'pres', 'hgt', 'temp.raob', 
-             'ws.raob', 'wd.raob', 'u.raob', 'v.raob', 'u.met', 'v.met', 
-             'w.met', 'zsfc', 'pres.met', 'temp.met', 'ws.met', 'wd.met', 
-             'temp.err', 'u.err', 'v.err', 'ws.err', 'wd.err')     
+  header = c('timestr', 'lat', 'lon', 'elev', 'pres.raob', 'hgt.raob',
+             'temp.raob', 'ws.raob', 'wd.raob', 'u.raob', 'v.raob', 'zagl.met', 
+             'u.met', 'v.met', 'w.met', 'zsfc', 'pres.met', 'temp.met', 
+             'ws.met', 'wd.met', 'temp.err', 'u.err', 'v.err', 'ws.err', 'wd.err')     
   write(header, file = err_file, append = F,sep = ',',ncolumns = length(header))
 
   # loop over each unique location + time
@@ -119,7 +119,7 @@ cal.wind.err = function(err_file, met, met_path, met_file_format, xstilt_wd,
     } # end for
 
     # merge obs and sim
-    merge.info = left_join(pos.raob, int.info %>% rename(pres.sim = pres), 
+    merge.info = left_join(pos.raob, int.info %>% rename(pres.met = pres), 
                            by = 'zagl') %>% 
                  rename(u.met = ubar, v.met = vbar, w.met = wbar, 
                         temp.met = temz) %>%
@@ -127,7 +127,7 @@ cal.wind.err = function(err_file, met, met_path, met_file_format, xstilt_wd,
                  # calculate ws and wd (FROM which dir, degree from true North)
                  mutate(ws.met = sqrt(u.met^2 + v.met^2),
                         wd.met = atan2(u.met/ws.met, v.met/ws.met)*180/pi + 180)
-
+    
     # when ws == 0, wd is NA, thus, replace NA with 0
     merge.info[is.na(merge.info$wd.met), 'wd.met'] = 0
 

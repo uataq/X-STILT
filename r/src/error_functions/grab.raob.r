@@ -33,7 +33,7 @@ grab.raob = function(raob.fn, timestr, err.path, nhrs,
       site.lon   = ncvar_get(dat, 'staLon')
       site.elev  = ncvar_get(dat, 'staElev')
       merge.raob = data.frame(site = site.name, lon = site.lon, lat = site.lat,
-                               elev = site.elev, timestr = rel.timestr)
+                              elev = site.elev, timestr = rel.timestr)
       merge.raob$nobs = seq(1, nrow(merge.raob))
 
       # grabbing wind speeds, directions, pressure and sounding releasing times
@@ -92,7 +92,7 @@ grab.raob = function(raob.fn, timestr, err.path, nhrs,
 
       site.elev = as.numeric(substr(dat[type == 1], 37, 42))
       merge.raob = data.frame(lon = site.lon, lat = site.lat, elev = site.elev,
-                               timestr = rel.timestr)
+                              timestr = rel.timestr)
 
       # start to grab wind info
       # units of wind speed 'ms' = tenths of meters/sec; 'kt' = knots
@@ -114,7 +114,7 @@ grab.raob = function(raob.fn, timestr, err.path, nhrs,
         # 8 = maximum wind level (GTS or merged data);
         # 9 = surface level
         sel = !is.na(match(as.numeric(substr(sel.dat, 5, 7)),
-                            c(9, 4, 5, 6, 7, 8)))
+                           c(9, 4, 5, 6, 7, 8)))
         dat.obs = sel.dat[sel]
 
         # grab pressure, altitude, temp, dew points, wind dir and speeds
@@ -130,9 +130,8 @@ grab.raob = function(raob.fn, timestr, err.path, nhrs,
         #if unit is 'ms', then denotes TENTHS of [m/s]
 
         result = data.frame(timestr = rel.timestr[i], lat = site.lat[i], 
-                             lon = site.lon[i], elev = site.elev[i],
-                             pres = pres, hgt = hgt, temp = temp, 
-                             ws = ws, wd = wd)
+                            lon = site.lon[i], elev = site.elev[i], pres = pres,
+                            hgt = hgt, temp = temp, ws = ws, wd = wd)
         merge.var = rbind(merge.var, result)
       }  # end for i
 
@@ -143,7 +142,7 @@ grab.raob = function(raob.fn, timestr, err.path, nhrs,
     # !!! degree true: from the true North to the wind barb,
     # so the actual wind direction is degree-true minus 180deg
     merge.var = merge.var %>% mutate(u = sin((wd - 180) * pi/180) * ws,
-                                      v = cos((wd - 180) * pi/180) * ws)
+                                     v = cos((wd - 180) * pi/180) * ws)
 
     # store in txt file
     write.table(merge.var, file = filename, sep = ',', quote = F, row.names = F)
@@ -157,7 +156,7 @@ grab.raob = function(raob.fn, timestr, err.path, nhrs,
   merge.var$timestr = substr(merge.var$timestr, 1, 10)
   options(scipen = 0)
   sel.var = merge.var %>% filter(timestr >= min(date1, date2), 
-                                  timestr <= max(date1, date2))
+                                 timestr <= max(date1, date2))
   return(sel.var)
 }
 

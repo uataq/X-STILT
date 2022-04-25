@@ -350,6 +350,7 @@ config_xstilt = function(namelist){
       dir.create(d, recursive = T)
   }
 
+  if (!run_trajec & !run_foot) stop('no need for parallel computing since run_trajec = F and run_foot = F ...\n')
 
   # removed 'isot', 'iconvert', 'outfrac', 'random' -- 
   # not used by the latest STILT

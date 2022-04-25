@@ -69,9 +69,9 @@ get.met.varh = function(receptor = NULL, agl = 5, run_trajec = T, namelist,
   # in p1 or p2 in distCosine(), first one is longitude, second is latitude
   # distance in x- y- and z- directions [m]
   delx = distCosine(p1 = c(sel.part$long, receptor$lati),
-                     p2 = c(receptor$long, receptor$lati)) # in meter
+                    p2 = c(receptor$long, receptor$lati)) # in meter
   dely = distCosine(p1 = c(receptor$long, sel.part$lati),
-                     p2 = c(receptor$long, receptor$lati))
+                    p2 = c(receptor$long, receptor$lati))
   delz = abs(sel.part$zagl - agl)
 
   # U-, V- and W- velocities [m/s]
