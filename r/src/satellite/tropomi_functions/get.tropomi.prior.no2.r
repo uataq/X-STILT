@@ -13,15 +13,13 @@ get.tropomi.prior.no2 = function(receptor, aux_path = NULL, aux_fn = NULL) {
 
     if (is.null(aux_fn)) {
         timestr = strftime(min(receptor$run_time), 'UTC', format = '%Y%m%d%H')
-        fns = list.files(aux_path, 'AUX_CTMANA', full.names = T)
-
+        fns = list.files(aux_path, 'AUX_CTMANA', full.names = T, recursive = T)
         aux_fn = do.call(c, lapply(timestr, function(x) 
             fns[grepl(paste0('CTMANA_', substr(x, 1, 8)), fns)] ))
 
         if (length(aux_fn) == 0) 
             stop('No auxiliary TROPOMI file found for this timestr...\n')
     } # end if
-
 
     # ------------- load all TROPOMI aux grid center lat/lon ----------------
     dat = nc_open(aux_fn[1])

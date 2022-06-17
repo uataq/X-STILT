@@ -57,20 +57,36 @@ get.uverr = function(run_hor_err, site, timestr, xstilt_wd, run_wind_err = F,
 
     # grab modeled winds, *** if no file found, this takes a long time to run
     dir.create(err_path, showWarnings = F, recursive = T)
-    err_file = file.path(err_path, paste0(site, '_', met, '_raob_', timestr, '.txt'))
+    err_file = file.path(err_path, paste0(site, '_', met, '_raob_', 
+                                          timestr, '.txt'))
 
     if ( !run_wind_err ) {
+      if (file.exists(err_file)) {
 
-      # if one does not want to run wind error analysis and no RAOB file found
-      cat('get.uverr(): no wind error comparisons found; 
-           make a conservative assumption for siguverr;
-           use user-defined RMSE wind error OR a default value of 3 m/s...\n')
-      err_stat = NULL
+          cat('get.uverr(): FOUND existing wind error comparisons...\n')
+          met_raob = read.csv(err_file)
 
-      # make a conservative assumption about the wind error, or use prescribed #
-      # < 2 m/s for GDAS 0.5deg for the Middle East, based on Wu et al., 2018
-      if (is.null(siguverr)) siguverr = 3
-      err_stat$siguverr = siguverr
+          # call get.SIGUVERR() to interpolate most near-field wind errors
+          if (!is.null(met_raob)) {
+            err_stat = get.siguverr(met_raob, nfTF, forwardTF, lon_lat, 
+                                    nhrs, timestr)
+            siguverr = err_stat$siguverr
+          } else err_stat$siguverr = siguverr   # assign default error
+
+      } else {
+
+        # if one does not want to run wind error analysis and no RAOB file found
+        cat('get.uverr(): no wind error comparisons found; 
+             make a conservative assumption for siguverr;
+             use user-defined RMSE wind error OR a default value of 3 m/s...\n')
+        err_stat = NULL
+
+        # make a conservative assumption about the wind error, or use prescribed #
+        # < 2 m/s for GDAS 0.5deg for the Middle East, based on Wu et al., 2018
+        if (is.null(siguverr)) siguverr = 3
+        err_stat$siguverr = siguverr
+
+      } # end if not running wind error
 
     } else {
       
@@ -79,14 +95,16 @@ get.uverr = function(run_hor_err, site, timestr, xstilt_wd, run_wind_err = F,
       met_raob = cal.wind.err(err_file, met, met_path, met_file_format, 
                               xstilt_wd, err_path, site, timestr, 
                               simstep_namelist, raob_fn, nhrs, maxagl)
-
+    
       # call get.SIGUVERR() to interpolate most near-field wind errors
+      if (!is.null(met_raob)) 
       err_stat = get.siguverr(met_raob, nfTF, forwardTF, lon_lat, nhrs, timestr)
       
-      if (is.null(err_stat)) { 
+      if (is.null(met_raob) | is.null(err_stat)) { 
         cat('get.uverr(): no raob data found, use default value of 3 m/s \n')
         err_stat$siguverr = siguverr
       } else siguverr = err_stat$siguverr
+
     }  # end if 
 
     cat(paste('SIGUVERR:', signif(siguverr, 3), 'm/s..\n'))

@@ -1,6 +1,20 @@
-Commit by April 23, 2022
+Commit by June 16, 2022
 ============
-Code refactoring for estimating transport uncertainties for OCO-3 XCO2 and non-CO2 species. 
+Code refactoring for transport error estimates and sounding selections for non-CO2 species. 
+
+:pushpin: Sounding selections:
+
+* `nf_dlat` and `nf_dlon`: define the NEAR-FIELD regions around `site`
+* `dlat` and `dlon`: define the ENTIRE target regions around `site`
+
+* `num_nf_lat` * `num_nf_lon`: total # of soundings to be selected along either the latitudinal or longitudinal direction (e.g., ~7 * 14 total soundings over the NEAR-FIELD domain around `site`)
+
+* `num_bg_lat` * `num_bg_lon`: total # of soundings to be selected along either the latitudinal or longitudinal direction (e.g., ~3 * 3 total soundings over the FAR-FIELD or BACKGROUND domain around `site`)
+
+* `get.recp.sensorv2()`: function for the selection of satellite soundings to save computational cost; If selected near- or far-field soundings share the same coordinate, only one of them will be treated as model receptor. 
+
+![](figs/demo_selection.png)
+Figure - An example of sounding selections (though not highly recommended for TROPOMI given its coarse resolution). 
 
 
 Commit by July 6, 2021

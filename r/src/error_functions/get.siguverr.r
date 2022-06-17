@@ -16,7 +16,7 @@ get.siguverr = function(met_raob, nfTF = F, forwardTF = F, lon_lat = NULL,
   max.time = as.numeric(substr(timestr, 1, 8))
 
   # filter pressure levels
-  met_raob = met_raob %>% na.omit() %>% filter(pres >= 300) %>%
+  met_raob = met_raob %>% na.omit() %>% filter(pres.raob >= 300) %>%
              mutate(time = as.numeric(substr(timestr, 1, 8)))
 
   # select nearfield radiosondes

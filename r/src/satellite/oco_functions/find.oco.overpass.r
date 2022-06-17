@@ -5,7 +5,7 @@
 #' @param oco.ver needs to contain version number
 #' @param lon.lat a data frame containining c(minlat, maxlat, minlon, maxlon), 
 #'                please follow THIS ORDER!!!
-#' @param urbanTF for searching soundings near urban region, DW, 06/15/2018
+#' @param nfTF for searching soundings near near-field region, DW, 06/15/2018
 # ---------------------------------------------------------------------------- #
 # add count for good quality data, DW, 12/20/2017
 # update for v9 data, DW, 10/19/2018 
@@ -14,13 +14,15 @@
 # remove warn levels, DW, 07/01/2020 
 # ---------------------------------------------------------------------------- #
 
-find.overpass = function(date.range, lon.lat, oco.ver = 'V10r', oco.path, 
-                         urbanTF = F, dlon = 0.5, dlat = 0.5){ 
-
+find.oco.overpass = function(date.range, lon.lat, oco.ver = 'V10r', oco.path, 
+                             nfTF = F, nf.dlon = 0.5, nf.dlat = 0.5){ 
+  
+  # find.overpass() in r/src/satellite/oco_functions
   library(geosphere); library(ncdf4); library(dplyr)
 
   # path and filename for storing OCO-2 info
   all.fns = list.files(pattern = 'LtCO2_', path = oco.path)
+  if (length(all.fns) == 0) stop('find.oco.overpass(): NO OCO data found...check file path\n')
 
   # get rid of some characters
   file.info = gsub('.nc4', '', all.fns)
@@ -97,28 +99,28 @@ find.overpass = function(date.range, lon.lat, oco.ver = 'V10r', oco.path,
             left_join(qf.count %>% rename(qf.count = n), by = 'orbit')
 
       # also search for soundings near city center,
-      if (urbanTF) {
-        urban.dat = obs %>% filter(lon >= (lon.lat$site_lon - dlon),
-                                   lon <= (lon.lat$site_lon + dlon),
-                                   lat >= (lon.lat$site_lat - dlat),
-                                   lat <= (lon.lat$site_lat + dlat))
+      if (nfTF) {
+        nf.dat = obs %>% filter(lon >= (lon.lat$site_lon - nf.dlon),
+                                lon <= (lon.lat$site_lon + nf.dlon),
+                                lat >= (lon.lat$site_lat - nf.dlat),
+                                lat <= (lon.lat$site_lat + nf.dlat))
         
-        tot.count2 = urban.dat %>% count(orbit)
-        qf.count2  = urban.dat %>% filter(qf == 0) %>% count(orbit)
-        sam.count2 = urban.dat %>% filter(mode == 4) %>% count(orbit)
-        uni.timestr2 = urban.dat %>% group_by(orbit) %>% 
+        tot.count2 = nf.dat %>% count(orbit)
+        qf.count2  = nf.dat %>% filter(qf == 0) %>% count(orbit)
+        sam.count2 = nf.dat %>% filter(mode == 4) %>% count(orbit)
+        uni.timestr2 = nf.dat %>% group_by(orbit) %>% 
                        dplyr::summarise(timestr = as.character(min(timestr)), .groups = 'drop')
 
         # merge all df, DW, 03/12/2021
-        tmp.urban = uni.timestr2 %>% 
-                    left_join(tot.count2 %>% rename(tot.urban.count = n), 
-                              by = 'orbit') %>%  
-                    left_join(qf.count2 %>% rename(qf.urban.count = n), 
-                              by = 'orbit') 
+        tmp.nf = uni.timestr2 %>% 
+                 left_join(tot.count2 %>% rename(tot.nf.count = n), 
+                           by = 'orbit') %>%  
+                 left_join(qf.count2 %>% rename(qf.nf.count = n), 
+                           by = 'orbit') 
 
         # combine 
-        tmp = tmp %>% left_join(tmp.urban, by = c('timestr', 'orbit'))
-      } # end if urbanTF
+        tmp = tmp %>% left_join(tmp.nf, by = c('timestr', 'orbit'))
+      } # end if nfTF
 
       tmp = tmp %>% rename(orbit.id = orbit) %>% 
             mutate(sam.count = ifelse(is.na(sam.count), 0, sam.count))

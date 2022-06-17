@@ -22,7 +22,7 @@ get.sensor.obs = function(site, timestr,
 
     # --------------------------- STEP 1 ------------------------------------- #
     # grab satellite observations (OCO-2/3, TROPOMI CO and NO2)
-    if ( is.null(lon_lat) ) lon_lat = get.lon_lat(site, dlat = 1.5, dlon = 1.5)
+    if ( is.null(lon_lat) ) lon_lat = get.lon.lat(site, dlat = 1.5, dlon = 1.5)
     err_message = 'get.sensor.obs(): NO observation found...\n'
     err_message2 = 'get.sensor.obs(): NO QUANLIFIED observation found...\n'
 

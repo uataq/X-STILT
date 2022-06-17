@@ -48,8 +48,13 @@ get.met.varh = function(receptor = NULL, agl = 5, run_trajec = T, namelist,
   if (file.exists(tmp.output$file)) particle = readRDS(tmp.output$file)
   
   # modify the code based on Ben's code, DW, 02/26/2021
-  if (length(particle) == 0 | run_trajec) {
+  if ( length(particle) == 0 | run_trajec ) {
     namelist$numpar = 1
+
+    #' @param nturb is NotTURBulence flag that turns turbulence on (FALSE or 0) or off (TRUE or 1)
+    #' because we would like to interpolate the wind vectors from met fields, 
+    #' we turn off the turbulence for this interpolation, but not for STILT runs
+    namelist$nturb = T          # nturb = T meaning NO turbulence
     particle = calc_trajectory(namelist, rundir, emisshrs = 0.01, hnf_plume, 
                                met_files, n_hours, output = tmp.output, 
                                rm_dat = T, timeout, w_option = 0, z_top)

@@ -27,13 +27,11 @@
 # max.yr for max year available 
 # only ODIAC is allowed
 run.xco2ff.sim = function(site, timestr = '2014100920', vname = 2019, 
-                          tiff.path, output_wd, foot.res, xstilt_wd, store.path,
-                          nhrs, oco.sensor = NA, met, run_emiss_err, 
+                          emiss.path, output_wd, foot.res, xstilt_wd, 
+                          store.path, nhrs, oco.sensor = NA, met, run_emiss_err,
                           edgar.file = NA, ffdas.file = NA, max.yr = NULL, 
                           overwriteTF = F){
 
-  library(rgdal)
-  
   # grab footprint files and get footprint domain
   foot.path = file.path(output_wd, 'by-id')
   foot.patt = 'X_foot.nc'
@@ -58,7 +56,7 @@ run.xco2ff.sim = function(site, timestr = '2014100920', vname = 2019,
   # call tif2nc.odiacv2() to subset and get emiss file name
   # get cropped ODIAC emission for the overpass month
   # moved from main script to this subroutine, DW, 10/21/2018
-  if (!is.null(max.yr)) max.yr = as.numeric(vname - 1)
+  if ( is.null(max.yr) ) max.yr = as.numeric(vname) - 1
   if (as.numeric(substr(timestr, 1, 4)) > max.yr) {
     tmp.timestr = paste0(max.yr, substr(timestr, 5, nchar(timestr)))
     cat(paste('run.xco2ff.sim(): NO data available for', timestr, 
@@ -66,8 +64,7 @@ run.xco2ff.sim = function(site, timestr = '2014100920', vname = 2019,
   } else tmp.timestr = timestr 
 
   emiss.file = tif2nc.odiacv3(site, timestr = tmp.timestr, vname, xstilt_wd, 
-                              foot.extent, tiff.path, gzTF = F)
-
+                              foot.extent, emiss.path, gzTF = F)
 
   # txt file name for outputting model results
   txtfile = file.path(store.path, paste0(timestr, '_', site, '_XCO2ff_', 
@@ -83,8 +80,10 @@ run.xco2ff.sim = function(site, timestr = '2014100920', vname = 2019,
 
     # get emission files for ODIAC, FFDAS, EDGAR
     # use year 2008 emissions to calculate absolute emission errors
-    odiac.file.2008 = tif2nc.odiacv3(site, timestr = '20081229', vname, xstilt_wd,
-                                     foot.extent, tiff.path, gzTF = F)
+    tmp.timestr = paste0('2008', substr(timestr, 5, nchar(timestr)))
+    odiac.file.2008 = tif2nc.odiacv3(site, timestr = tmp.timestr, vname, 
+                                     xstilt_wd, foot.extent, emiss.path, 
+                                     gzTF = F)
 
     # get absolute emission eror that can further be convolved with footprints
     # **** in 0.1 deg resolution, need to generate 0.1 deg res of footprint
@@ -92,21 +91,23 @@ run.xco2ff.sim = function(site, timestr = '2014100920', vname = 2019,
                                ffdas.file, emiss.file, overwrite = F)
 
     # txt file name for outputting model results
-    txtfile = file.path(store.path, paste0(timestr, '_', site, '_XCO2ff_emiss_err_', 
-                                           abs(nhrs), 'hrs_', oco.sensor, 
-                                           '_', met, '_odiac', vname, '.txt'))
+    txtfile = file.path(store.path, paste0(timestr, '_', site, 
+                                           '_XCO2ff_emiss_err_', abs(nhrs), 
+                                           'hrs_', oco.sensor, '_', met, 
+                                           '_odiac', vname, '.txt'))
     
     if (is.na(oco.sensor)) 
-      txtfile = file.path(store.path, paste0(timestr, '_', site, '_XCO2ff_emiss_err_', 
-                                             abs(nhrs), 'hrs_',  met, '_odiac', 
-                                             vname, '.txt'))
+      txtfile = file.path(store.path, paste0(timestr, '_', site, 
+                                             '_XCO2ff_emiss_err_', abs(nhrs), 
+                                             'hrs_', met, '_odiac', vname, 
+                                             '.txt'))
   }  # end if run_emiss_err
                                         
 
-  # if cannot find the correct format of nc file for emissions given selected area
+  # if cannot find the correct format of emissions given selected area
   # and return ODIAC file name with path in front
   if (length(emiss.file) == 0) {
-    cat('run.xco2.sim(): NO nc file found, check ODIAC tiff file...\n')
+    cat('run.xco2ff.sim(): NO nc file found, check ODIAC tiff file...\n')
     return()
 
   } else {  ## read in emissions
@@ -119,12 +120,12 @@ run.xco2ff.sim = function(site, timestr = '2014100920', vname = 2019,
   nbin = str_count(basename(foot.file[1]), '_') + 1
   receptor = unlist(strsplit(basename(foot.file), '_'))
   receptor = as.data.frame(matrix(receptor, byrow = T, ncol = nbin),
-                            stringsAsFactors = F) %>%
-              dplyr::select('V1', 'V2', 'V3') %>% 
+                           stringsAsFactors = F) %>%
+             dplyr::select('V1', 'V2', 'V3') %>% 
               
-              # mutate_all() convert character to numberic
-              mutate_all(funs(as.numeric), colnames(receptor)) %>% 
-              rename(timestr = V1, lon = V2, lat = V3)
+             # mutate_all() convert character to numberic
+             mutate_all(funs(as.numeric), colnames(receptor)) %>% 
+             rename(timestr = V1, lon = V2, lat = V3)
 
   order.index = order(receptor$lat)
   receptor  = receptor[order.index, ]
@@ -150,20 +151,23 @@ run.xco2ff.sim = function(site, timestr = '2014100920', vname = 2019,
       # NOW, foot and emiss should have the same dimension,
       # multiple them to get contribution map of CO2 enhancements
       xco2.ff.sp = raster::overlay(x = emiss.dat, y = foot.dat,
-                                    fun = function(x, y){return(x * y)}) # spatial xco2.ff
+                                   fun = function(x, y){return(x * y)}) 
       
-      ### store emission * column footprint = XCO2 contribution grid into .nc file
+      ### store emission * column footprint = XCO2 contribution into .nc file
       # store into the same workding dir
       crs(xco2.ff.sp) = '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0'
-      longname = 'XCO2 enhancemnets due to ODIAC emission'; varname = 'XCO2'
+      longname = 'XCO2 enhancemnets due to ODIAC emission'
+      varname = 'XCO2'
+
       if (run_emiss_err) {
-        longname = 'XCO2 error due to ODIAC emission error'; varname = 'XCO2 error'
+        longname = 'XCO2 error due to ODIAC emission error'
+        varname = 'XCO2 error'
       }
 
       # write raster in nc file
       writeRaster(xco2.ff.sp, outfile, overwrite = TRUE, format = 'CDF',
-                  varname = varname, varunit = 'PPM', xname = 'lon', yname = 'lat',
-                  longname = longname)
+                  varname = varname, varunit = 'PPM', xname = 'lon', 
+                  yname = 'lat', longname = longname)
       print(outfile)
     } # end if
 

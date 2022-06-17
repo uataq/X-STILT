@@ -20,7 +20,7 @@ find.tropomi = function(tropomi_path, timestr, lon_lat, bufferTF = F) {
     
     # if hour and beyond is given, further select some of the TROPOMI files
     # DW, 08/19/2021
-    if (!is.na(HH)) {
+    if ( !is.na(HH) ) {
 
         cat('\nfind.tropomi(): HH is given, narrowing down TROPOMI files...\n')
         datestr = as.POSIXct(paste0(YYYYMMDD, HH), 'UTC', format = '%Y%m%d%H')
@@ -29,25 +29,30 @@ find.tropomi = function(tropomi_path, timestr, lon_lat, bufferTF = F) {
             HH_fns = HH_fns %>% dplyr::select(mn = V10, mx = V11)
         } else HH_fns = HH_fns %>% dplyr::select(mn = V9, mx = V10)
 
-        HH_fns = HH_fns %>% mutate(date_mn = as.POSIXct(mn, 'UTC', 
-                                                    format = '%Y%m%dT%H%M%S'), 
-                                   date_mx = as.POSIXct(mx, 'UTC', 
-                                                    format = '%Y%m%dT%H%M%S'))
+        HH_fns = HH_fns %>% 
+                 mutate(date_mn = as.POSIXct(mn, 'UTC',format ='%Y%m%dT%H%M%S'),
+                        date_mx = as.POSIXct(mx, 'UTC',format ='%Y%m%dT%H%M%S'))
         
-        exact_indx = which(datestr >= HH_fns$date_mn & 
-                           datestr <= HH_fns$date_mx)
+        # bug fixed for selecting files based on `timestr`
+        exact_indx = unique(
+                            c(which(datestr >= HH_fns$date_mn &
+                                    datestr <= HH_fns$date_mx), 
+                              which(datestr + 59 * 60 >= HH_fns$date_mn &
+                                    datestr + 59 * 60 <= HH_fns$date_mx))
+                            )
 
         # add buffer by 1 nc file to make sure, +/- file before and after 
         if (bufferTF) {
-            indices = c(exact_indx - 1, exact_indx, exact_indx + 1)
+            indices = c(min(exact_indx) - 1, exact_indx, max(exact_indx) + 1)
             indices = indices[indices != 0 | indices > length(fns)]
         } else indices = exact_indx
-
+        
         fns = fns[indices]
         if (length(fns) == 0) {
             cat('Cannot find any TROPOMI files that match your time...\n')
             return()
         }
+        
     }   # end if HH selection
     
 

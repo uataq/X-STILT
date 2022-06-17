@@ -28,7 +28,15 @@ config_xstilt = function(namelist){
   store_path = namelist$store_path
 
   # make sure obs_* are set to NA and no AK weighting for ideal runs
-  if (is.na(obs_sensor)) { obs_path = obs_species = NA; namelist$ak_wgt = F }
+  if (is.na(obs_sensor)) { 
+    obs_path = obs_species = NA
+    namelist$ak_wgt = F 
+
+    # *** For ideal simulations without satellite data, set to NA or FALSE 
+    # receptors will be placed based on lati/long info from receptor_demo.csv
+    num_bg_lat = num_bg_lon = num_nf_lat = num_nf_lon = num_jitter = NA
+    jitterTF = FALSE
+  }
 
 
   # Model control -------------------------------------------------------------
@@ -41,6 +49,7 @@ config_xstilt = function(namelist){
   run_ver_err = namelist$run_ver_err
   run_wind_err = namelist$run_wind_err
   
+  cat('\n --- Configuring --- \n')
   if (run_trajec) cat('Need to generate trajec...\n')
   if (run_foot)   cat('Need to generate footprint...\n')
   if (!run_trajec & !run_foot & !run_sim) 
@@ -83,17 +92,18 @@ config_xstilt = function(namelist){
   hnf_plume       = namelist$hnf_plume
   smooth_factor   = namelist$smooth_factor
   projection      = namelist$projection 
-
+  
   # Create output directory ------------------------------------------------
   outlist = create.outwd(timestr, obs_species, obs_sensor, obs_path, lon_lat, 
                          store_path, met, run_hor_err)
-  obs_info = outlist$obs_info    # get obs file name if satellite is used
+  obs_info = outlist$obs_info         # get obs file name if satellite is used
   output_wd = outlist$output_wd
 
   if ( nrow(obs_info) > 1 ) {
     track_indx = which(obs_info$tot.count == max(obs_info$tot.count))
     obs_fn = obs_info$fn[track_indx]
     if (length(output_wd) > 1) output_wd = output_wd[track_indx]
+  
   } else obs_fn = obs_info$fn
   cat(paste('Obs file -', obs_fn, '\n'))
 
@@ -123,25 +133,25 @@ config_xstilt = function(namelist){
       # call func to match ODIAC emissions with xfoot & sum up to get 'dxco2.ff'
       cat('Start simulations of XCO2.ff or its error due to emiss err...\n')
       result = run.xco2ff.sim(site, timestr, vname = namelist$odiac_ver, 
-                              tiff.path = namelist$odiac_path, 
+                              emiss.path = namelist$odiac_path, 
                               output_wd, foot.res = xres, xstilt_wd, store_path,
                               nhrs = n_hours, obs_sensor, met, 
                               run_emiss_err = namelist$run_emiss_err, 
                               edgar.file = namelist$edgar_file, 
                               ffdas.file = namelist$ffdas_file)
-      if (is.null(result)) 
-        stop('No results calculated, check run.xco2ff.sim()\n')
+      
+      if (is.null(result)) stop('No results calculated...\n')
       return(result)
     } # end if run_hor_err
 
-  } else if (run_sim & obs_species != 'CO2') 
+  } else if ( run_sim & obs_species != 'CO2' ) 
     stop('Currently, the model only calculates the FF signals of XCO2...\n\n')
   # end if run_sim
 
 
   # Receptor locations & time -------------------------------------------------
   # IF for ideal simulation, read from receptor file 
-  if (is.na(obs_sensor)) {
+  if ( is.na(obs_sensor) ) {
     receptors = read.table(namelist$recp_fn, header = T, sep = ',')
     
     # if no time column found, use @param timestr
@@ -163,22 +173,23 @@ config_xstilt = function(namelist){
 
   } else {    # IF for simulations using satellite data
 
-    peak_lat = c(lon_lat$site_lat - namelist$urban_dlat, 
-                 lon_lat$site_lat + namelist$urban_dlat)
-    num_bg   = namelist$num_bg 
-    num_peak = namelist$num_peak 
-
     # obtain receptors' locations based on satellite soundings
-    receptors = get.recp.sensor(timestr, 
-                                obs_filter = unlist(namelist$obs_filter), 
-                                obs_fn, obs_sensor, obs_path, lon_lat, 
-                                jitterTF = namelist$jitterTF, 
-                                num_jitter = namelist$num_jitter, peak_lat, 
-                                num_bg, num_peak, agl, run_trajec, output_wd)
-                                
+    receptors = get.recp.sensorv2(timestr, 
+                                  obs_filter = unlist(namelist$obs_filter), 
+                                  obs_fn, obs_sensor, obs_path, lon_lat, 
+                                  jitterTF = namelist$jitterTF, 
+                                  num_jitter = namelist$num_jitter, 
+                                  nf_dlat = namelist$nf_dlat, 
+                                  nf_dlon = namelist$nf_dlon, 
+                                  num_bg_lat = namelist$num_bg_lat, 
+                                  num_bg_lon = namelist$num_bg_lon, 
+                                  num_nf_lat = namelist$num_nf_lat, 
+                                  num_nf_lon = namelist$num_nf_lon, 
+                                  agl, run_trajec, output_wd)
+                                  
   } # end if
-  cat(paste('Done with receptor setup...total', nrow(receptors), 'receptor(s)..\n\n'))
-
+  cat(paste('Done with receptor setup...total', nrow(receptors), 
+            'receptor(s)..\n\n'))
 
   # Transport and dispersion settings, use default setting in STILT-R v2
   capemin     = -1
@@ -208,7 +219,7 @@ config_xstilt = function(namelist){
   kdef        = 0
   khinp       = 0
   khmax       = 9999
-  kmix0       = 250
+  kmix0       = 150
   kmixd       = 3
   kmsl        = 0
   kpuff       = 0
@@ -255,7 +266,7 @@ config_xstilt = function(namelist){
   zicontroltf = 0
   z_top       = 25000
   if (toupper(met) == 'NARR') z_top = 15000 
-  
+  if (toupper(met) == 'HRRR') z_top = 20000
 
   # Aggregate STILT/HYSPLIT namelist
   simstep_namelist = list(capemin = capemin, cmass = cmass, conage = conage,
@@ -322,7 +333,7 @@ config_xstilt = function(namelist){
 
   if (is.na(obs_sensor)) 
     jobname = paste0('XSTILT_', site, '_', timestr, '_ideal')
-
+  if (run_hor_err | run_ver_err) jobname = paste0(jobname, '_error')
 
   # Startup messages -----------------------------------------------------------
   message('\n\nInitializing X-STILT')

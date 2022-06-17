@@ -3,24 +3,22 @@
 # DW, 07/05/2021
 
 # plotTF  = FALSE             # T: plot OCO XCO2 and SIF on maps and lat series
-# urbanTF = TRUE              # T: also count overpasses over urban region
+# nfTF = TRUE                 # T: also count overpasses over near-field region
 # searchTF = FALSE            # T: loop over all OCO overpasses and find all 
                               #  the overpasses that pass by your site
 if (F) {
-    urbanTF = T 
+    nfTF = T 
     searchTF = F
-    date.range = c('20140101', '20211231')
+    date_range = c('20140101', '20221231')
     obs_ver = 'V10r'
     qfTF = T 
     plotTF = T
 }
 
-
 get_timestr = function(site, lon_lat, obs_sensor, obs_ver = 'V10r', obs_path, 
-                       store_path, recp_fn = NULL, plotTF = FALSE, 
-                       qfTF = FALSE, urbanTF = TRUE, urban_dlon = 0.5, 
-                       urban_dlat = 0.5, sif_path = NULL, searchTF = FALSE, 
-                       date.range = c('20140101', '20211231')) {
+                       store_path, recp_fn = NULL, plotTF = F, qfTF = F, 
+                       nfTF = T, nf_dlon = 0.5, nf_dlat = 0.5, sif_path = NULL, 
+                       searchTF = F, date_range = c('20140101', '20211231')) {
 
     timestr = NA        # initialize
     if ( is.na(obs_sensor) )  {                 # NA for ideal simulation
@@ -48,12 +46,12 @@ get_timestr = function(site, lon_lat, obs_sensor, obs_ver = 'V10r', obs_path,
         oco_track = get.site.track(site, oco.sensor = obs_sensor, 
                                    oco.ver = obs_ver, oco.path = obs_path, 
                                    searchTF = searchTF, 
-                                   date.range = date.range, 
+                                   date.range = date_range, 
                                    thred.count.per.deg = 100, 
-                                   lon.lat = lon_lat, urbanTF, urban_dlon, 
-                                   urban_dlat, thred.count.per.deg.urban = 50, 
-                                   rmTF = FALSE, plotTF, 
-                                   store.path = store_path, 
+                                   lon.lat = lon_lat, nfTF = nfTF, 
+                                   nf.dlon = nf_dlon, nf.dlat = nf_dlat, 
+                                   thred.count.per.deg.nf = 50, 
+                                   plotTF, store.path = store_path, 
                                    sif.path = sif_path, qfTF)   
                                    
         all.timestr = oco_track$timestr; print(oco_track)

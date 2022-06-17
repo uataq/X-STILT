@@ -31,7 +31,8 @@ create.outwd = function(timestr, obs_species, obs_sensor, obs_path, lon_lat,
     cat(paste('\n\n --- Obtaining', obs_sensor, obs_species, 'info --- \n'))
     obs_fn = list.files(obs_path, paste0('_', substr(timestr, 3, 8), '_'), 
                         full.names = T, recursive = T)
-    if (length(obs_fn) == 0) stop('Please check your obs setting\n')
+    if (length(obs_fn) == 0) 
+      stop('NO OCO-2/3 files found for this time, please check...\n')
 
     obs_info = data.frame(timestr = timestr, fn = obs_fn, stringsAsFactors = F)
 
@@ -43,7 +44,6 @@ create.outwd = function(timestr, obs_species, obs_sensor, obs_path, lon_lat,
   if (run_hor_err)  # for error output 
     output_wd = gsub(paste0('out_', timestr), paste0('outerr_', timestr), output_wd)
 
-
-  cat(paste('\n\nOutput dir - ', output_wd, '\n'))
+  cat(paste('\n\nOutput dir -', output_wd, '\n'))
   return(list(obs_info = obs_info, output_wd = output_wd))
 }

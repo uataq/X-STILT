@@ -22,10 +22,11 @@ cal.wind.err = function(err_file, met, met_path, met_file_format, xstilt_wd,
 
   # loop over each time period
   # grab RAOB and rename
-  raob = grab.raob(raob_fn, timestr, err_path, nhrs = raob.nhrs, 
-                   overwriteTF = T) %>%
-         rename(temp.raob = temp, u.raob = u, v.raob = v, 
-                ws.raob = ws, wd.raob = wd)
+  raob = grab.raob(raob_fn, timestr, err_path, nhrs = raob.nhrs, overwriteTF =T)
+  if (is.null(raob)) return()
+
+  raob = raob %>% rename(temp.raob = temp, u.raob = u, v.raob = v, 
+                         ws.raob = ws, wd.raob = wd)
   
   # compute unique receptors (time, lat, lon)
   recpstr = paste(raob$timestr, raob$lat, raob$lon)
@@ -65,13 +66,14 @@ cal.wind.err = function(err_file, met, met_path, met_file_format, xstilt_wd,
   header = c('timestr', 'lat', 'lon', 'elev', 'pres.raob', 'hgt.raob',
              'temp.raob', 'ws.raob', 'wd.raob', 'u.raob', 'v.raob', 'zagl.met', 
              'u.met', 'v.met', 'w.met', 'zsfc', 'pres.met', 'temp.met', 
-             'ws.met', 'wd.met', 'temp.err', 'u.err', 'v.err', 'ws.err', 'wd.err')     
+             'ws.met', 'wd.met', 'temp.err', 'u.err', 'v.err', 'ws.err', 
+             'wd.err')     
   write(header, file = err_file, append = F,sep = ',',ncolumns = length(header))
 
   # loop over each unique location + time
   cat(paste('\nTotal', nrow(recp.df), 'unique raob station & raob time\n'))
   err.info = NULL
-  for (i in 1 : nrow(recp.df)) {
+  for ( i in 1 : nrow(recp.df) ) {
 
     cat(paste('# ----- working on #', i, 'unique raob loc & time ---- #\n'))
     # no need to calculate footprint per trajec, thus turn off hnf_plume 
@@ -79,7 +81,7 @@ cal.wind.err = function(err_file, met, met_path, met_file_format, xstilt_wd,
                             namelist = simstep_namelist, rundir = rundir, 
                             hnf_plume = F, met_file_format, met_path, 
                             n_hours = 1, timeout = 5 * 60)
-
+    
     # add error message, DW, 11/16/2018
     if (is.null(tmp.info)) { 
       cat('NO met vars extracted (e.g., recp outside met fields)...\n'); next}
@@ -149,7 +151,6 @@ cal.wind.err = function(err_file, met, met_path, met_file_format, xstilt_wd,
     err.info = rbind(err.info, tmp.err.info)
   } # end for i
 
-  
   return(err.info)
 }
 

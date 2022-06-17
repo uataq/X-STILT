@@ -2,8 +2,8 @@
 
 ggmap.obs.info = function(plotTF, site, store.path = NULL, all.timestr = NULL, 
                           oco.sensor = NULL, oco.ver = NULL, oco.path = NULL, 
-                          sif.path = NULL, lon.lat = NULL, dlat.urban = NULL, 
-                          dlon.urban = NULL, zoom = 8, qfTF = T) {
+                          sif.path = NULL, lon.lat = NULL, nf.dlat = NULL, 
+                          nf.dlon = NULL, zoom = 8, qfTF = T) {
 
     if (plotTF) {
         
@@ -15,7 +15,7 @@ ggmap.obs.info = function(plotTF, site, store.path = NULL, all.timestr = NULL,
         for (t in 1 : length(all.timestr)) {
             x1 = ggmap.obs.xco2(site, all.timestr[t], oco.sensor, oco.ver, 
                                 oco.path, lon.lat, plotdir, zoom, qfTF = qfTF, 
-                                box.dlat = dlat.urban, box.dlon = dlon.urban)
+                                box.dlat = nf.dlat, box.dlon = nf.dlon)
 
             if (!is.null(sif.path))
                 s1 = ggmap.obs.sif(site, all.timestr[t], oco.sensor, oco.ver, 

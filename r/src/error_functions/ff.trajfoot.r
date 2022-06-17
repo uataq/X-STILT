@@ -16,52 +16,53 @@
 # remove zero footprint to save time and space, DW, 01/29/2019 
 
 #########
-ff.trajfoot <- function(trajdat, emiss){
-
-  library(dplyr)
+ff.trajfoot = function(trajdat, emiss){
 
   # compute the total indx before any operations
-  tot.p <- data.frame(indx = unique(trajdat$indx))
+  library(dplyr)
+  tot.p = data.frame(indx = unique(trajdat$indx))
 
   # cut particles beyond emission grid
   # remove zero footprint to save time and space, DW, 01/29/2019 
-  trajdat <- trajdat %>% filter(long >= extent(emiss)@xmin,
-                                long <  extent(emiss)@xmax, 
-                                lati >= extent(emiss)@ymin,
-                                lati <  extent(emiss)@ymax, 
-                                foot > 0)
+  trajdat = trajdat %>% filter(long >= extent(emiss)@xmin,
+                               long <  extent(emiss)@xmax, 
+                               lati >= extent(emiss)@ymin,
+                               lati <  extent(emiss)@ymax, foot > 0)
 
   # find emissions and calculate CO2
-  trajcor <- trajdat %>% dplyr::select(long, lati) 
-  coordinates(trajcor) <- c('long', 'lati')
-  trajdat <- trajdat %>% mutate(find.emiss = raster::extract(x = emiss, y = trajcor),
-                                co2 = find.emiss * foot)
+  trajcor = trajdat %>% dplyr::select(long, lati) 
+  coordinates(trajcor) = c('long', 'lati')
+  trajdat = trajdat %>% 
+            mutate(find.emiss = raster::extract(x = emiss, y = trajcor),
+                   co2 = find.emiss * foot)
 
-  # checking --
-  if (F) {
-    m1 <- ggplot.map(map = 'ggmap', center.lat = lon.lat$site_lat + 0.5,
-                     center.lon = lon.lat$site_lon + 0.1, zoom = 7)[[1]]
-    c1 <- m1 + geom_point(data = trajdat[trajdat$indx < 2000, ],
-                          aes(long, lati, colour = co2)) +
-               scale_colour_gradient(low = 'yellow', high = 'red', trans = 'log10')
-    e1 <- m1 + geom_point(data = trajdat[trajdat$indx < 2000, ],
-                          aes(long, lati, colour = find.emiss)) +
-               scale_colour_gradient(low = 'yellow', high = 'red', trans = 'log10')
-  }
+  # FINALLY, compute total dCO2 for each traj over all backwards hours
+  sum.trajdat = trajdat %>% group_by(indx) %>% na.omit() %>%
+                dplyr::summarise(ff.sum = sum(co2)) %>% ungroup() %>% 
 
-  # also, compute total dCO2 for each traj over all backwards hours
-  sum.trajdat <- trajdat %>% group_by(indx) %>% na.omit() %>%
-                             dplyr::summarize(ff.sum = sum(co2)) %>% ungroup()
+                # as we first removed particles with zero footprint, 
+                # we need to fill the gap to add zero to ff.sum, DW, 01/29/2019 
+                right_join(tot.p, by = 'indx') %>%
 
-  # since we removed particles with zero footprint, we need to add zero to ff.sum 
-  # to let `sum.trajdat` have the same amount of total particles as `tot.p`, 
-  # DW, 01/29/2019 
-  sum.trajdat <- sum.trajdat %>% right_join(tot.p, by = 'indx') 
-
-  # NA will show up in above `sum.trajdat` for particles with foot = 0
-  # thus, replace NA with 0 
-  sum.trajdat$ff.sum[is.na(sum.trajdat$ff.sum)] <- 0 
+                # NA will show up after merging for particles with foot = 0
+                # thus, replace NA with 0 
+                mutate(ff.sum = ifelse(is.na(ff.sum), 0, ff.sum))
 
   return(sum.trajdat)
+} 
+# end of subroutine
 
-} # end of subroutine
+
+
+
+# checking --
+if (F) {
+  m1 = ggplot.map(map = 'ggmap', center.lat = lon.lat$site_lat + 0.5,
+                    center.lon = lon.lat$site_lon + 0.1, zoom = 7)[[1]]
+  c1 = m1 + geom_point(data = trajdat[trajdat$indx < 2000, ],
+                        aes(long, lati, colour = co2)) +
+              scale_colour_gradient(low = 'yellow', high = 'red', trans = 'log10')
+  e1 = m1 + geom_point(data = trajdat[trajdat$indx < 2000, ],
+                        aes(long, lati, colour = find.emiss)) +
+              scale_colour_gradient(low = 'yellow', high = 'red', trans = 'log10')
+}

@@ -17,8 +17,7 @@ get.lon.lat = function(site, dlon, dlat, site.loc = NULL, api.key = NULL) {
     # google API can be obtained from https://console.developers.google.com/
     # *** if the site lat/lon is known, no need for API
     if (is.null(api.key)) api.key = readLines('insert_ggAPI.csv')
-    if (api.key == '') 
-      stop('Missing googleAPI, insert your API in insert_ggAPI.csv\n')
+    if (api.key == '') stop('Missing googleAPI for getting lat/lon of your site; put your API in insert_ggAPI.csv or mannually insert lat/lon, see @param site.loc...\n')
     register_google(key = api.key)
     site.loc = geocode(location = site, output = 'latlon', source = 'google',
                        override_limit = T)

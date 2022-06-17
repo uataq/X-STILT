@@ -68,7 +68,11 @@ grab.raob = function(raob.fn, timestr, err.path, nhrs,
     if (format == 'fsl') {
 
       # reading line by line, originate from JCL's
-      dat  = scan(raob.fn, sep = '\n', what = '')
+      dat = scan(raob.fn, sep = '\n', what = '')
+      if (grepl('No data is currently available for this request', dat[4])) {
+        cat('grab.raob(): No raob data is currently available...return NA\n\n')
+        return()
+      }
       type = as.numeric(substr(dat, 5, 7))   #type of identification line
 
       # grab time

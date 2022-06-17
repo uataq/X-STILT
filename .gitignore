@@ -47,4 +47,7 @@ exe/*.ASC
 exe/arw2arl
 exe/hycs_std
 exe/xtrct_grid
-
+plot_script.r 
+r/src/mini_functions/get.lon.lat.epa.r
+r/src/satellite/tropomi_functions/get.tropomi.prior.hcho.r
+archive

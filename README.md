@@ -32,15 +32,15 @@ Prerequisites for working with XCO<sub>2</sub>
 ============
 1. Download [OCO-2 Level 2 Lite files](https://disc.gsfc.nasa.gov/datasets/OCO2_L2_Lite_FP_9r/summary) and modify `oco2.path`; X-STILT will read in averaging kernels and pressure weighting functions from OCO-2 lite files to perform vertical weighting to footprint values for air parcels that releases from different altitudes and then provide the vertically compressed column footprints. See [this section](#generalization) if you desired to use other column sensors. 
 
-2. Download [1 km ODIAC files in tif format](http://db.cger.nies.go.jp/dataset/ODIAC/DL_odiac2019.html) and modify `tiff.path`. ODIAC is the main emission product we adopted to estimate anthropogenic XCO<sub>2</sub> concentrations in ppm. 
+2. (OPTIONAL) Download [1 km ODIAC files in tif format](http://db.cger.nies.go.jp/dataset/ODIAC/DL_odiac2019.html) and modify `odiac_path`. ODIAC is the prior emission product for estimating anthropogenic XCO<sub>2</sub> concentrations in ppm. 
 
 3. Meteorological fields in ARL format, e.g., ones provided by [NOAA ARL](ftp://arlftp.arlhq.noaa.gov/archives/), and modify the relevant lines in [STEP 4](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L228-L234). 
 
-4. Additional input data streams for performing transport error analyses:
+4. (OPTIONAL) Inputs for performing transport error analyses:
    * [NOAA radiosonde data](https://ruc.noaa.gov/raobs/) for computing model-data wind errors; please choose wind speed unit of tenths of m s-1 and FSL format; Users could download all RAOB stations within a spatial area around their target city;
    * [Carbon-Tracker mole fraction data, e.g., CT-NRT](https://www.esrl.noaa.gov/gmd/ccgg/carbontracker/CT-NRT/) for getting the total XCO<sub>2</sub> in addition to FF XCO<sub>2</sub>. 
 
-5. Additional input data streams for performing emission error analyses: 
+5. (OPTIONAL) Inputs for performing emission error analyses: 
    * Bottom-up emission inventories ensemble [FFDAS](http://ffdas.rc.nau.edu/index.html) and [EDGAR](https://edgar.jrc.ec.europa.eu/). 
 
 
@@ -86,10 +86,10 @@ As discussed in [Sect. 4.2 in Wu et al. (2018)](https://www.geosci-model-dev.net
 
 Example figures of column footprints and XCO<sub>2.ff</sub>
 ============
-![](wgt_sum_xfoot_Riyadh_2015121610_gdas0p5_STILTv2_zoom8_-72hrs_100dpar.png)
+![](figs/wgt_sum_xfoot_Riyadh_2015121610_gdas0p5_STILTv2_zoom8_-72hrs_100dpar.png)
 Figure 1: Latitude integrated map of weighted column footprints [umol/m2/s] on 12/29/2014 from 70+ selected sounding/receptor over Riyadh.
 
-![](wgt_sum_xco2_Riyadh_2015121610_gdas0p5_STILTv2_zoom8_-72hrs_100dpar.png)
+![](figs/wgt_sum_xco2_Riyadh_2015121610_gdas0p5_STILTv2_zoom8_-72hrs_100dpar.png)
 Figure 2: Latitude integrated XCO<sub>2</sub>.ff contribution maps [ppm] on 12/29/2014 from 70+ selected sounding/receptor over Riyadh.
 
 
