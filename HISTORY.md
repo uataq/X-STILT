@@ -13,7 +13,8 @@ Code refactoring for transport error estimates and sounding selections for non-C
 
 * `get.recp.sensorv2()`: function for the selection of satellite soundings to save computational cost; If selected near- or far-field soundings share the same coordinate, only one of them will be treated as model receptor. 
 
-![](figs/demo_selection.png)
+<img src="figs/demo_selection.png" width="400" height="400">
+
 Figure - An example of sounding selections (though not highly recommended for TROPOMI given its coarse resolution). 
 
 
