@@ -6,17 +6,18 @@
 # add time windows for releasing particles, DW, 11/09/2017
 # clear things up and add more sites, DW, 04/16/2018
 
-# *** default output directory will be automatically created and under 'xstilt_wd',
+# default output directory will be automatically created and under 'xstilt_wd',
 # in different Copies; make sure different nummodels are used for different
 # overpass events, DW, 07/31/2018
 # add customized data filtering, DW, 08/20/2018
-# remove data filtering, always use QF = 0 for background estimates, DW, 10/31/2018
+# remove data filtering, use QF = 0 for background estimates, DW, 10/31/2018
 # rename output folder names, DW, 01/25/2019 
 
 
 # ---------------------- function inside run.forward.trajec ------------------ #
 # can work on multiple orbits, DW, 04/30/2021
-convert.timestr2ident = function(timestr, dtime, site_lon, site_lat, agl, numpar, dxyp) {
+convert.timestr2ident = function(timestr, dtime, site_lon, site_lat, agl, 
+                                 numpar, dxyp) {
   
   # get lat/lon for site_ center as well as time string
   clon = signif(site_lon, 6)
@@ -28,20 +29,21 @@ convert.timestr2ident = function(timestr, dtime, site_lon, site_lat, agl, numpar
   # add an additional half an hour to make sure we capture the overpass hour
   # DW, 03/04/2021
   # modify when multiple orbits are found in one day, DW, 04/30/2021
-  date.list = do.call(list, lapply(recp.date, FUN = function(x) 
-  { 
+  date.list = do.call(list, lapply(recp.date, FUN = function(x) { 
     rel.date = x + c(dtime, 0.5) * 60 * 60   # in second
 
     # calculate each release times when continuously releasing particles
-    format.date = strsplit.to.df(format(rel.date, '%Y-%m-%d-%H-%M-%S'), sep = '-') 
-    format.date = format.date %>% mutate_all(funs(as.numeric), colnames(format.date))
+    format.date = strsplit.to.df(format(rel.date, '%Y-%m-%d-%H-%M-%S'), 
+                                 sep = '-') 
+    format.date = format.date %>% 
+                  mutate_all(funs(as.numeric), colnames(format.date))
     colnames(format.date) = c('yr', 'mon', 'day', 'hr', 'min', 'sec')
     format.date$lat = clat; format.date$lon = clon 
 
     # create traj names for each release time, in form of
     # YYYYxMMxDDxHHxmmxNxWxmAGLxPxdeg that works with Trajecmulti()
     format.date$ident = paste0(paste(format(rel.date, '%Yx%mx%dx%Hx%M'), 
-                               latstr, lonstr, formatC(agl, width = 5, flag = 0), 
+                               latstr, lonstr, formatC(agl, width = 5,flag = 0),
                                paste0(numpar, 'P'), dxyp, sep = 'x'), '.rds')
     return(format.date)
   }))
@@ -62,7 +64,9 @@ find.all.metfiles = function(timestr, dtime, met_file_format, met_path, nhrs) {
   for (r in 1:length(rel.date))
     met.files = c(met.files, find_met_files(t_start = rel.date[r],
                                              met_file_format = met_file_format,
-                                             n_hours = nhrs, met_path = met_path))
+                                             n_hours = nhrs, 
+                                             met_path = met_path))
+  
   met.files = basename(unique(met.files))
   if (length(met.files) == 0) {
     cat('find.all.metfiles(): No meteo fields found...please check\n');return()}
@@ -126,7 +130,8 @@ run.forward.trajec = function(site, site_lon, site_lat, timestr,
 
       # now in YYYYMMDDHH
       timestr = unique(substr(obs_df$time_utc, 1, 10)); print(timestr)  
-      if (length(timestr) > 1) cat('run.forward.trajec(): Found multiple orbits per day\n')
+      if (length(timestr) > 1) 
+        cat('run.forward.trajec(): Found multiple orbits per day\n')
 
     } else stop('run.forward.trajec(): Invalid satellite sensor...\n')
   }   # end if 
@@ -136,8 +141,8 @@ run.forward.trajec = function(site, site_lon, site_lat, timestr,
 
   # ------------------------------ STEP 3 --------------------------------- #
   ## get horizontal transport error component if run_hor_err = T
-  # if run_wind_err = T, prepare RAOB data and compute model-data wind comparisons
-  # *** if you do not want to run wind error analysis, set run_wind_err to FALSE 
+  # if run_wind_err = T, prepare RAOB data for model-data wind comparisons
+  # if you do not want to run wind error analysis, set run_wind_err to FALSE 
   # and prescribe a horizontal wind error, e.g., siguverr = 3 (with unit of m/s)
   # for more info, please see get.uverr.r
   
@@ -150,34 +155,39 @@ run.forward.trajec = function(site, site_lon, site_lat, timestr,
   # since final box length = 2 * dxyp * met_res, DW, 06/30/2020
   dxyp = box.len / met_res / 2   
 
-  # reformat trajec info that fits STILT version 1, this script needs to updated later
+  # reformat trajec info that fits STILTv1, this script needs to updated later
   dtime   = seq(dtime.from, dtime.to, dtime.sep)     # vector in hours
-  results = convert.timestr2ident(timestr, dtime, site_lon, site_lat, agl, numpar, dxyp)
+  results = convert.timestr2ident(timestr, dtime, site_lon, site_lat, agl, 
+                                  numpar, dxyp)
 
   # parasm for getting error stats ----------------------------------
   namelist = list(run_hor_err = run_hor_err, run_ver_err = run_ver_err, 
-                  run_wind_err = run_wind_err, zisf = zisf, odiac_path = NULL, 
-                  raob_path = raob_path, nhrs = nhrs, numpar = numpar, met = met, 
-                  met_path = met_path, met_file_format = met_file_format, 
-                  agl = c(0, 100), store_path = store_path)
+                  run_wind_err = run_wind_err, run_sim = TRUE, zisf = zisf, 
+                  odiac_path = NULL, raob_path = raob_path, nhrs = nhrs, 
+                  numpar = numpar, met = met, met_path = met_path, 
+                  met_file_format = met_file_format, agl = c(0, 100), 
+                  store_path = store_path)
 
   # if running trajec
-  if (run_trajec) {
+  if ( run_trajec ) {
 
     # in case there are multiple orbits in a single day, DW, 05/01/2021
-    for (tt in 1 : length(timestr)) {
+    for ( tt in 1 : length(timestr) ) {
       
-      # path that will store the generated wind error statistics if run_hor_err = T
+      # path that store the generated wind error statistics if run_hor_err = T
       tmp_timestr = timestr[tt]
       errlist = config_trans_err(namelist, site, lon_lat = err.lon.lat, 
                                  timestr = tmp_timestr, xstilt_wd)
+      
       hor_err = errlist$hor_err 
       pbl_err = errlist$pbl_err 
       date_df = results[[tt]]
 
       # create out_forward dir for generating forward trajec
-      traj_dir = file.path(traj_path, paste0('out_forward_', tmp_timestr, '_', site))
-      if (!is.na(sensor)) traj_dir = paste0(traj_dir, '_', sensor); print(traj_dir)
+      traj_dir = file.path(traj_path, 
+                           paste0('out_forward_', tmp_timestr, '_', site))
+      if (!is.na(sensor)) traj_dir = paste0(traj_dir, '_', sensor)
+      print(traj_dir)
 
       # delete previous directories and then create new one
       system(paste0('rm -rf ', traj_dir), ignore.stderr = T)
@@ -196,7 +206,10 @@ run.forward.trajec = function(site, site_lon, site_lat, timestr,
       # the updated Trajecmulti() and fortran codes will randomly place receptors
       # according to dxyp
       cat('run.forward.trajec(): Generating forward trajec...\n')
-      met_fns = find.all.metfiles(tmp_timestr, dtime, met_file_format, met_path, nhrs)
+      met_fns = find.all.metfiles(tmp_timestr, dtime, met_file_format, 
+                                  met_path, nhrs)
+      if (is.null(met_fns)) stop('NO met fields found...please check\n')   
+
       Trajecmulti(yr = date_df$yr - 2000, mon = date_df$mon, day = date_df$day, 
                   hr = date_df$hr, mn  = date_df$min, outname = date_df$ident, 
                   numpar = numpar, lat = date_df$lat, lon = date_df$lon,
@@ -204,15 +217,23 @@ run.forward.trajec = function(site, site_lon, site_lat, timestr,
                   dzp  = rep(0, nrow(date_df)),
                   agl  = rep(agl, nrow(date_df)), 
                   nhrs = rep(nhrs, nrow(date_df)),
-                  nummodel = tmp_timestr, metd = c('fnl', 'awrf'), 
-                  outpath = traj_dir, overwrite = run_trajec,
-                  metfile = met_fns, metlib = paste0(met_path, '/'),
+                  nummodel = tmp_timestr, 
+                  metd = c('fnl', 'awrf'), 
+                  outpath = traj_dir, 
+                  overwrite = run_trajec,
+                  metfile = met_fns, 
+                  metlib = paste0(met_path, '/'),
                   doublefiles = T, 
-                  rundir = dirname(traj_dir), rundirname = basename(traj_dir), 
+                  rundir = dirname(traj_dir), 
+                  rundirname = basename(traj_dir), 
                   varsout = varstrajec, 
-                  siguverr = hor_err$siguverr, TLuverr = hor_err$TLuverr, 
-                  zcoruverr = hor_err$zcoruverr, horcoruverr = hor_err$horcoruverr,
-                  hymodelc.exe = './hymodelc.aer', # use the AER version of hymodelc
+                  siguverr = hor_err$siguverr, 
+                  TLuverr = hor_err$TLuverr, 
+                  zcoruverr = hor_err$zcoruverr, 
+                  horcoruverr = hor_err$horcoruverr,
+
+                  # use the AER version of hymodelc
+                  hymodelc.exe = './hymodelc.aer', 
                   setup.list = list(DELT = delt, VEGHT = 0.5)) %>% invisible()
     }  # end for tt
 
