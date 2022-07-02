@@ -2,7 +2,12 @@
 
 X-STILT is an atmospheric transport model that deals with vertically integrated column concentrations of various trace gases ([*Wu et al*., 2018](https://doi.org/10.5194/gmd-11-4843-2018)). The model code was built upon the Stochastic Time-Inverted Lagrangian Transport (STILT) model ([*Lin et al*., 2003](https://doi.org/10.1029/2002JD003161)) and its [latest version 2](https://github.com/uataq/stilt) ([*Fasoli et al*., 2018](https://doi.org/10.5194/gmd-11-2813-2018)). 
 
-**X-STILT can now work with OCO-2&3 XCO<sub>2</sub> and TROPOMI XCO ([*Wu et al*., ACPD](https://acp.copernicus.org/preprints/acp-2021-1029/)), CH<sub>4</sub>, and NO<sub>2</sub> and will be available for [TCCON](https://tccon-wiki.caltech.edu/) and EM27.** :sunglasses: 
+This GitHub repo has built-in scripts/functions for 
+1. running backward trajectories from an atmospheric column and column footprint (start with `run_xstilt.r`); 
+2. running forward-time trajectories from a box around the site and compute background from satellite observations (start with `compute_bg.r`); 
+3. and estimating wind and PBL uncertainties and translating those into XCO<sub>2</sub> uncertainties (start with `run_xstilt.r`)
+
+**The model framework can now work with OCO-2&3 XCO<sub>2</sub> and TROPOMI XCO ([*Wu et al*., ACPD](https://acp.copernicus.org/preprints/acp-2021-1029/)), CH<sub>4</sub>, and NO<sub>2</sub> and will be available for [TCCON](https://tccon-wiki.caltech.edu/) and EM27.** :sunglasses: 
 
 Model developments are ongoing and contributions are welcomed and appreciated. Please contact Dien (dienwu@caltech.edu) if you are interested in other column sensors/species or have any questions.
 
@@ -62,9 +67,11 @@ Obtain column footprint
 
 2. Select the kind of simulation one would like to conduct in [STEP 2](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L120-L132). One needs to modify logical flags which included:
 
-   >* `run_trajec = T or run_foot = T`: Backward trajectories + vertically weighted column footprints; 
+   >* `run_trajec = T or run_foot = T`: Backward trajectories + vertically weighted column footprints;
 
-   >* `run_hor_err = T`: Horizontal transport error analysis (one needs to calculate wind error statistics first (remember to set `run_hor_err = T`), e.g., by comparing modeled winds with observed winds from NOAA RAOB, see [STEP 4](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L237-L241) for more info); 
+   >* `run_hor_err = T`: Horizontal transport error analysis (one needs to calculate wind error statistics first, see below); 
+
+   >* `run_wind_err = T`: Modeled wind error estimates against radiosonde data (one need to download them from NOAA webpage first); 
 
    >* `run_ver_err = T`: Vertical transport error analysis (via scaling mixed layer height up and down with scaling factors stated in [STEP 4](https://github.com/uataq/X-STILT/blob/master/run_xstilt.r#L253-L256));
 
@@ -85,6 +92,15 @@ Obtain column footprint
 Determine background XCO<sub>2</sub>
 ============
 Start with main script of `compute_bg.r`. [M3 is the overpass specific background [ppm]](https://github.com/uataq/X-STILT/blob/master/compute_bg.r) by releasing air parcels in a forward fashion from a city and determining urban plume and background region using 2D kernel density. Please refer to details described in [Sect. 2.3 in Wu et al. (2018)](https://www.geosci-model-dev.net/11/4843/2018/#section2).
+
+   >* `run_trajec = T`: calculate forward-time trajectories from a small box around the site (see parameter `box.len` and other parameters in STEP 2) no matter if those trajectories had been calculated previously. In this mode, air parcels are released continuously for every `dtime.sep` hours (see parameter `dtime.*`);
+
+   >* `run_trajec = T & run_for_err = T`: add a wind error component (controlled by parameter `siguverr`) while calculating forward-time trajectories;
+
+   >* `run_wind_err = T`: calculate modeled wind errors against radiosonde data (one need to download them first);
+
+   >* `run_bg = T`: calculate the background values based on OCO-2/3 or TROPOMI data (see parameters in STEP 4); the inner functions will generate plots of plumes and observed enhancements by assuming background region to the north/south/east/west outside the plume. The final estimated background values will be stored in `file.path(store_path, fn)` if `writeTF = T`. 
+
 
 Estimate horizontal and vertical transport errors
 ============
