@@ -18,7 +18,7 @@ api.key = readLines('insert_ggAPI.csv')
 
 #------------------------------ STEP 1 --------------------------------------- #
 site     = 'SanFrancisco'  # insert target site
-lon_lat  = get.lon.lat(site = site, dlon = 1, dlat = 2, api.key = api.key)
+lon_lat  = get.lon.lat(site = site, dlon = 1, dlat = 1, api.key = api.key)
 site_lon = lon_lat$site_lon
 site_lat = lon_lat$site_lat
 
@@ -105,26 +105,29 @@ if (run_trajec) {       # parallel running, DW, 11/06/2019
 
 # -------------------------------- STEP 4 ------------------------------------ #
 #' @param for calculating background based on 2D kernel density 
-# threshold for outmost boundary of modeled urban plume (smaller td, more outwards)
-td      = 0.1                            # range from 0.1 to 1 
-bg_dlat = 0.5                            # buffer for bg region, in deg-lat
-bg_dlon = 0.5                            # buffer for bg region, in deg-lon
-zoom    = 8                              # zoom for plotting ggmap, see ggmap()
-writeTF = T                              # T: output bg info to txt file
-qfTF    = T                              # T: use screened obs; F: use all obs
-sensor_qa = 0.5                          # quality assurance for TROPOMI, QA > 0.5
+#' @param td - threshold for defining the outmost boundary of modeled plume 
+#'       i.e., normalized KDE in Wu et al. (2018) (smaller td, further outwards)
+td      = 0.1                         # normalized KDE from 0.1 to 1 
+bg_deg  = 0.3                         # bg region in deg-lat/lon
+bin_deg = 0.2                         # bin step (deg) for TROPOMI obs
+zoom    = 8                           # zoom for plotting ggmap, see ggmap()
+writeTF = T                           # T: output bg info to txt file
+qfTF    = T                           # T: use screened obs; F: use all obs
+sensor_qa = 0.5                       # quality assurance for TROPOMI, QA > 0.5
+rm_outlierTF = T                      # remove outliers in bg observation
 
-if (run_trajec == F & run_bg) {         # need forward trajec ready
+if ( run_trajec == F & run_bg ) {         # need forward trajec ready
 
     bg_df = NULL
-    for ( tt in 1 : length(all_timestr) ) {            # loop over each overpass
-        timestr = all_timestr[tt]
+    for ( timestr in all_timestr)  {            # loop over each overpass
         tmp_df = calc.bg.forward.trajec(site, timestr, sensor, sensor_path, 
-                                        sensor_gas, sensor_qa, qfTF, store_path, 
-                                        met, td, bg_dlat, bg_dlon, zoom, api.key)
+                                        sensor_gas, sensor_ver, sensor_qa, 
+                                        qfTF, store_path, met, td, bg_deg, 
+                                        bin_deg, zoom, rm_outlierTF, api.key, 
+                                        lon_lat, bg_side = NA)
         if ( is.null(tmp_df) ) next
         bg_df = rbind(bg_df, tmp_df)
-    }   # end for tt
+    }   # end loop
 
     if (writeTF) {
         if ( grepl('OCO', sensor) ) {           # label qfTF for OCO

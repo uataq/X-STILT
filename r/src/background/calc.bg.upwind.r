@@ -17,9 +17,9 @@ calc.bg.upwind = function(site_lon, site_lat, obs_df, sensor, sensor_gas,
     
     # check if there are any obs outside the plume, if not return NULL
     obs_out = obs_df %>% filter(plmTF == FALSE)
-    if (nrow(obs_out) == 0) { cat('NO obs within background region...\n'); return()} 
+    if (nrow(obs_out) == 0) { cat('NO obs within background region...\n'); return() } 
 
-    # will remove bg observations outside 2-sigma or only within [2.3%tile, 97.7%tile]
+    # remove bg observations outside 2-sigma or within [2.3%tile, 97.7%tile]
     if (rm_outlierTF) {
         library(cowplot)
         cat('calc.bg.upwind(): removing outlier observations from background calc...\n')
@@ -46,20 +46,26 @@ calc.bg.upwind = function(site_lon, site_lat, obs_df, sensor, sensor_gas,
                                                  fill = val, alpha = plmTF)) 
                  
             if (sensor_gas != 'CO2') 
-                o1 = o1 + geom_text(data = obs_df, aes(lon, lat, label = signif(val, 2)), 
+                o1 = o1 + geom_text(data = obs_df, 
+                                    aes(lon, lat, label = signif(val, 2)), 
                                     size = 1.5, color = 'white') 
 
             h1 = ggplot() + theme_classic() + labs(x = 'Xobs', y = 'Count') + 
-                 geom_histogram(data = obs_df, aes(val, fill = plmTF), color = 'gray30')
-            d1 = ggplot() + theme_classic() + labs(x = 'Xobs_bg', y = NULL, title = 'Cum Emp Dens') + 
+                 geom_histogram(data = obs_df, aes(val, fill = plmTF), 
+                                color = 'gray30')
+            d1 = ggplot() + theme_classic() + 
+                 labs(x = 'Xobs_bg', y = NULL, title = 'Cum Emp Dens') + 
                  geom_point(data = ecdf_df, aes(x, y), size = 0.4) + 
                  geom_vline(xintercept = edge, color = 'blue')
 
-            xloc = 0.5; yloc = 0.6; if (sensor_gas == 'CO2') {xloc = 0.6; yloc = 0.7}
+            xloc = 0.5; yloc = 0.6
+            if (sensor_gas == 'CO2') { xloc = 0.6; yloc = 0.7 }
             hd = ggdraw() + draw_plot(h1) + draw_plot(d1, x = xloc, y = yloc, width = .3, height = .3)
-            picname = file.path(plot_path, paste0('background_demo_x', tolower(sensor_gas), 
-                                                  '_', min(unique(obs_df$time_utc)), '.png'))
-            ggsave(ggarrange(o1, hd), filename = picname, width = 11, height = 5)
+            picname = file.path(plot_path, 
+                                paste0('background_demo_x', tolower(sensor_gas),
+                                      '_', min(unique(obs_df$time_utc)),'.png'))
+            ggsave(ggarrange(o1, hd), filename = picname, 
+                   width = 11, height = 5)
         }
 
         obs_out = obs_out %>% filter(val <= edge)

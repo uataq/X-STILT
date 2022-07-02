@@ -26,8 +26,7 @@ get.recp.sensorv2 = function(timestr, obs_filter = NULL, obs_fn, obs_sensor,
     # -------------------------------------------------------------------------
     qfTF = FALSE
     if (!is.null(obs_filter)) { 
-        qfTF = T; tropomi_qa = as.numeric(obs_filter[2]) 
-    }
+        qfTF = T; tropomi_qa = as.numeric(obs_filter[2]) }
 
     # make sure selTF is correct based on num_*
     selTF = TRUE; if (is.na(num_bg_lat) | is.na(num_nf_lat)) selTF = FALSE
@@ -36,9 +35,8 @@ get.recp.sensorv2 = function(timestr, obs_filter = NULL, obs_fn, obs_sensor,
                             sensor_path = obs_path, qfTF, tropomi_qa, lon_lat) 
     
     if (obs_sensor == 'TROPOMI') 
-        obs_df = obs_df %>% rename(lon = center_lon, 
-                                     lat = center_lat, 
-                                     vertices = corner)
+        obs_df = obs_df %>% rename(lon = center_lon, lat = center_lat, 
+                                   vertices = corner)
 
     # remove vertices coordinate from obs
     uni_df = unique(obs_df %>% dplyr::select(-c(lons, lats, vertices)))
@@ -106,10 +104,11 @@ get.recp.sensorv2 = function(timestr, obs_filter = NULL, obs_fn, obs_sensor,
     
     # ----------------------------------------------------------------------
     # round lat, lon for each sounding, fix bug, DW, 07/31/2018
-    recp_info = recp_info %>% dplyr::select(run_time = datestr, lati = lat, 
-                                            long = lon) %>% arrange(lati) %>% 
-                mutate(lati = signif(lati, 6), long = signif(long, 7)) %>% 
-                arrange(lati)
+    if ( !'run_time' %in% colnames(recp_info) ) 
+        recp_info = recp_info %>% dplyr::select(run_time = datestr, lati = lat, 
+                                                long = lon) %>% 
+                    mutate(lati = signif(lati, 6), long = signif(long, 7)) %>% 
+                    arrange(lati)
 
     ## add release height
     recp_info$zagl = list(agl)

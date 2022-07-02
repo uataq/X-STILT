@@ -63,9 +63,9 @@ find.all.metfiles = function(timestr, dtime, met_file_format, met_path, nhrs) {
   met.files = NULL
   for (r in 1:length(rel.date))
     met.files = c(met.files, find_met_files(t_start = rel.date[r],
-                                             met_file_format = met_file_format,
-                                             n_hours = nhrs, 
-                                             met_path = met_path))
+                                            met_file_format = met_file_format,
+                                            n_hours = nhrs, 
+                                            met_path = met_path))
   
   met.files = basename(unique(met.files))
   if (length(met.files) == 0) {
