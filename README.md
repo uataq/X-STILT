@@ -111,7 +111,7 @@ Briefly speaking, users need to first generate another set of trajectories with 
 <img src="figs/trans_err.png" width="450" height="300">
 
 
-Atmospheric inversion on XCO<sub>2</sub>
+Atmospheric inversion
 ============
 As discussed in [Sect. 4.2 in Wu et al. (2018)](https://www.geosci-model-dev.net/11/4843/2018/#section4), we could come up the posterior scaling factor for anthropogenic emissions based on 5 overpasses over Riyadh, via a simple Bayesian Inversion. We treated the entire city as a whole and solve for one scaling factor, given biases in near-field wind direction. So, we did not solve for posterior emissions for every grid cell within a city. Codes are not included in this repo. 
 
