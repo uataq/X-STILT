@@ -33,14 +33,18 @@ get.lon.lat = function(site, dlon, dlat, site.loc = NULL, api.key = NULL) {
   pointsSP = SpatialPoints(site.loc, proj4string =CRS(proj4string(countriesSP)))
   indices = over(pointsSP, countriesSP)
 
-  if (as.character(indices$ISO3) == 'USA') {
-    # get country, state, zipcode, and timezone
-    state_df = site.loc %>% 
-               tidygeocoder::reverse_geocode(lat = lat, long = lon, 
-                                          address = site, full_results = T) %>%
-               dplyr::select(state) %>% 
-               mutate(state_abb = state.abb[state.name %in% state])
-  } else state_df = data.frame(state = NA, state_abb = NA)
+  state_df = data.frame(state = NA, state_abb = NA)
+  # if (as.character(indices$ISO3) == 'USA') {
+
+  #   # get country, state, zipcode, and timezone
+  #   state_df = site.loc %>% 
+  #              tidygeocoder::reverse_geocode(lat = lat, long = lon, 
+  #                                            address = site, 
+  #                                            full_results = T) %>%
+  #              dplyr::select(state) %>% 
+  #              mutate(state_abb = state.abb[state.name %in% state])
+  # }
+
   
   # get time.zone 
   tz = tz_lookup_coords(site.loc$lat, site.loc$lon)

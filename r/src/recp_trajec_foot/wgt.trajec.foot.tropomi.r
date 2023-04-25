@@ -4,7 +4,8 @@
 #     particles, based on different releasing heights
 # written by Dien Wu
 
-wgt.trajec.foot.tropomi = function(output, tropomi.fn, tropomi.species, 
+wgt.trajec.foot.tropomi = function(output, tropomi.fn, 
+								   tropomi.species = c('CO', 'CH4', 'NO2')[1], 
 								   ak.wgt = T, pwf.wgt = T, overwriteTF = T) {
 
 	# read trajectory before weighting

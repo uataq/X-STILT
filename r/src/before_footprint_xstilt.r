@@ -11,8 +11,8 @@
 # minor update for using OCO-3 data, i.e., change variable names, DW, 06/28/2020
 # add vertical AK weighting of TROPOMI column CO, DW, 08/25/2020 
 # if ak_wgt == FALSE, remove dependence of any satellite, DW, 09/15/2020 
-# add weighting of trajec-level footprints for NO2 modling by NOx lifetime, DW, 10/06/2020
 
+# add vertical weighting based on TCCON profiles (SZA, ALT), DW, 04/21/2023
 before_footprint_xstilt = function() {
 
     # since xres2, yres2, and time_intergrate2 can contain multiple variables, 
@@ -20,7 +20,7 @@ before_footprint_xstilt = function() {
     xres2 = unlist(args$xres2)
     yres2 = unlist(args$yres2)
     time_integrate2 = unlist(args$time_integrate2)
-    obs_species = args$obs_species 
+    obs_species = unlist(args$obs_species)
     obs_sensor = args$obs_sensor 
     obs_fn  = args$obs_fn 
     ak_wgt  = args$ak_wgt 
@@ -61,10 +61,43 @@ before_footprint_xstilt = function() {
                                          tropomi.species = obs_species, 
                                          ak.wgt = ak_wgt, pwf.wgt = pwf_wgt) 
                 
+    } else if ( obs_sensor == 'TCCON' ) {
+        
         # ---------------------------------------------------------------------
-        # weight trajec-level footprints by NOx lifetime, DW, TBD/....
+        #' weight trajec-level foot uding TCCON weighting profiles 
+        #' has to apply those weighting when using TCCON data
+        #' can work on multiple species if @param obs_species is a vector
         # ---------------------------------------------------------------------
-    } 
+        cat('based on TCCON AK and integration operators\n')
+
+        # if there are more than one non-CO2 species, calc footprint first
+        non_co2_species = obs_species[ obs_species != 'CO2' ]
+
+        if ( length(non_co2_species) > 0 ) {    
+            for ( ss in non_co2_species) {
+                cat('\n\nbefore_footprint_xstilt(): working on', ss, '\n')
+                tmp_output = wgt.trajec.foot.tccon(output = output, 
+                                                   tccon.fn = obs_fn, 
+                                                   tccon.species = ss)
+                
+                # then generated foots for non-CO2 species
+                tmp_fn = file.path(rundir, paste0(simulation_id, '_', ss, 
+                                                  '_foot.nc'))
+
+                # use weighted output for footprint
+                calc_footprint(p = tmp_output$particle, output = tmp_fn, 
+                               r_run_time = r_run_time, 
+                               smooth_factor = smooth_factor,
+                               time_integrate = time_integrate,
+                               xmn = xmn, xmx = xmx, xres = xres,
+                               ymn = ymn, ymx = ymx, yres = yres)
+            }   # end for
+        } 
+
+        # default footprint weighting is to use CO2 weighting profiles 
+        output = wgt.trajec.foot.tccon(output = output, tccon.fn = obs_fn, 
+                                       tccon.species = 'CO2')
+    }
     
     cat('before_footprint_xstilt(): DONE with footprint weighting...\n')
 
@@ -76,7 +109,7 @@ before_footprint_xstilt = function() {
     if ( !(NA %in% xres2) & !(NA %in% yres2) ) {
 
         cat('\n\nbefore_footprint_xstilt(): generate footprint with different config...\n')
-        for (f in 1 : length(xres2)) {
+        for ( f in 1 : length(xres2) ) {
             
             tmp_fn = file.path(rundir, paste0(basename(rundir), '_', 
                                               signif(xres2[f], 3), 'x', 

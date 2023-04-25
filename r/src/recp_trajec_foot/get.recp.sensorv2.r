@@ -14,12 +14,13 @@
 # but preserve TROPOMI overpass time for receptor time
 
 # attempt to evenly select satellite soundings, DW, 06/17/2022 
+# implement slant column release (recalc recp lon/lat based on SZA and SAA), DW, 04/21/2023
 
 get.recp.sensorv2 = function(timestr, obs_filter = NULL, obs_fn, obs_sensor, 
-                             obs_path, lon_lat, jitterTF = FALSE, num_jitter, 
-                             nf_dlat, nf_dlon, num_bg_lat, num_bg_lon, 
-                             num_nf_lat, num_nf_lon, agl, run_trajec, 
-                             output_wd, combine_locTF = FALSE, oco_path = NULL){
+                             obs_path, obs_spescies, lon_lat, jitterTF = FALSE, 
+                             num_jitter, numpar, nf_dlat, nf_dlon, num_bg_lat, 
+                             num_bg_lon, num_nf_lat, num_nf_lon, agl, run_trajec, run_slant = FALSE, output_wd, 
+                             combine_locTF = FALSE, oco_path = NULL){
     
     # -------------------------------------------------------------------------
     # 1 - grab all available OCO or TROPOMI data first 
@@ -39,7 +40,10 @@ get.recp.sensorv2 = function(timestr, obs_filter = NULL, obs_fn, obs_sensor,
                                    vertices = corner)
 
     # remove vertices coordinate from obs
-    uni_df = unique(obs_df %>% dplyr::select(-c(lons, lats, vertices)))
+    if ( 'lons' %in% colnames(obs_df) ) {
+        uni_df = unique(obs_df %>% dplyr::select(-c(lons, lats, vertices)))
+    } else uni_df = obs_df %>% unique()
+        
 
     # -------------------------------------------------------------------------
     # 2 - select observations
@@ -62,13 +66,13 @@ get.recp.sensorv2 = function(timestr, obs_filter = NULL, obs_fn, obs_sensor,
         # for setting up receptors
         cat('get.recp.sensorv2(): since combine_locTF == TRUE, use OCO loc and TROPOMI time for receptors...\n')
         oco_df = get.sensor.obs(site, timestr, sensor = 'OCO-3', 
-                                 sensor_gas = 'CO2', sensor_fn = NULL, 
-                                 sensor_path = oco_path, qfTF, lon_lat =lon_lat)
+                                sensor_gas = 'CO2', sensor_fn = NULL, 
+                                sensor_path = oco_path, qfTF, lon_lat = lon_lat)
         
         if (nrow(oco_df) == 0) 
             stop('get.recp.sensor(): NO OCO loc found for placing receptors with TROPOMI time')
         oco_df = unique(oco_df %>% dplyr::select(-c(lons, lats, vertices)))
-      
+        
         # place denser receptors within lat range with high XCO2
         if (selTF) oco_df = sel.obs4recpv2(df = oco_df, nf_dlat, nf_dlon, 
                                            lon_lat, num_bg_lat, num_bg_lon, 
@@ -86,11 +90,18 @@ get.recp.sensorv2 = function(timestr, obs_filter = NULL, obs_fn, obs_sensor,
     } else if ( selTF == TRUE ) {   
         
         # ----------------------------------------------------------------------
-        # select satellite soundings as receptors; works for OCO and TROPOMI
-        recp_info = sel.obs4recpv2(df = uni_df, nf_dlat, nf_dlon, lon_lat, 
-                                   num_bg_lat, num_bg_lon, 
-                                   num_nf_lat, num_nf_lon)
-    
+        # spatially select soundings as receptors; works for OCO and TROPOMI
+        if (obs_sensor %in% c('OCO-2', 'OCO-3', 'TROPOMI')) {
+            recp_info = sel.obs4recpv2(df = uni_df, nf_dlat, nf_dlon, lon_lat, 
+                                       num_bg_lat, num_bg_lon, 
+                                       num_nf_lat, num_nf_lon)
+
+        } #else if (obs_sensor == 'TCCON') {
+            # for TCCON, since it's continuous, if selTF is true, 
+            # let's perform an hourly integration 
+            
+        #}
+
     } else if ( jitterTF & !is.na(num_jitter) ) {
         
         # ----------------------------------------------------------------------
@@ -104,14 +115,70 @@ get.recp.sensorv2 = function(timestr, obs_filter = NULL, obs_fn, obs_sensor,
     
     # ----------------------------------------------------------------------
     # round lat, lon for each sounding, fix bug, DW, 07/31/2018
-    if ( !'run_time' %in% colnames(recp_info) ) 
-        recp_info = recp_info %>% dplyr::select(run_time = datestr, lati = lat, 
-                                                long = lon) %>% 
+    if ( !'run_time' %in% colnames(recp_info) ) {
+
+        # requires SZA and SAA info from observation or users
+        if ( run_slant ) {
+            
+            if ( !'sza' %in% colnames(recp_info) | 
+                 !'saa' %in% colnames(recp_info)) 
+            stop('You turned on slant column release @param run_slant, but no SZA/SAA found in the observation data for calc slant x-receptors...\n')
+            
+            recp_info = recp_info %>% dplyr::select(run_time = datestr, lati = lat, long = lon, sza, saa)
+
+        } else recp_info = recp_info %>% 
+                       dplyr::select(run_time = datestr, lati = lat, long = lon)
+
+        recp_info = recp_info %>% 
                     mutate(lati = signif(lati, 6), long = signif(long, 7)) %>% 
                     arrange(lati)
+    }   # end if
 
     ## add release height
     recp_info$zagl = list(agl)
+
+
+    # ----------------------------------------------------------------------
+    # now tilt the column receptor if slant column release is enabled 
+    if (run_slant) {
+       
+        R = 6378137     # earth radius in m
+        
+        # work on each row and calc the lon/lat along slant column 
+        # make lati/long a list   
+        recp_slant = NULL
+        for ( r in 1 : nrow(recp_info)) {
+          
+          tmp = recp_info[r, ]
+          xhgt_min = min(unlist(tmp$zagl))
+          xhgt_max = max(unlist(tmp$zagl))
+          xhgt_rng = xhgt_max - xhgt_min
+          xhgt_step = xhgt_rng / numpar
+          xhgt = (1:numpar) * xhgt_step + xhgt_min
+          
+          # expand fixed lon/lat at Nadir to slant lon/lat
+          # create new data frame where lati, long, zagl are all list()
+          dl_m = xhgt * tan(tmp$sza * pi / 180)
+
+          # deviations in lon/lat per particle
+          dlon_m = dl_m * sin(tmp$saa * pi / 180)
+          dlat_m = dl_m * cos(tmp$saa * pi / 180)
+
+          # calc new lon/lat along slant column 
+          long_slant = tmp$long + dlon_m / R * 180 / pi
+          lati_slant = tmp$lati + dlat_m / (R * cos(tmp$lati * pi / 180)) * 180 / pi
+
+          tmp_slant = data.frame(run_time = tmp$run_time, lati0 = tmp$lati, 
+                                 long0 = tmp$long)
+          tmp_slant$lati = list(lati_slant)
+          tmp_slant$long = list(long_slant)
+          tmp_slant$zagl = list(xhgt)
+
+          recp_slant = rbind(recp_slant, tmp_slant)
+        }
+
+        recp_info = recp_slant
+    }        
 
     return(recp_info)
 } # end of subroutine

@@ -13,8 +13,10 @@ if (F) {
 
 # for TROPOMI vertical column density (VCD), convert to mixing ratio in ppb 
 #' get rid of @param sensor.ver for grabbing warn levels, DW, 07/23/2021
+#' add sections for loading TCCON data, DW, 04/21/2023 
+#' 
 get.sensor.obs = function(site, timestr, 
-                          sensor = c('OCO-2', 'OCO-3', 'TROPOMI')[1], 
+                          sensor = c('OCO-2', 'OCO-3', 'TROPOMI', 'TCCON')[1], 
                           sensor_gas = c('CO2', 'CO', 'NO2', 'CH4', 'HCHO')[1], 
                           sensor_fn = NULL, sensor_path, qfTF = T, 
                           tropomi_qa = c(0, 0.4, 0.5, 0.7, 1)[1], 
@@ -36,8 +38,14 @@ get.sensor.obs = function(site, timestr,
         if (qfTF) obs = obs %>% filter(qf == 0)
     }
     
+    # TCCON gases, XCO in ppb, others in ppm, DW, 04/21/2023
+    if ( grepl('TCCON', sensor)) {      
+        obs = grab_tccon(tccon_fn = sensor_fn, timestr)
+        if ( is.null(obs) ) { cat(err_message); return() }
+    }
+
     # TROPOMI CO VCD and mixing ratio XCO in ppb
-    if ( grepl('TROPOMI', sensor) & sensor_gas == 'CO' ) {      
+    if ( grepl('TROPOMI', sensor) & 'CO' %in% sensor_gas ) {      
         obs = grab.tropomi.co(tropomi.path = sensor_path, timestr, lon_lat, 
                               tropomi.fn = sensor_fn) 
         if ( is.null(obs) ) { cat(err_message); return() }
@@ -48,7 +56,7 @@ get.sensor.obs = function(site, timestr,
     }
     
     # TROPOMI NO2, final mixing ratio of tropo NO2 in ppb
-    if ( grepl('TROPOMI', sensor) & sensor_gas == 'NO2' ) {      
+    if ( grepl('TROPOMI', sensor) & 'NO2' %in% sensor_gas ) {      
         obs = grab.tropomi.no2(tropomi.path = sensor_path, timestr, lon_lat, 
                                tropomi.fn = sensor_fn) 
         if ( is.null(obs) ) { cat(err_message); return() }
@@ -59,7 +67,7 @@ get.sensor.obs = function(site, timestr,
     }
 
     # TROPOMI CH4
-    if ( grepl('TROPOMI', sensor) & sensor_gas == 'CH4' ) {      
+    if ( grepl('TROPOMI', sensor) & 'CH4' %in% sensor_gas ) {      
         obs = grab.tropomi.ch4(tropomi.path = sensor_path, timestr, lon_lat, 
                                tropomi.fn = sensor_fn) 
         if ( is.null(obs) ) { cat(err_message); return() }
@@ -70,7 +78,7 @@ get.sensor.obs = function(site, timestr,
     }
 
     # TROPOMI HCHO
-    if ( grepl('TROPOMI', sensor) & sensor_gas == 'HCHO' ) {      
+    if ( grepl('TROPOMI', sensor) & 'HCHO' %in% sensor_gas ) {      
         obs = grab.tropomi.hcho(tropomi.path = sensor_path, timestr, lon_lat, 
                                 tropomi.fn = sensor_fn) 
         if ( is.null(obs) ) { cat(err_message); return() }
@@ -80,14 +88,14 @@ get.sensor.obs = function(site, timestr,
         if (qfTF) obs = obs %>% filter(qa >= tropomi_qa)
     }
 
-
     if ( is.null(obs) ) { cat(err_message2); return() }
     if ( nrow(obs) == 0 ) { cat(err_message2); return() }
 
-    # initiate swath number as 1 and add row number, DW, 03/09/2021
-    obs = obs %>% mutate(swath = 1, row = seq(1, nrow(obs)))  
     if ( grepl('OCO', sensor) ) { 
 
+        # initiate swath number as 1 and add row number, DW, 03/09/2021
+        obs$row = seq(1, nrow(obs))
+        
         # assign polygon indx to OCO-3 SAM
         zero.indx   = which(obs$vertices == 1)
         obs$polygon = findInterval(obs$row, zero.indx)
@@ -102,13 +110,18 @@ get.sensor.obs = function(site, timestr,
             obs = obs %>% mutate(swath = findInterval(obs$row, track.indx))
         }   # end SAM
 
+        obs = obs %>% dplyr::select(-row)
+
     } else if ( grepl('TROPOMI', sensor) ) {        
 
+        # initiate swath number as 1 and add row number, DW, 03/09/2021
+        obs = obs %>% mutate(swath = 1, row = seq(1, nrow(obs)))  
+        
         # assign fake polygon indx
         zero.indx   = which(obs$corner == 0)
         obs$polygon = findInterval(obs$row, zero.indx)
+        obs = obs %>% dplyr::select(-row)
     }   # end if
 
-    obs = obs %>% dplyr::select(-row)
     return(obs)
 }

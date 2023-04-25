@@ -23,7 +23,7 @@
 # DW, 08/30/2019 
 
 # minor update for using OCO-3 data, i.e., change variable names, DW, 06/28/2020
-# interpolate vertical profiles onto each particle instead of each release level, 
+# interpolate vert profiles onto each particle instead of each release level, 
 #    due to changes in HYSPLIT compiler, DW, 07/07/2020
 
 get.wgt.oco.func = function(output, oco.path, oco.fn = NA) {
@@ -75,9 +75,9 @@ get.wgt.oco.func = function(output, oco.path, oco.fn = NA) {
 	a.oco = coef(nls)[[1]]    # a3 stands for g/RTv_mean based on OCO atmos-X
 
 
-	# ----------------------------------------------------------------------------
+	# --------------------------------------------------------------------------
 	# now start to weight trajec-level footprint for X-STILT
-	# ----------------------------------------------------------------------------
+	# --------------------------------------------------------------------------
 	# first bin up specific according to pressure of bottom level
 	# +1 is adjust as findInterval() finds the lower end of a pressure interval
 	# but pressure declines with height
@@ -97,17 +97,17 @@ get.wgt.oco.func = function(output, oco.path, oco.fn = NA) {
 	# release height of each particle is roughly distributed between levels of a line source
 	sel.p = sel.p %>% 
 
-			 # use OCO sfc pressure to calculate pressure of release heights
-			 # P = Psfc * exp (g/RT * (Zsfc - Z))
-			 mutate(xpres = oco.psfc * exp(a.oco * (-xhgt)), 
+			# use OCO sfc pressure to calculate pressure of release heights
+			# P = Psfc * exp (g/RT * (Zsfc - Z))
+			mutate(
+				xpres = oco.psfc * exp(a.oco * (-xhgt)), 
 			
-					# interpolate specific humidity, AK_norm, apriori to 
-					# each particle based on its release pressure
-			 		q = approx(qt.bin$xpres, qt.bin$sphu, xout = xpres, rule = 2)$y, 
-			        ak.norm = approx(oco.df$pres, oco.df$ak.norm, xout = xpres, rule = 2)$y, 
-					ap = approx(oco.df$pres, oco.df$ap, xout = xpres, rule = 2)$y) %>% 
-
-			arrange(desc(xpres))
+				# interpolate specific humidity, AK_norm, apriori to 
+				# each particle based on its release pressure
+			 	q = approx(qt.bin$xpres, qt.bin$sphu, xout = xpres, rule = 2)$y,
+			    ak.norm = approx(oco.df$pres, oco.df$ak.norm, xout = xpres, rule = 2)$y,
+				ap = approx(oco.df$pres, oco.df$ap, xout = xpres, rule = 2)$y
+				  ) %>% arrange(desc(xpres))
 
 	# calculate diff in pressure between particles based on release heights
 	dp = abs(c(oco.psfc - max(sel.p$xpres), diff(sel.p$xpres)))
@@ -124,7 +124,8 @@ get.wgt.oco.func = function(output, oco.path, oco.fn = NA) {
 
 	# lastly locate the OCO-2 levels that above the STILT particles 
 	min.pres.xstilt = min(sel.p$xpres)
-	upper.oco.df = oco.df %>% filter(pres < min.pres.xstilt) %>% arrange(desc(pres))
+	upper.oco.df = oco.df %>% filter(pres < min.pres.xstilt) %>% 
+							  arrange(desc(pres))
 	upper.oco.df$indx = seq(npar + 1, npar + nrow(upper.oco.df))
 
 	# adjust the PWF for the first level above XSTILT particles 

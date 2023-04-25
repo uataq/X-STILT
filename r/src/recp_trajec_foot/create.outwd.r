@@ -1,9 +1,9 @@
 # read satellite data and craete output dir for TROPOMI or OCO-3, DW, 07/02/2021
-
+# add TCCON, DW, 04/21/2023
 
 # obs_* can be NA, for column simulations without satellite data
-create.outwd = function(timestr, obs_species, obs_sensor, obs_path, lon_lat, 
-                        store_path, met, run_hor_err) {
+create.outwd = function(timestr, obs_species, obs_sensor, obs_path, 
+                        obs_fn = NA, lon_lat, store_path, met, run_hor_err) {
 
   if ( is.na(obs_sensor) ) {    # ideal run without satellite data
     obs_info = data.frame(timestr = timestr, fn = NA, stringsAsFactors = F)
@@ -39,10 +39,23 @@ create.outwd = function(timestr, obs_species, obs_sensor, obs_path, lon_lat,
     # path for storing trajec, foot for OCO-2/3, DW, 07/31/2018
     output_wd = file.path(store_path, paste('out', timestr, met, obs_sensor, sep = '_'))
 
+  } else if ( grepl ('TCCON', obs_sensor) ) {
+    
+    if ( is.na(obs_fn) ) stop('create.outwd(): NO TCCON file assigned...\n')
+    obs_info = data.frame(timestr = timestr, fn = obs_fn, stringsAsFactors = F)
+
+    # path for storing trajec, foot for OCO-2/3, DW, 07/31/2018
+    if ( length(timestr) > 1) {
+      output_wd = file.path(store_path, 
+                            paste('out', min(timestr), max(timestr), met, 
+                                  obs_sensor, sep = '_'))
+    } else output_wd = file.path(store_path, paste('out', timestr, met, obs_sensor, sep = '_'))
+
   } else stop("ONLY TROPOMI, OCO-2, OCO-3, NA are currently implemented, please check @param obs_sensor...\n")
 
   if (run_hor_err)  # for error output 
-    output_wd = gsub(paste0('out_', timestr), paste0('outerr_', timestr), output_wd)
+    output_wd = gsub(paste0('out_', timestr), 
+                     paste0('outerr_', timestr), output_wd)
 
   cat(paste('\n\nOutput dir -', output_wd, '\n'))
   return(list(obs_info = obs_info, output_wd = output_wd))

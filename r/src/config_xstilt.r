@@ -20,11 +20,12 @@ config_xstilt = function(namelist){
   xstilt_wd = namelist$xstilt_wd
   lib.loc   = .libPaths()[1]
   site      = namelist$site
-  timestr   = namelist$timestr
+  timestr   = namelist$timestr[[1]]
   lon_lat   = namelist$lon_lat[[1]]
   obs_path  = namelist$obs_path
+  obs_fn    = namelist$obs_fn
   obs_sensor = namelist$obs_sensor
-  obs_species = namelist$obs_species
+  obs_species = unlist(namelist$obs_species)
   store_path = namelist$store_path
 
   # make sure obs_* are set to NA and no AK weighting for ideal runs
@@ -38,10 +39,14 @@ config_xstilt = function(namelist){
     jitterTF = FALSE
   }
 
+  if ( obs_sensor == 'TROPOMI' & length(obs_species) > 1) 
+    stop('Please only choose one atmospheric species per time for TROPOMI, denoted by @param obs_species...\n')
+
 
   # Model control -------------------------------------------------------------
   rm_dat      = T
   timeout     = namelist$timeout  # in sec
+  run_slant   = namelist$run_slant 
   run_trajec  = namelist$run_trajec
   run_foot    = namelist$run_foot
   run_sim     = namelist$run_sim
@@ -69,6 +74,7 @@ config_xstilt = function(namelist){
     varsiwant = c('time', 'indx', 'long', 'lati', 'zagl', 'zsfc', 'foot', 
                   'mlht', 'dens', 'samt', 'sigw', 'tlgr', 'temp', 'pres')
 
+
   # met fields ----------------------------------------------------------------
   met       = namelist$met
   met_path  = namelist$met_path
@@ -93,24 +99,25 @@ config_xstilt = function(namelist){
   smooth_factor   = namelist$smooth_factor
   projection      = namelist$projection 
   
+
   # Create output directory ------------------------------------------------
-  outlist = create.outwd(timestr, obs_species, obs_sensor, obs_path, lon_lat, 
-                         store_path, met, run_hor_err)
+  outlist = create.outwd(timestr, obs_species, obs_sensor, obs_path, obs_fn, 
+                         lon_lat, store_path, met, run_hor_err)
   obs_info = outlist$obs_info         # get obs file name if satellite is used
   output_wd = outlist$output_wd
 
-  if ( nrow(obs_info) > 1 ) {
+  if ( length(unique(obs_info$fn)) > 1 ) {  # if multiple tracks per day
     track_indx = which(obs_info$tot.count == max(obs_info$tot.count))
     obs_fn = obs_info$fn[track_indx]
     if (length(output_wd) > 1) output_wd = output_wd[track_indx]
-  
-  } else obs_fn = obs_info$fn
+
+  } else obs_fn = unique(obs_info$fn)
   cat(paste('Obs file -', obs_fn, '\n'))
 
 
   # Compute XCO2 using existing traj & foot ------------------------------------
   # calculate XCO2 concentration and its error (need trajec and footprint ready)
-  if ( !run_trajec & !run_foot & run_sim & obs_species == 'CO2' ) {
+  if ( !run_trajec & !run_foot & run_sim & 'CO2' %in% obs_species ) {
 
     # ------------------------  Horizontal trans error ---------------------- #
     ### simulate transport error in XCO2 due to met errors, DW, 07/25/2018
@@ -129,7 +136,7 @@ config_xstilt = function(namelist){
     } else {
 
       # ------------------- XCO2 or emiss error simulations ----------------- #
-      # requires trajec and footprints ready for running things below, DW, 06/04/2018  
+      # requires trajec/footprints ready for running sim, DW, 06/04/2018  
       # call func to match ODIAC emissions with xfoot & sum up to get 'dxco2.ff'
       cat('Start simulations of XCO2.ff or its error due to emiss err...\n')
       result = run.xco2ff.sim(site, timestr, vname = namelist$odiac_ver, 
@@ -144,19 +151,19 @@ config_xstilt = function(namelist){
       return(result)
     } # end if run_hor_err
 
-  } else if ( run_sim & obs_species != 'CO2' ) 
-    stop('Currently, the model only calculates the FF signals of XCO2...\n\n')
+  } else if ( run_sim & !'CO2' %in% obs_species ) 
+    stop('You will need to write your own scripts in coupling non-CO2 emissions with footprint...\n\n')
   # end if run_sim
 
 
   # Receptor locations & time -------------------------------------------------
   # IF for ideal simulation, read from receptor file 
-  if ( is.na(obs_sensor) ) {
+  #if ( is.na(obs_sensor) ) {
+  if ( !is.na(namelist$recp_fn) ) {
     receptors = read.table(namelist$recp_fn, header = T, sep = ',')
     
     # if no time column found, use @param timestr
-    if (!is.na(namelist$timestr)) { 
-      receptors$run_times = timestr 
+    if (!is.na(namelist$timestr)) { receptors$run_times = timestr 
     } else receptors = receptors %>% rename(run_times = time)
     
     nchart = nchar(receptors$run_times[1])
@@ -171,25 +178,35 @@ config_xstilt = function(namelist){
                                     format = formatt) 
     receptors$zagl = list(agl)
 
-  } else {    # IF for simulations using satellite data
-
-    # obtain receptors' locations based on satellite soundings
+  } else {    
+    
+    # IF for simulations using satellite or ground-based X data
+    # obtain receptors' locations based on obs availability
     receptors = get.recp.sensorv2(timestr, 
                                   obs_filter = unlist(namelist$obs_filter), 
-                                  obs_fn, obs_sensor, obs_path, lon_lat, 
-                                  jitterTF = namelist$jitterTF, 
-                                  num_jitter = namelist$num_jitter, 
+                                  obs_fn, obs_sensor, obs_path, obs_species, 
+                                  lon_lat, jitterTF = namelist$jitterTF, 
+                                  num_jitter = namelist$num_jitter, numpar, 
                                   nf_dlat = namelist$nf_dlat, 
                                   nf_dlon = namelist$nf_dlon, 
                                   num_bg_lat = namelist$num_bg_lat, 
                                   num_bg_lon = namelist$num_bg_lon, 
                                   num_nf_lat = namelist$num_nf_lat, 
                                   num_nf_lon = namelist$num_nf_lon, 
-                                  agl, run_trajec, output_wd)
-                                  
+                                  agl, run_trajec, run_slant, output_wd)
+
   } # end if
+  
   cat(paste('Done with receptor setup...total', nrow(receptors), 
             'receptor(s)..\n\n'))
+
+  # if for slant column release, be explicit about the output dir names
+  if ( is.list(receptors$lati) & is.list(receptors$long) ) {
+    sim_id_format = paste0('%Y%m%d%H%M_', receptors$long0, '_', receptors$lati0,
+                           '_', ifelse(length(receptors$zagl[[1]]) > 1, 'X', r_zagl))
+    simulation_id = strftime(receptors$run_time, sim_id_format, 'UTC')
+  } else simulation_id = NA
+
 
   # Transport and dispersion settings, use default setting in STILT-R v2
   capemin     = -1
@@ -229,7 +246,7 @@ config_xstilt = function(namelist){
   kwet        = 1
   kzmix       = 0
   maxdim      = 1
-  maxpar      = namelist$numpar
+  maxpar      = numpar
   mgmin       = 10
   mhrs        = 9999
   nbptyp      = 1
@@ -322,18 +339,31 @@ config_xstilt = function(namelist){
   n_cores = namelist$n_cores
   n_nodes = namelist$n_nodes
 
-  # OR specify the ammount of memory per cpu your job requires
-  #mem_per_cpu = 10 * 1024    
+  # OR specify the ammount of memory per cpu your job requires  
   slurm_options = list(time = namelist$job_time, 
                        account = namelist$slurm_account, 
                        partition = namelist$slurm_partition)
   if (!is.null(namelist$mem_per_node)) slurm_options$mem = namelist$mem_per_node
-  jobname = paste0('XSTILT_', site, '_', timestr, '_', obs_sensor, 
-                   '_', obs_species)
+  
+  # specify job names
+  jobname = paste('XSTILT', site, timestr, obs_sensor, obs_species, sep = '_')
+  
+  if ( is.na(obs_sensor) )      # no obs involved - meaning no AK 
+    jobname = paste('XSTILT', site, timestr, 'ideal', sep = '_')
+  
+  if ( length(timestr) > 1 )    # multiple receptor times
+    jobname = paste('XSTILT', site, min(timestr), max(timestr), 
+                    obs_sensor, obs_species, sep = '_')
 
-  if (is.na(obs_sensor)) 
-    jobname = paste0('XSTILT_', site, '_', timestr, '_ideal')
+  if ( length(obs_species) > 1 )    # multiple receptor times
+    jobname = paste('XSTILT', site, timestr, obs_sensor, 'multi', sep = '_')
+  
+  if ( length(timestr) > 1 & length(obs_species) > 1 )
+    jobname = paste('XSTILT', site, min(timestr), max(timestr), 
+                    obs_sensor, 'multi', sep = '_')
+
   if (run_hor_err | run_ver_err) jobname = paste0(jobname, '_error')
+
 
   # Startup messages -----------------------------------------------------------
   message('\n\nInitializing X-STILT')
@@ -373,7 +403,7 @@ config_xstilt = function(namelist){
                         jobname = jobname, 
                         before_footprint = list(before_footprint),
                         before_trajec = list(before_trajec),
-                        lib.loc = lib.loc,
+                        simulation_id = simulation_id,
                         capemin = capemin,
                         cmass = cmass,
                         conage = conage,
@@ -413,6 +443,7 @@ config_xstilt = function(namelist){
                         kspl = kspl,
                         kwet = kwet,
                         kzmix = kzmix,
+                        lib.loc = lib.loc,
                         maxdim = maxdim,
                         maxpar = maxpar,
                         met_file_format = met_file_format,
@@ -487,7 +518,7 @@ config_xstilt = function(namelist){
   # needed for before_*_xstilt() for X-STILT, DW, 07/01/2021
                         met = met, 
                         obs_sensor = obs_sensor, 
-                        obs_species = obs_species,
+                        obs_species = list(obs_species),
                         obs_fn = obs_fn, 
                         ak_wgt = namelist$ak_wgt, 
                         pwf_wgt = namelist$pwf_wgt, 
@@ -500,6 +531,7 @@ config_xstilt = function(namelist){
                         ct_ver = namelist$ct_ver, 
                         ctflux_path = namelist$ctflux_path, 
                         ctmole_path = namelist$ctmole_path)
+
 }
 
 
@@ -511,9 +543,10 @@ if (F) {
   r_lati = receptors$lati[X]
   r_long = receptors$long[X]
   r_zagl = receptors$zagl[X]
+  simulation_id = simulation_id[X]
 
   args = list(obs_sensor = obs_sensor, 
-              obs_species = obs_species,
+              obs_species = list(obs_species),
               obs_fn = obs_fn, 
               ak_wgt = namelist$ak_wgt, 
               pwf_wgt = namelist$pwf_wgt, 
@@ -523,10 +556,17 @@ if (F) {
               foot_nhrs = namelist$foot_nhrs,
 
               run_hor_err = run_hor_err,
-              emiss_fn = emiss_fn, 
+              emiss_fn = NA, 
               ct_ver = namelist$ct_ver, 
               ctflux_path = namelist$ctflux_path, 
               ctmole_path = namelist$ctmole_path)
+
+  rundir = file.path(output_wd, 'by-id', simulation_id)
+  output = list()
+  output$file = file.path(rundir, paste0(simulation_id, '_traj.rds'))
+  output = readRDS(output$file)
+  
+
 
 }
 
