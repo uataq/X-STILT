@@ -1,13 +1,14 @@
 # X-STILT: Column-Stochastic Time-Inverted Lagrangian Transport model
 
-X-STILT is an atmospheric transport model that deals with vertically integrated column concentrations of various trace gases ([*Wu et al*., 2018](https://doi.org/10.5194/gmd-11-4843-2018)). The model code was built upon the Stochastic Time-Inverted Lagrangian Transport (STILT) model ([*Lin et al*., 2003](https://doi.org/10.1029/2002JD003161)) and its [latest version 2](https://github.com/uataq/stilt) ([*Fasoli et al*., 2018](https://doi.org/10.5194/gmd-11-2813-2018)). 
+X-STILT is an atmospheric transport model that deals with vertically integrated column concentrations of various trace gases ([Wu et al., 2018, 2023](https://doi.org/10.5194/gmd-11-4843-2018)). The model code was built upon the Stochastic Time-Inverted Lagrangian Transport (STILT) model ([Lin et al., 2003](https://doi.org/10.1029/2002JD003161)) and its [latest version 2](https://github.com/uataq/stilt) ([Fasoli et al., 2018](https://doi.org/10.5194/gmd-11-2813-2018)). 
 
-This GitHub repo has built-in scripts/functions for 
-1. running backward trajectories from an atmospheric column and column footprint (start with `run_xstilt.r`); 
+The model framework can now work with OCO-2&3 XCO<sub>2</sub> and TROPOMI column CO ([Wu et al., ACP](https://acp.copernicus.org/articles/22/14547/2022/acp-22-14547-2022.html)), CH<sub>4</sub> (Li et al., and Tribby et al., in prep), and NO<sub>2</sub> ([Wu et al., EGUsphere: STILT-NOx](https://egusphere.copernicus.org/preprints/2023/egusphere-2023-876/)) and is testing for [TCCON and EM27](https://github.com/uataq/X-STILT/pull/6). :sunglasses: 
+
+This GitHub repo includes built-in scripts/functions for 
+1. running backward trajectories from an atmospheric column and column footprint (start with `run_xstilt.r` for either initial X-STILT or updated STILT-NOx); 
 2. running forward-time trajectories from a box around the site and compute background from satellite observations (start with `compute_bg.r`); 
-3. and estimating wind and PBL uncertainties and translating those into XCO<sub>2</sub> uncertainties (start with `run_xstilt.r`)
-
-**The model framework can now work with OCO-2&3 XCO<sub>2</sub> and TROPOMI XCO ([*Wu et al*., ACPD](https://acp.copernicus.org/preprints/acp-2021-1029/)), CH<sub>4</sub>, and NO<sub>2</sub> and will be available for [TCCON](https://tccon-wiki.caltech.edu/) and EM27.** :sunglasses: 
+3. estimating wind and PBL uncertainties and translating those into XCO<sub>2</sub> uncertainties (start with `run_xstilt.r`)
+4. simulating column CO<sub>2</sub>, CO, and NO<sub>2</sub> abundances at OCO-2/3 and TROPOMI soundings (STILT-NOx, start with `run_sim_nox.r`)
 
 Model developments are ongoing and contributions are welcomed and appreciated. Please contact Dien (dienwu@caltech.edu) if you are interested in other column sensors/species or have any questions.
 

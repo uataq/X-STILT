@@ -39,12 +39,17 @@
 # ---------------------------------------------------------------------------
 
 # !!!! to run this code in R session: source('run_xstilt.r')
+options(timeout = max(1500, getOption('timeout')))   # for download.file
 
 # ----------- Dependencies and API key for geolocation (must-have) ---------- #
 ## go to X-STILT dir and source functions and libraries
 homedir = '/central/home/dienwu'
-xstilt_wd = file.path(homedir, 'models/X-STILT') 
+xstilt_wd = file.path(homedir, 'X-STILT') 
 setwd(xstilt_wd); source('r/dependencies.r')
+
+# Please insert your API in the 'insert_ggAPI.csv' for use of ggplot and ggmap
+# google API can be obtained from https://console.developers.google.com/
+api.key = readLines('insert_ggAPI.csv')
 
 # --------------------- Site location params (must-have) --------------------- #
 cat('Enter your site name: ')
@@ -54,8 +59,8 @@ site = readLines('stdin', n = 1); print(site)
 # for selecting observations, if num_* is not NA
 # ENTIRE domain - site_lat +/- dlat, site_lon +/- dlon 
 # NEAR-FIELD domain - site_lat +/- nf_dlat, site_lon +/- nf_dlon
-dlon = 1            # e.g., dlon = 0.5 means 1 x 1 degree box around the site
-dlat = 1            # dlat/dlon in degrees 
+dlon = 0.5            # e.g., dlon = 0.5 means 1 x 1 degree box around the site
+dlat = 0.5            # dlat/dlon in degrees 
 nf_dlon = 0.3
 nf_dlat = 0.3
 
@@ -70,12 +75,14 @@ input_path  = '/central/groups/POW'
 store_path  = file.path(input_path, 'XSTILT_output', site)
 
 # *** modify the info path/directory that stores OCO-2/3 or TROPOMI data -------
-obs_sensor  = c('OCO-2', 'OCO-3', 'TROPOMI', NA)[2]
-obs_ver     = c('V10p4r', NA)[1]              # retrieval algo ver if applicable
-obs_species = c('CO2', 'CO', 'NO2', 'CH4')[1]   # only allow 1 species at 1 time
+obs_sensor  = c('OCO-2', 'OCO-3', 'TROPOMI', NA)[3]
+obs_ver     = c('V11r', 'V10p4r', NA)[3]       # retrieval algo ver if there is
+obs_species = c('CO2', 'CO', 'NO2', 'CH4')[3]  # only 1 gas per run
 oco_path = file.path(input_path, obs_sensor, paste0('L2_Lite_FP_', obs_ver))
 sif_path = file.path(input_path, obs_sensor, paste0('L2_Lite_SIF_', obs_ver))
-trp_path = file.path(input_path, obs_sensor, obs_species)
+trp_path = file.path(input_path, obs_sensor, obs_species, 'L2')
+store_path = file.path(input_path, 'XSTILT_output', site)
+if (!is.na(obs_ver)) store_path = file.path(store_path, obs_ver)
 
 
 # *** if obs_sensor is NA, perform ideal runs without satellite dependence, 
@@ -92,11 +99,13 @@ if (is.na(obs_sensor)) {   # X-simulations WOUT satellite data
   obs_path = ifelse(obs_sensor == 'TROPOMI', trp_path, oco_path)
 }
 
-# (optional) paths for radiosonde (for transport error analysis) and ODIAC ----
-raob_path = file.path(input_path, 'XSTILT_dep/RAOB')          # NOAA radiosonde
-raob_fn   = list.files(raob_path, '.tmp', full.names = T)
-odiac_ver = c('2019', '2020')[2]                             # ODIAC version
+# paths for radiosonde, ODIAC, chemical transport model (optional) -------------
+raob_path  = file.path(input_path, 'RAOB', site)  # NOAA radiosonde
+raob_fn    = list.files(raob_path, 'tmp')
+odiac_ver  = c('2019', '2020')[2]         # ODIAC version
 odiac_path = file.path(input_path, 'ODIAC', paste0('ODIAC', odiac_ver))  
+cat('Done with choosing cities & overpasses...\n')
+# --------------------------------------------------------------------------- #
 
 
 # ---------------------- obtaining overpass time string --------------------- #
@@ -148,7 +157,7 @@ num_jitter = 5                # number of additional receptors per sounding
 #' Only place receptors for soundings that qualify @param obs_filter
 #' here are some choices for OCO-2/3 and TROPOMI (uncomment the one you need)
 #obs_filter = c('QF', 0)             # select OCO soundings with QF = 0
-obs_filter = c('QA', 0.5)            # select TROPOMI soundings with QA >= 0.5 
+obs_filter = c('QA', 0.7)            # select TROPOMI soundings with QA >= 0.5 
 #obs_filter = NULL                   # use all soundings regardless of QF or QA
 
 #' evenly select soundings within near-field or far-field (background) regions
@@ -160,21 +169,20 @@ num_bg_lat = num_bg_lon = num_nf_lat = num_nf_lon = NA
 #num_bg_lat = 5; num_bg_lon = 5; num_nf_lat = 10; num_nf_lon = 10
 
 
-
 # ------------------- ARL format meteo params (must-have) -------------------- #
 # see STILTv2 https://uataq.github.io/stilt/#/configuration?id=meteorological-data-input
-met = c('gdas0p5', 'gfs0p25', 'hrrr')[2]         # choose met fields
+met = c('gfs0p25', 'hrrr', 'wrf27km')[1]         # choose met fields
 met_path = file.path(homedir, met)               # path of met fields
-n_met_min = 1                                    # min number of files needed
 met_file_format = '%Y%m%d'                       # met file name convention
+n_met_min = download.met.arl(timestr, met_file_format, nhrs, met_path, met)
 
 # OPTION for subseting met fields if met_subgrid_enable is on, 
 # useful for large met fields like GFS or HRRR
 met_subgrid_buffer = 0.1   # Percent to extend footprint area for met subdomain
-met_subgrid_enable = T    
+met_subgrid_enable = F   
 
-# if set, extracts the defined number of vertical levels from the 
-# meteorological data files to further accelerate simulations, default is NA
+# if set, extracts the defined number of vertical levels from the meteorological 
+# data files to further accelerate simulations, default is NA
 met_subgrid_levels = NA    
 cat('Done with params for receptor and meteo- setup...\n')
 
@@ -195,15 +203,15 @@ foot_dlon = 10
 # *** You can run multiple sets of footprints with different spatiotemporal 
 #     resolution from the same trajec at one time (see below), DW, 07/01/2021
 #' @param MAIN_RUN (e.g., 1km time-integrated footprint) -----------------------
-foot_res  = 1/120       # spatial resolution in degree
+foot_res  = 1/10       # spatial resolution in degree
 foot_nhrs = nhrs        # if foot_nhrs < nhrs, subset trajec before footprint
 time_integrate = TRUE   # F: hourly foot; T: time-integrated foot
 
 #' @param OPTIONAL_RUN with diff configurations (e.g., hourly 0.05 deg foot) ---
 #' both params can be a vector, footprint filename contains res info
 #' if no need for alternative runs, set @param foot_res to NA, DW, 02/11/2019
-foot_res2 = c(NA, 1/10, 1/20, 1)[3]     # spatial res in degree
-time_integrate2 = FALSE                 # ndim(time_integrate2) = ndim(foot_res2)
+foot_res2 = c(NA, 1/10, 1/20, 1)[1]    # spatial res in degree
+time_integrate2 = FALSE                # ndim(time_integrate2) = ndim(foot_res2)
 
 # ---------------------------------------------------------------------------- #
 # other neccesary footprint params using STILTv2 (Fasoli et al., 2018)
@@ -245,8 +253,9 @@ if (run_emiss_err) {
 # mannually pull the development version from github by doing:
 #devtools::install_github('SESYNC-ci/rslurm')               # DW, 11/6/2020
 slurm = T                           # T: SLURM parallel computing
-n_nodes = 3
-n_cores = 7
+n_nodes = 12
+n_cores = 10
+if (!slurm) n_nodes = n_cores = 1
 timeout = 12 * 60 * 60              # time allowed before terminations in sec
 job_time = '12:00:00'               # total job time
 slurm_account = 'pow'
