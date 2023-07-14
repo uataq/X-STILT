@@ -10,7 +10,6 @@
 # allows for generate footprints with different resolutions, DW, 02/11/2019 
 # add additional variables due to changes in simulation_step()'s argument, DW, 07/02/2020
 # add/remove variables as migrating to STILT-HYSPLIT, DW, 07/03/2020 
-
 # refactoring: move some of the calculation in the main script to this function
 # DW, 10/26/2020
 
@@ -161,12 +160,15 @@ config_xstilt = function(namelist){
   #if ( is.na(obs_sensor) ) {
   if ( !is.na(namelist$recp_fn) ) {
     receptors = read.table(namelist$recp_fn, header = T, sep = ',')
-    
-    # if no time column found, use @param timestr
-    if (!is.na(namelist$timestr)) { receptors$run_times = timestr 
-    } else receptors = receptors %>% rename(run_times = time)
-    
-    nchart = nchar(receptors$run_times[1])
+    if ( 'time' %in% colnames(receptors) ) {    # if there is a `time` column
+      time_string = receptors$time 
+      receptors$time = NULL
+    } else if ( !is.na(namelist$timestr) ) {  # no time column but timestr ava
+      time_string = namelist$timestr
+    } else stop('Missing receptor time strings...please check @param recp_fn or @param timestr\n')
+
+    time_string = as.character(time_string)
+    nchart = nchar(time_string[1])
     if (nchart == 8 ) formatt = '%Y%m%d'
     if (nchart == 10) formatt = '%Y%m%d%H'
     if (nchart == 12) formatt = '%Y%m%d%H%M'
@@ -174,10 +176,9 @@ config_xstilt = function(namelist){
     if (!nchart %in% c(8, 10, 12, 14)) 
       stop('Incorrect form of time string...please check @param recp_fn or @param timestr\n')
 
-    receptors$run_time = as.POSIXct(receptors$run_times, 'UTC', 
-                                    format = formatt) 
+    receptors$run_time = as.POSIXct(time_string, 'UTC', format = formatt) 
     receptors$zagl = list(agl)
-
+    
   } else {    
     
     # IF for simulations using satellite or ground-based X data

@@ -124,10 +124,12 @@ get.recp.sensorv2 = function(timestr, obs_filter = NULL, obs_fn, obs_sensor,
                  !'saa' %in% colnames(recp_info)) 
             stop('You turned on slant column release @param run_slant, but no SZA/SAA found in the observation data for calc slant x-receptors...\n')
             
-            recp_info = recp_info %>% dplyr::select(run_time = datestr, lati = lat, long = lon, sza, saa)
+            recp_info = recp_info %>% dplyr::select(run_time = datestr, 
+                                                    lati = lat, long = lon, 
+                                                    sza, saa)
 
-        } else recp_info = recp_info %>% 
-                       dplyr::select(run_time = datestr, lati = lat, long = lon)
+        } else recp_info = recp_info %>% dplyr::select(run_time = datestr, 
+                                                       lati = lat, long = lon)
 
         recp_info = recp_info %>% 
                     mutate(lati = signif(lati, 6), long = signif(long, 7)) %>% 
@@ -175,7 +177,7 @@ get.recp.sensorv2 = function(timestr, obs_filter = NULL, obs_fn, obs_sensor,
           tmp_slant$zagl = list(xhgt)
 
           recp_slant = rbind(recp_slant, tmp_slant)
-        }
+        }   # end for
 
         recp_info = recp_slant
     }        

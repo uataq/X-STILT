@@ -75,9 +75,9 @@ input_path  = '/central/groups/POW'
 store_path  = file.path(input_path, 'XSTILT_output', site)
 
 # *** modify the info path/directory that stores OCO-2/3 or TROPOMI data -------
-obs_sensor  = c('OCO-2', 'OCO-3', 'TROPOMI', NA)[3]
+obs_sensor  = c('OCO-2', 'OCO-3', 'TROPOMI', NA)[4]
 obs_ver     = c('V11r', 'V10p4r', NA)[3]       # retrieval algo ver if there is
-obs_species = c('CO2', 'CO', 'NO2', 'CH4')[3]  # only 1 gas per run
+obs_species = c('CO2', 'CO', 'NO2', 'CH4')[1]  # only 1 gas per run
 oco_path = file.path(input_path, obs_sensor, paste0('L2_Lite_FP_', obs_ver))
 sif_path = file.path(input_path, obs_sensor, paste0('L2_Lite_SIF_', obs_ver))
 trp_path = file.path(input_path, obs_sensor, obs_species, 'L2')
@@ -112,7 +112,8 @@ cat('Done with choosing cities & overpasses...\n')
 #' @param obs_sensor == TROPOMI - daily obs, time string provided by user
 #' @param obs_sensor == NA - ideal run w/o obs, time string provided by user
 #' @param timestr in format of YYYYMMDD or YYYYMMDDHH (either works)
-timestr = '20191007'
+#timestr = '20191007'
+timestr = NA 
 
 #' @param obs_sensor == OCO-2/3 - can help search for overpasses with #
 #' sufficient data over the entire area and/or near-field area around site
@@ -157,8 +158,8 @@ num_jitter = 5                # number of additional receptors per sounding
 #' Only place receptors for soundings that qualify @param obs_filter
 #' here are some choices for OCO-2/3 and TROPOMI (uncomment the one you need)
 #obs_filter = c('QF', 0)             # select OCO soundings with QF = 0
-obs_filter = c('QA', 0.7)            # select TROPOMI soundings with QA >= 0.5 
-#obs_filter = NULL                   # use all soundings regardless of QF or QA
+#obs_filter = c('QA', 0.7)            # select TROPOMI soundings with QA >= 0.5 
+obs_filter = NULL                   # use all soundings regardless of QF or QA
 
 #' evenly select soundings within near-field or far-field (background) regions
 #' near-field: defined by @param nf_dlat & @param nf_dlon 
@@ -171,7 +172,7 @@ num_bg_lat = num_bg_lon = num_nf_lat = num_nf_lon = NA
 
 # ------------------- ARL format meteo params (must-have) -------------------- #
 # see STILTv2 https://uataq.github.io/stilt/#/configuration?id=meteorological-data-input
-met = c('gfs0p25', 'hrrr', 'wrf27km')[1]         # choose met fields
+met = c('gfs0p25', 'hrrr', 'wrf27km')[2]         # choose met fields
 met_path = file.path(homedir, met)               # path of met fields
 met_file_format = '%Y%m%d'                       # met file name convention
 n_met_min = download.met.arl(timestr, met_file_format, nhrs, met_path, met)

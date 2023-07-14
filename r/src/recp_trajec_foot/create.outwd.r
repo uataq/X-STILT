@@ -2,13 +2,14 @@
 # add TCCON, DW, 04/21/2023
 
 # obs_* can be NA, for column simulations without satellite data
-create.outwd = function(timestr, obs_species, obs_sensor, obs_path, 
-                        obs_fn = NA, lon_lat, store_path, met, run_hor_err) {
-
+create.outwd = function(timestr, obs_species, obs_sensor, obs_path, obs_fn = NA,
+                        lon_lat, store_path, met, run_hor_err) {
+  
   if ( is.na(obs_sensor) ) {    # ideal run without satellite data
     obs_info = data.frame(timestr = timestr, fn = NA, stringsAsFactors = F)
     output_wd = file.path(store_path, 
-                          paste('out', timestr, met, 'ideal', sep = '_'))
+                          paste0('out_', ifelse(!is.na(timestr), timestr, ''), 
+                                 met, '_ideal'))
 
   } else if ( obs_sensor == 'TROPOMI' ) {
     
