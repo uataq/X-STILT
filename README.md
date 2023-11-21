@@ -8,7 +8,7 @@ This GitHub repo includes built-in scripts/functions for
 1. running backward trajectories from an atmospheric column and column footprint (start with `run_xstilt.r` for either initial X-STILT or updated STILT-NOx); 
 2. running forward-time trajectories from a box around the site and compute background from satellite observations (start with `compute_bg.r`); 
 3. estimating wind and PBL uncertainties and translating those into XCO<sub>2</sub> uncertainties (start with `run_xstilt.r`)
-4. simulating column CO<sub>2</sub>, CO, and NO<sub>2</sub> abundances at OCO-2/3 and TROPOMI soundings (STILT-NOx, start with `run_sim_nox.r`)
+4. simulating column CO<sub>2</sub>, CO, CH<sub>4</sub>, and NO<sub>2</sub> abundances at OCO-2/3 and TROPOMI soundings (STILT-NOx, start with `run_sim_multi.r`)
 
 Model developments are ongoing and contributions are welcomed and appreciated. Please contact Dien (dienwu@caltech.edu) if you are interested in other column sensors/species or have any questions.
 
