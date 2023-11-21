@@ -41,7 +41,6 @@ config_xstilt = function(namelist){
   if ( obs_sensor == 'TROPOMI' & length(obs_species) > 1) 
     stop('Please only choose one atmospheric species per time for TROPOMI, denoted by @param obs_species...\n')
 
-
   # Model control -------------------------------------------------------------
   rm_dat      = T
   timeout     = namelist$timeout  # in sec
@@ -73,7 +72,6 @@ config_xstilt = function(namelist){
     varsiwant = c('time', 'indx', 'long', 'lati', 'zagl', 'zsfc', 'foot', 
                   'mlht', 'dens', 'samt', 'sigw', 'tlgr', 'temp', 'pres')
 
-
   # met fields ----------------------------------------------------------------
   met       = namelist$met
   met_path  = namelist$met_path
@@ -98,7 +96,6 @@ config_xstilt = function(namelist){
   smooth_factor   = namelist$smooth_factor
   projection      = namelist$projection 
   
-
   # Create output directory ------------------------------------------------
   outlist = create.outwd(timestr, obs_species, obs_sensor, obs_path, obs_fn, 
                          lon_lat, store_path, met, run_hor_err)
@@ -129,8 +126,7 @@ config_xstilt = function(namelist){
       cat('Start simulations of XCO2 error due to horizontal trans err...\n')
       result = cal.trans.err(site, timestr, workdir = xstilt_wd, 
                              outdir = output_wd, store_path, met)
-      if (is.null(result)) 
-        stop('No results calculated, check cal.trans.err()\n')
+      if (is.null(result)) stop('No results calculated, check cal.trans.err()\n')
 
     } else {
 
@@ -151,7 +147,7 @@ config_xstilt = function(namelist){
     } # end if run_hor_err
 
   } else if ( run_sim & !'CO2' %in% obs_species ) 
-    stop('You will need to write your own scripts in coupling non-CO2 emissions with footprint...\n\n')
+    stop('You will need to write your own scripts for coupling non-CO2 emissions with footprint...:( \n\n')
   # end if run_sim
 
 
@@ -207,7 +203,7 @@ config_xstilt = function(namelist){
                            '_', ifelse(length(receptors$zagl[[1]]) > 1, 'X', r_zagl))
     simulation_id = strftime(receptors$run_time, sim_id_format, 'UTC')
   } else simulation_id = NA
-
+  
 
   # Transport and dispersion settings, use default setting in STILT-R v2
   capemin     = -1
@@ -544,7 +540,9 @@ if (F) {
   r_lati = receptors$lati[X]
   r_long = receptors$long[X]
   r_zagl = receptors$zagl[X]
-  simulation_id = simulation_id[X]
+
+  simulation_id_format = paste0('%Y%m%d%H%M_', r_long, '_', r_lati, '_X')
+  simulation_id = strftime(r_run_time, simulation_id_format, 'UTC')
 
   args = list(obs_sensor = obs_sensor, 
               obs_species = list(obs_species),
@@ -555,7 +553,6 @@ if (F) {
               yres2 = list(namelist$foot_res2), 
               time_integrate2 = list(time_integrate2), 
               foot_nhrs = namelist$foot_nhrs,
-
               run_hor_err = run_hor_err,
               emiss_fn = NA, 
               ct_ver = namelist$ct_ver, 
@@ -566,7 +563,6 @@ if (F) {
   output = list()
   output$file = file.path(rundir, paste0(simulation_id, '_traj.rds'))
   output = readRDS(output$file)
-  
 
 
 }

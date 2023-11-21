@@ -35,15 +35,15 @@ get.recp.sensorv2 = function(timestr, obs_filter = NULL, obs_fn, obs_sensor,
                             sensor_gas = obs_species, sensor_fn = obs_fn, 
                             sensor_path = obs_path, qfTF, tropomi_qa, lon_lat) 
     
-    if (obs_sensor == 'TROPOMI') 
-        obs_df = obs_df %>% rename(lon = center_lon, lat = center_lat, 
-                                   vertices = corner)
-
+    rename_lookup = c(lon = 'center_lon', lat = 'center_lat', 
+                      vertices = 'corner')
+    obs_df = obs_df %>% rename(any_of(rename_lookup))
+    
     # remove vertices coordinate from obs
     if ( 'lons' %in% colnames(obs_df) ) {
         uni_df = unique(obs_df %>% dplyr::select(-c(lons, lats, vertices)))
     } else uni_df = obs_df %>% unique()
-        
+    
 
     # -------------------------------------------------------------------------
     # 2 - select observations

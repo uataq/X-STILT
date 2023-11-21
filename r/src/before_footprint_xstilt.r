@@ -51,7 +51,7 @@ before_footprint_xstilt = function() {
         output = wgt.trajec.foot(output = output, oco.fn = obs_fn, 
                                  ak.wgt = ak_wgt, pwf.wgt = pwf_wgt) 
 
-    } else if (obs_sensor == 'TROPOMI') {
+    } else if ( obs_sensor == 'TROPOMI' ) {
         
         # ---------------------------------------------------------------------
         # weight trajec-level foot using TROPOMI weighting profiles (ak_wgt = T)

@@ -56,7 +56,7 @@ get.oco.info = function(oco.path, receptor, oco.fn = NA, diff.td = 1E-4){
   # if so, loose 'diff.td', or check OCO-2 version, or input lat/lon
   if(length(loc.index) != 1){
 
-    cat('get.oco.info(): cannot find the receptor lat/lon from OCO file...')
+    cat('get.oco.info(): OCO sounding far away from receptor...')
     return()
 
   } else {

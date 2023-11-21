@@ -3,6 +3,12 @@
 #     and then apply to STILT footprint, by weighting the footprints of
 #     particles, based on different releasing heights
 # written by Dien Wu
+if (F) {
+	tropomi.fn = obs_fn
+    tropomi.species = obs_species 
+    ak.wgt = ak_wgt
+	pwf.wgt = pwf_wgt
+}
 
 wgt.trajec.foot.tropomi = function(output, tropomi.fn, 
 								   tropomi.species = c('CO', 'CH4', 'NO2')[1], 
@@ -95,6 +101,7 @@ wgt.trajec.foot.tropomi = function(output, tropomi.fn,
 	} 	# end if TROPOMI NO2 weighting
 
 
+	# ------------------------------------------------------------------------ #
 	# weighting foot with AK and PW profiles and # of STILT levels/particles
 	if ( tropomi.species == 'CH4' ) {
 		
@@ -109,7 +116,7 @@ wgt.trajec.foot.tropomi = function(output, tropomi.fn,
 				  		  dplyr::select(indx, ak.norm, pwf, ak.pwf) %>% 
 						  rename(ak.norm.ch4 = ak.norm, pwf.ch4 = pwf, 
 						  		 ak.pwf.ch4 = ak.pwf)
-
+		
 		# perform weighting for each particle
 		trajdat.ch4 = trajdat %>% left_join(xstilt.prof.ch4, by = 'indx') 
 		if (ak.wgt == T & pwf.wgt == T) 

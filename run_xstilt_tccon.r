@@ -186,10 +186,9 @@ num_bg_lat = num_bg_lon = num_nf_lat = num_nf_lon = NA
 
 # ------------------- ARL format meteo params (must-have) -------------------- #
 # see STILTv2 https://uataq.github.io/stilt/#/configuration?id=meteorological-data-input
-met = c('gfs0p25', 'hrrr', 'wrf27km')[1]         # choose met fields
+met = c('gfs0p25', 'hrrr', 'wrf27km')[2]         # choose met fields
 met_path = file.path(homedir, met)               # path of met fields
-met_file_format = '%Y%m%d'                       # met file name convention
-n_met_min = download.met.arl(timestr, met_file_format, nhrs, met_path, met)
+met_list = download.met.arl(timestr, nhrs, run_trajec, met_path, met)
 
 # OPTION for subseting met fields if met_subgrid_enable is on, 
 # useful for large met fields like GFS or HRRR
@@ -292,18 +291,18 @@ namelist = list(ak_wgt = ak_wgt, ct_ver = ct_ver, ctflux_path = ctflux_path,
                 hnf_plume = hnf_plume, jitterTF = jitterTF, 
                 job_time = job_time, lon_lat = list(lon_lat), 
                 mem_per_node = mem_per_node, met = met,                 
-                met_file_format = met_file_format, met_path = met_path, 
-                met_subgrid_buffer = met_subgrid_buffer, 
+                met_file_format = met_list$met_file_format, 
+                met_path = met_path, met_subgrid_buffer = met_subgrid_buffer, 
                 met_subgrid_enable = met_subgrid_enable, 
                 met_subgrid_levels = met_subgrid_levels, minagl = minagl, 
                 maxagl = maxagl, nhrs = nhrs, n_cores = n_cores, 
-                n_met_min = n_met_min, n_nodes = n_nodes, nf_dlat = nf_dlat, 
-                nf_dlon = nf_dlon, num_jitter = num_jitter, 
+                n_met_min = met_list$n_met_min, n_nodes = n_nodes, 
+                nf_dlat = nf_dlat, nf_dlon = nf_dlon, num_jitter = num_jitter, 
                 num_bg_lat = num_bg_lat, num_bg_lon = num_bg_lon, 
                 num_nf_lat = num_nf_lat, num_nf_lon = num_nf_lon, 
-                numpar = numpar, obs_filter = list(obs_filter),
-                obs_path = obs_path, obs_sensor = obs_sensor, obs_fn = obs_fn,
-                obs_species = list(obs_species), odiac_path = odiac_path, 
+                numpar = numpar, obs_filter = list(obs_filter), obs_fn = obs_fn,
+                obs_path = obs_path, obs_sensor = obs_sensor, 
+                obs_species = obs_species, odiac_path = odiac_path, 
                 odiac_ver = odiac_ver, projection = projection, 
                 pwf_wgt = pwf_wgt, raob_fn = raob_fn, recp_fn = recp_fn, 
                 run_emiss_err = run_emiss_err, run_foot = run_foot, 
@@ -311,12 +310,12 @@ namelist = list(ak_wgt = ak_wgt, ct_ver = ct_ver, ctflux_path = ctflux_path,
                 run_slant = run_slant, run_trajec = run_trajec, 
                 run_ver_err = run_ver_err, run_wind_err = run_wind_err, 
                 site = site, slurm = slurm, slurm_account = slurm_account,
-                slurm_partition = slurm_partition, 
+                slurm_partition = slurm_partition,
                 smooth_factor = smooth_factor, store_path = store_path, 
                 time_integrate = time_integrate, 
-                time_integrate2 = list(time_integrate2), 
-                timeout = timeout, timestr = list(timestr), 
-                varstrajec = varstrajec, xstilt_wd = xstilt_wd, zisf = zisf)
+                time_integrate2 = list(time_integrate2), timeout = timeout, 
+                timestr = timestr, varstrajec = varstrajec, 
+                xstilt_wd = xstilt_wd, zisf = zisf)
 cat('Done with creating namelist...\n')
 config_xstilt(namelist)  # start X-STILT, either calc traj, foot or simulation
 q('no')

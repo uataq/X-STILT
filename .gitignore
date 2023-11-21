@@ -51,3 +51,6 @@ plot_script.r
 r/src/mini_functions/get.lon.lat.epa.r
 r/src/satellite/tropomi_functions/get.tropomi.prior.hcho.r
 archive
+*_debug.r
+r/src/chemv0
+r/src/chem_lifetime/EnKF_function

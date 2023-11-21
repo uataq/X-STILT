@@ -22,24 +22,60 @@ get.tropomi.prof = function(receptor,
     tropomi.fn = tropomi.info$fn
   } # end if
 
+
   # --------------------- load all TROPOMI grid center lat/lon
-  dat = nc_open(tropomi.fn)
-  indx_along_track  = ncvar_get(dat, 'PRODUCT/scanline')
-  indx_across_track = ncvar_get(dat, 'PRODUCT/ground_pixel')
-  lat  = ncvar_get(dat, 'PRODUCT/latitude')   # [across, along]
-  lon  = ncvar_get(dat, 'PRODUCT/longitude')
-  lats = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/GEOLOCATIONS/latitude_bounds') #[corner, across, along]
-  lons = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/GEOLOCATIONS/longitude_bounds')
-  dimnames(lat) = dimnames(lon) = list(indx_across_track, indx_along_track)
+  if ( grepl('s5p_l2_ch4', tropomi.fn) ) {
+    
+    dat = nc_open(tropomi.fn)
+    lat = ncvar_get(dat, 'instrument/latitude_center')
+    lon = ncvar_get(dat, 'instrument/longitude_center')
+    xch4 = ncvar_get(dat, 'target_product/xch4'); id = 1:length(xch4)
+    xch4_bc = ncvar_get(dat, 'target_product/xch4_corrected')
+    xch4_uncert = ncvar_get(dat, 'target_product/xch4_precision')
+    qa = ncvar_get(dat, 'diagnostics/qa_value')
+    time_mtrx = ncvar_get(dat, 'instrument/time')
+    hsfc = ncvar_get(dat, 'meteo/surface_altitude') # m
+    psfc = ncvar_get(dat, 'meteo/surface_pressure') # hPa
+    h2o_vcd = ncvar_get(dat, 'side_product/h2o_column')     # molec cm-2 
+    dp = ncvar_get(dat, 'meteo/dp')  # hPa
+    
+    time_df = as.data.frame(t(time_mtrx)) %>% 
+              mutate(time_utc = paste0(V1, formatC(V2, width = 2, flag = 0),
+                                        formatC(V3, width = 2, flag = 0), 
+                                        formatC(V4, width = 2, flag = 0),
+                                        formatC(V5, width = 2, flag = 0), 
+                                        formatC(V6, width = 2, flag = 0)))
 
-  var_array = array(  
-    data = do.call(cbind, list(lon, lat)), dim = c(dim(lon), 2), 
-                   dimnames = c(dimnames(lon), list(c('lon', 'lat')))
-    )   # assuming all matrices in the list have equal dimensions
-  
-  var_df = dcast(melt(var_array), Var1 + Var2~Var3, value.var = 'value')
-  colnames(var_df)[1:2] = c('indx_across_track', 'indx_along_track')
+    var_df = data.frame(id = id, lon = lon, lat = lat, hsfc = hsfc, psfc = psfc,
+                        time_utc = time_df$time_utc, h2o_vcd = h2o_vcd, 
+                        qa = qa, xch4 = xch4, xch4_bc = xch4_bc, 
+                        xch4_uncert = xch4_uncert, dp = dp) %>% 
+             filter(lon <= 1e36, xch4 < 1e36) %>% 
+             mutate(h2o_vcd = h2o_vcd / 6.023e23 * 1e4) # to mole m-2
 
+  } else {
+
+    dat = nc_open(tropomi.fn)
+    indx_along_track  = ncvar_get(dat, 'PRODUCT/scanline')
+    indx_across_track = ncvar_get(dat, 'PRODUCT/ground_pixel')
+    lat  = ncvar_get(dat, 'PRODUCT/latitude')   # [across, along]
+    lon  = ncvar_get(dat, 'PRODUCT/longitude')
+
+    # [corner, across, along]
+    lats = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/GEOLOCATIONS/latitude_bounds')
+    lons = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/GEOLOCATIONS/longitude_bounds')
+    dimnames(lat) = dimnames(lon) = list(indx_across_track, indx_along_track)
+
+    var_array = array(  
+      data = do.call(cbind, list(lon, lat)), dim = c(dim(lon), 2), 
+                     dimnames = c(dimnames(lon), list(c('lon', 'lat')))
+      )   # assuming all matrices in the list have equal dimensions
+    
+    var_df = dcast(melt(var_array), Var1 + Var2~Var3, value.var = 'value')
+    colnames(var_df)[1:2] = c('indx_across_track', 'indx_along_track')
+
+  } # end if reading file
+ 
 
   # ----------- locate the TROPOMI grid that is most close to X-STILT receptor 
   # average observations according to coordinates of limited receptors
@@ -51,26 +87,54 @@ get.tropomi.prof = function(receptor,
   cat(paste('get.tropomi.prof(): find a TROPOMI grid;', 
             signif(min(tmp.dist) / 1E3, 3), 'km away from receptor\n'))
   tmp.grid = var_df[tmp.dist == min(tmp.dist), ]
+
+
+  # now locate the one sounding --------------
+  if ( grepl('s5p_l2_ch4', tropomi.fn) ) {
+    tmp_id = tmp.grid$id
+
+    # [level, nobs] or [corner, nobs]
+    air_vcd = sum(ncvar_get(dat, 'meteo/dry_air_subcolumns')[, tmp_id]) / 6.023e23 * 1e4    # total dry air column from molec cm-2 to mol m-2
+    ak = ncvar_get(dat, 'target_product/xch4_column_averaging_kernel')[, tmp_id]
+    zlvl = ncvar_get(dat, 'meteo/altitude_levels')[, tmp_id]  # in m
+    zmid = zoo::rollmean(zlvl, 2)    # middle point for a layer
+    find_lats = ncvar_get(dat, 'instrument/latitude_corners')[, tmp_id]
+    find_lons = ncvar_get(dat, 'instrument/longitude_corners')[, tmp_id]
+    
+    # AK, zlvl, zmid, from TOA to surface
+    upper_pres = rev(seq(tmp.grid$psfc - tmp.grid$dp, 
+                         tmp.grid$psfc - tmp.grid$dp * length(zmid), 
+                         by = -tmp.grid$dp))
+    lower_pres = rev(seq(tmp.grid$psfc, 
+                         tmp.grid$psfc - tmp.grid$dp * (length(zmid) - 1), 
+                         by = -tmp.grid$dp))
+    nc_close(dat)
+
+    all_info = list(tropomi_lat = tmp.grid$lat, tropomi_lon = tmp.grid$lon, 
+                    tropomi_lats = find_lats, tropomi_lons = find_lons, 
+                    ak = ak, lower_pres = lower_pres, upper_pres = upper_pres, 
+                    zagl = zlvl, zmid = zmid, tropomi_zsfc = tmp.grid$hsfc, 
+                    tropomi_psfc = tmp.grid$psfc, xch4 = tmp.grid$xch4, 
+                    xch4_uncert = tmp.grid$xch4_uncert, 
+                    h2o_vcd = tmp.grid$h2o_vcd, air_vcd = air_vcd)
+   return(all_info)
+  } # end if for extracing AK from CH4 files downloaded from SNOR Remote repo
+  
+
   along_indx = which(indx_along_track == tmp.grid$indx_along_track)
   across_indx = which(indx_across_track == tmp.grid$indx_across_track)
-
-
-  # ------------ grabbing 50 TROPOMI CO vertical levels or 34 NO2 levels
   time = substr(ncvar_get(dat, 'PRODUCT/time_utc'), 1, 19)  # UTC
   timestr = format(as.POSIXct(time, format = '%Y-%m-%dT%H:%M:%S'), 
-                   format = '%Y%m%d%H%M%S')[along_indx]
+                    format = '%Y%m%d%H%M%S')[along_indx]
   
   # these matrics all have dims of [across, along]
-  qa   = ncvar_get(dat, 'PRODUCT/qa_value')[across_indx, along_indx]  # quality assurances
+  qa   = ncvar_get(dat, 'PRODUCT/qa_value')[across_indx, along_indx] 
   hsfc = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/INPUT_DATA/surface_altitude')[across_indx, along_indx]
-
   psfc = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/INPUT_DATA/surface_pressure')[across_indx, along_indx] / 100 # Pa to hPa
 
-  sfc_class = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/INPUT_DATA/surface_classification')[across_indx, along_indx]
-
   ### combine all OCO-2 vertical profiles and other 1D variables
-  find_lat = lat[across_indx, along_indx]
-  find_lon = lon[across_indx, along_indx]
+  find_lat  = lat[across_indx, along_indx]
+  find_lon  = lon[across_indx, along_indx]
   find_lats = lats[, across_indx, along_indx]
   find_lons = lons[, across_indx, along_indx]
   
@@ -134,9 +198,13 @@ get.tropomi.prof = function(receptor,
 
     ak = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/DETAILED_RESULTS/column_averaging_kernel')[, across_indx, along_indx]
     
-    plvl = seq(0, psfc, dp)
-    lower_pres = plvl[-1]
-    upper_pres = plvl[-length(plvl)]
+    if ( is.na(dp) ) {
+      plvl = lower_pres = upper_pres = NA
+    } else {
+      plvl = seq(0, psfc, dp)
+      lower_pres = plvl[-1]
+      upper_pres = plvl[-length(plvl)]
+    }
 
     all_info = list(tropomi_lat = find_lat, tropomi_lon = find_lon, 
                     tropomi_lats = find_lats, tropomi_lons = find_lons, 
