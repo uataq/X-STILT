@@ -173,8 +173,10 @@ num_bg_lat = num_bg_lon = num_nf_lat = num_nf_lon = NA
 # ------------------- ARL format meteo params (must-have) -------------------- #
 # see STILTv2 https://uataq.github.io/stilt/#/configuration?id=meteorological-data-input
 met = c('gfs0p25', 'hrrr', 'wrf27km')[2]         # choose met fields
-met_path = file.path(homedir, met)               # path of met fields
-met_list = download.met.arl(timestr, nhrs, run_trajec, met_path, met)
+met_path = file.path(homedir, met)     
+met_file_format = '%Y%m%d'                       # met file name convention
+n_met_min = download.met.arl(timestr, met_file_format, nhrs, met_path, met, 
+                             run_trajec)
 
 # OPTION for subseting met fields if met_subgrid_enable is on, 
 # useful for large met fields like GFS or HRRR
@@ -278,13 +280,13 @@ namelist = list(ak_wgt = ak_wgt, ct_ver = ct_ver, ctflux_path = ctflux_path,
                 hnf_plume = hnf_plume, jitterTF = jitterTF, 
                 job_time = job_time, lon_lat = list(lon_lat), 
                 mem_per_node = mem_per_node, met = met,                 
-                met_file_format = met_list$met_file_format, 
-                met_path = met_path, met_subgrid_buffer = met_subgrid_buffer, 
+                met_file_format = met_file_format, met_path = met_path, 
+                met_subgrid_buffer = met_subgrid_buffer, 
                 met_subgrid_enable = met_subgrid_enable, 
                 met_subgrid_levels = met_subgrid_levels, minagl = minagl, 
                 maxagl = maxagl, nhrs = nhrs, n_cores = n_cores, 
-                n_met_min = met_list$n_met_min, n_nodes = n_nodes, 
-                nf_dlat = nf_dlat, nf_dlon = nf_dlon, num_jitter = num_jitter, 
+                n_met_min = n_met_min, n_nodes = n_nodes, nf_dlat = nf_dlat, 
+                nf_dlon = nf_dlon, num_jitter = num_jitter, 
                 num_bg_lat = num_bg_lat, num_bg_lon = num_bg_lon, 
                 num_nf_lat = num_nf_lat, num_nf_lon = num_nf_lon, 
                 numpar = numpar, obs_filter = list(obs_filter), obs_fn = obs_fn,

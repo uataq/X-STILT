@@ -1,78 +1,63 @@
 
-
-download.met.arl = function(timestr, nhrs, run_trajec = F, met_path, 
+download.met.arl = function(timestr, met_file_format, nhrs, met_path, 
                             met = c('wrf27km', 'hrrr', 'gfs0p25')[2], 
-                            met_file_format = NULL) {
+                            run_trajec = F) {
+
+    # quickly check if met fields exist 
+    if ( nchar(timestr) == 8) ff = '%Y%m%d'
+    if ( nchar(timestr) == 10) ff = '%Y%m%d%H'
+    t_start = as.POSIXct(timestr, 'GMT', format = ff)
+    met_fns = find_met_files(t_start, met_file_format, n_hours = nhrs, met_path)
     
-    # if only day is given, need to download more met files just in case
-    if ( nchar(timestr) == 8) timestr = paste0(timestr, c('00', '23'))
-    t_start = as.POSIXct(timestr, 'UTC', format = '%Y%m%d%H')
     t_end = t_start + nhrs * 3600
-    t_hrs = seq(min(t_end, t_start), max(t_end, t_start), by = 'hour')
-    t_day = unique(as.Date(t_hrs, format = '%Y%m%d%H'))
-
-    # ------------------------------------------------------------------------
-    # initialize temporal resolution of met files from NOAA ARL 
-    #arl_path = file.path('ftp://arlftp.arlhq.noaa.gov/archives', met)
-    arl_path = file.path('https://www.ready.noaa.gov/data/archives', met)
-    if (met == 'wrf27km') { 
-        t_met = t_hrs
-        met_file_format = 'wrfout_d01_%Y%m%d%H.ARL'
-        arl_path = file.path(arl_path, 'avg', unique(substr(t_hrs, 1, 4)))
-    }
-
-    if (met == 'hrrr') {
-        if ( max(t_day) < as.Date('2019-07-01') ) {
-            met_file_format = 'hysplit.%Y%m%d.%Hz.hrrra'
-            arl_path = gsub('hrrr', 'hrrr.v1', arl_path)
-        } else met_file_format = '%Y%m%d_%H'
-        t_met = unique(lubridate::floor_date(t_hrs, '6 hours'))
-    }
-
-    # no GFS0p25 data before May 13, 2016
-    # GFS0p25 version 1 between May 13, 2016 and June 12, 2019
-    # GFS0p25 default after June 13, 2019
-    if (met == 'gfs0p25') { 
-        if ( min(as.Date(t_hrs)) < as.Date('2016-05-13') ) 
-            stop('download.met.arl(): NO GFS0p25 from NOAA ARL before May 13, 2016...\n')
-
-        if ( min(as.Date(t_hrs)) >= as.Date('2016-05-13') & 
-             max(as.Date(t_hrs)) <= as.Date('2019-06-12')) 
-            arl_path = gsub('gfs0p25', 'gfs0p25.v1', arl_path)
-        
-        t_met = unique(lubridate::floor_date(t_hrs, 'day'))
-        met_file_format = '%Y%m%d_gfs0p25'
-    }
-
-    if ( is.null(met_file_format) ) 
-        stop('download.met.arl(): User needs to provide data format for meteo files...\n')
-
-    # form filename that matches NOAA ARL
-    fns = strftime(t_met, tz = 'UTC', format = met_file_format)
-
-    # hrrr.v1 for data before July 2019; hrrr for data after July 2019
-    if ( met == 'hrrr' & min(t_day) > as.Date('2019-07-01') ) 
-        fns = paste0(fns, '-', substr(t_met + 5 * 3600, 12, 13), '_hrrr')
-    cat('download.met.arl(): require the following met files:\n'); print(fns)
-
-    # ------------------------------------------------------------------------
-    #t_met = unique(format(seq(t_end, t_start, by = 'hour'), format = '%Y%m%d'))
-    n_met_min = length(t_met)
-    ava_fns = basename(find_met_files(t_start, met_file_format, nhrs, met_path))
+    t_min = min(c(t_start, t_end)); t_max = max(c(t_start, t_end))
+    t_hrs = seq(t_min, t_max, by = 'hour')
     
-    find_fns = do.call(c, lapply(fns, function(x) ava_fns[grepl(x, ava_fns)] ))
-    miss_fns = do.call(c, lapply(fns, function(x) {
-        if ( length(ava_fns[grepl(x, ava_fns)]) == 0 ) return(x) } ))
+    # according to ARL, 1hr for WRF27km, 6hr for HRRR, 1d for GFS
+    t_dys = unique(trunc(t_hrs, units = 'days')) + c(-1, 1) * 3600 * 24
+    if (met == 'wrf27km') { t_seq = '1 hour'; arl_format = '%Y%m%d%H' }
+    if (met == 'hrrr') { 
+        t_seq = '6 hour'
+        arl_format = ifelse(timestr < '2019070100', '%Y%m%d.%Hz', '%Y%m%d_%H') }
+    if (met == 'gfs0p25') { t_seq = '1 day'; arl_format = '%Y%m%d' }
 
-    # ------------------------------------------------------------------------
+    t_bound = seq(min(t_dys), max(t_dys), by = t_seq)
+    t_find_time = unique(t_bound[findInterval(t_hrs, t_bound)])
+    t_met = strftime(t_find_time, format = arl_format, tz = 'GMT')
+    n_met_min = length(t_met)
+    met_fns = do.call(c, lapply(t_met, function(x) met_fns[grepl(x, met_fns)] ))
+    
     # downloading met fields if not found
-    if ( length(ava_fns) < n_met_min & run_trajec ) {
+    if ( length(met_fns) < n_met_min & run_trajec ) {
         cat('download.met.arl(): missing metfiles...downloading now...\n')
 
-        urls = file.path(arl_path, miss_fns)
+        arl_path = file.path('ftp://arlftp.arlhq.noaa.gov/archives', met)
+        if (met == 'wrf27km') 
+            urls = file.path(arl_path, 'avg', substr(t_met, 1, 4), 
+                             paste0('wrfout_d01_', t_met, '.ARL'))
+        
+        if (met == 'gfs0p25') {
+            if (timestr <= '2019050100' & timestr >= '2016051300') 
+            arl_path = gsub('gfs0p25', 'gfs0p25.v1', arl_path)
+            urls = file.path(arl_path, paste0(t_met, '_', met))
+        }
+
+        if (met == 'hrrr') {
+            # ftp://arlftp.arlhq.noaa.gov/archives/hrrr.v1 for data before July 2019
+            if ( timestr < '2019070100' ) {
+                arl_path = gsub('hrrr', 'hrrr.v1', arl_path)
+                urls = file.path(arl_path, paste0('hysplit.', t_met, '.hrrra'))
+            } else {
+                hh_end = formatC(as.numeric(substr(t_met, 10, 11)) + 5, 
+                                 width = 2, flag = 0) 
+                urls = file.path(arl_path, paste0(t_met, '-', hh_end, '_', met))
+            }
+        }   # end if
+
         for (url in urls) 
             download.file(url, destfile = file.path(met_path, basename(url)))
-    } else cat('Found meteo files...\n') # end if
+    } # end if
 
-    return(list(n_met_min = n_met_min, met_file_format = met_file_format))
+    print(met_fns)
+    return(n_met_min)
 }
