@@ -61,10 +61,7 @@ get.met.vars = function(namelist, output, met_file_format, met_path,
                             rm_dat = T, timeout = 600, w_option = 0, 
                             z_top = z_top) 
                              
-    if (is.null(tmp.p)) stop(paste('get.met.vars(): no trajec generated\n',
-                             '*** Likely the current @param z_top of', z_top, 
-                             'm is too high for the met field you adopted\n', 
-                             '*** Lower z_top in config_xstilt.r'))
+    if (is.null(tmp.p)) stop(paste('get.met.vars(): no trajec generated...check error message in <output_path>/by-id/<receptor>\npossible reasons: met fields not compatible (e.g., missing met files, met_path too long, etc)'))
 
     # ----------------------------------------------------------------------- #
     # subset trajectories at min time step
