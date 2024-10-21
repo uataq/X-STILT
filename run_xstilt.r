@@ -261,7 +261,7 @@ if (!slurm) n_nodes = n_cores = 1
 timeout = 12 * 60 * 60              # time allowed before terminations in sec
 job_time = '12:00:00'               # total job time
 slurm_account = 'pow'
-slurm_partition = 'any'
+slurm_partition = 'expansion'
 
 # *** IF YOU EVER RAN INTO OOM-KILL ERROR, YOU CAN ENLARGE THE MAX MEM HERE *** 
 # The ammount of memory per node you need in MB, extending to 10 GB per core

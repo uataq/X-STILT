@@ -40,7 +40,7 @@ before_footprint_xstilt = function() {
     # weight trajec-level foot using species specific profiles, DW, 09/05/2020
     # ---------------------------------------------------------------------
     cat('before_footprint_xstilt(): footprint weighting ')
-    if ( grepl('OCO', obs_sensor) | is.na(obs_sensor)) {
+    if ( grepl('OCO', obs_sensor) | is.na(obs_sensor) ) {
 
         # ---------------------------------------------------------------------
         # weight trajec-level footprints using OCO profiles (ak_wgt = T)
@@ -50,7 +50,7 @@ before_footprint_xstilt = function() {
         if (!ak_wgt) cat('assuming AK = 1 (no satellite dependencies)\n')
         output = wgt.trajec.foot(output = output, oco.fn = obs_fn, 
                                  ak.wgt = ak_wgt, pwf.wgt = pwf_wgt) 
-
+        
     } else if ( obs_sensor == 'TROPOMI' ) {
         
         # ---------------------------------------------------------------------

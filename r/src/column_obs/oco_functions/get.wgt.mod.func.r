@@ -56,8 +56,8 @@ get.xdry.mod = function(output) {
 							  rule = 2)$y) %>% arrange(desc(xpres))
 
 	# calculate diff in pressure between particles based on release heights
-	dp = abs(c(p.psfc - max(sel.p$xpres), diff(sel.p$xpres)))
-
+	sel.p$dp = abs(c(p.psfc - max(sel.p$xpres), diff(sel.p$xpres)))
+	
 	# merge info per particle and calculate dry-air column density in mol m-2
 	g = 9.8        	      	# m s-2
 	Mdry = 29 / 1E3        	# kg mol-1

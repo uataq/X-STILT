@@ -38,6 +38,7 @@ in
 *.conf
 _rslurm*
 insert_ggAPI_cp.csv
+run_xstilt_cp.r
 dien_mod
 r/src/cluster_functions
 

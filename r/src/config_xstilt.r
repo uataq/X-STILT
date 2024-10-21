@@ -162,7 +162,7 @@ config_xstilt = function(namelist){
     } else if ( !is.na(namelist$timestr) ) {  # no time column but timestr ava
       time_string = namelist$timestr
     } else stop('Missing receptor time strings...please check @param recp_fn or @param timestr\n')
-
+    
     time_string = as.character(time_string)
     nchart = nchar(time_string[1])
     if (nchart == 8 ) formatt = '%Y%m%d'
