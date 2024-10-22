@@ -9,11 +9,11 @@ create.outwd = function(timestr, obs_species, obs_sensor, obs_path, obs_fn = NA,
     obs_info = data.frame(timestr = timestr, fn = NA, stringsAsFactors = F)
 
     if (length(timestr) > 1) {
-      dir_wd = 'demo'
+      dir_wd = paste0(min(timestr), '-', max(timestr))
     } else {
       dir_wd = ifelse(is.na(timestr), '',  timestr)
     }
-
+  
     output_wd = file.path(store_path, 
                           paste0('out_', dir_wd, '_', met, '_ideal'))
     

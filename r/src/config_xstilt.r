@@ -29,11 +29,8 @@ config_xstilt = function(namelist){
 
   # make sure obs_* are set to NA and no AK weighting for ideal runs
   if (is.na(obs_sensor)) { 
-    obs_path = obs_species = NA
+    obs_path = NA
     namelist$ak_wgt = F 
-
-    # *** For ideal simulations without satellite data, set to NA or FALSE 
-    # receptors will be placed based on lati/long info from receptor_demo.csv
     num_bg_lat = num_bg_lon = num_nf_lat = num_nf_lon = num_jitter = NA
     jitterTF = FALSE
   }
@@ -96,6 +93,32 @@ config_xstilt = function(namelist){
   smooth_factor   = namelist$smooth_factor
   projection      = namelist$projection 
   
+
+  # IF for ideal simulation, read from receptor file ----------------------
+  if ( !is.na(namelist$recp_fn) ) {
+    receptors = read.table(namelist$recp_fn, header = T, sep = ',')
+    
+    if ( 'time' %in% colnames(receptors) ) {    # if there is a `time` column
+      time_string = receptors$time 
+      receptors$time = NULL
+    } else if ( !is.na(namelist$timestr) ) {  # no time column but timestr ava
+      time_string = namelist$timestr
+    } else stop('Missing receptor time strings...please check @param recp_fn or @param timestr\n')
+    
+    time_string = as.character(time_string)
+    nchart = nchar(time_string[1])
+    if (nchart == 8 ) formatt = '%Y%m%d'
+    if (nchart == 10) formatt = '%Y%m%d%H'
+    if (nchart == 12) formatt = '%Y%m%d%H%M'
+    if (nchart == 14) formatt = '%Y%m%d%H%M%S'
+    if (!nchart %in% c(8, 10, 12, 14)) 
+      stop('Incorrect form of time string...please check @param recp_fn or @param timestr\n')
+    timestr = unique(substr(time_string, 1, 10))
+    receptors$run_time = as.POSIXct(time_string, 'UTC', format = formatt) 
+    receptors$zagl = list(agl)
+  } else receptors = NULL
+
+
   # Create output directory ------------------------------------------------
   outlist = create.outwd(timestr, obs_species, obs_sensor, obs_path, obs_fn, 
                          lon_lat, store_path, met, run_hor_err)
@@ -152,33 +175,9 @@ config_xstilt = function(namelist){
 
 
   # Receptor locations & time -------------------------------------------------
-  # IF for ideal simulation, read from receptor file 
-  #if ( is.na(obs_sensor) ) {
-  if ( !is.na(namelist$recp_fn) ) {
-    receptors = read.table(namelist$recp_fn, header = T, sep = ',')
-    if ( 'time' %in% colnames(receptors) ) {    # if there is a `time` column
-      time_string = receptors$time 
-      receptors$time = NULL
-    } else if ( !is.na(namelist$timestr) ) {  # no time column but timestr ava
-      time_string = namelist$timestr
-    } else stop('Missing receptor time strings...please check @param recp_fn or @param timestr\n')
-    
-    time_string = as.character(time_string)
-    nchart = nchar(time_string[1])
-    if (nchart == 8 ) formatt = '%Y%m%d'
-    if (nchart == 10) formatt = '%Y%m%d%H'
-    if (nchart == 12) formatt = '%Y%m%d%H%M'
-    if (nchart == 14) formatt = '%Y%m%d%H%M%S'
-    if (!nchart %in% c(8, 10, 12, 14)) 
-      stop('Incorrect form of time string...please check @param recp_fn or @param timestr\n')
-
-    receptors$run_time = as.POSIXct(time_string, 'UTC', format = formatt) 
-    receptors$zagl = list(agl)
-    
-  } else {    
-    
-    # IF for simulations using satellite or ground-based X data
-    # obtain receptors' locations based on obs availability
+  # IF for simulations using satellite or ground-based X data
+  # obtain receptors' locations based on obs availability
+  if ( is.null(receptors) ) {
     receptors = get.recp.sensorv2(timestr, 
                                   obs_filter = unlist(namelist$obs_filter), 
                                   obs_fn, obs_sensor, obs_path, obs_species, 
@@ -341,24 +340,14 @@ config_xstilt = function(namelist){
                        account = namelist$slurm_account, 
                        partition = namelist$slurm_partition)
   if (!is.null(namelist$mem_per_node)) slurm_options$mem = namelist$mem_per_node
-  
+  print(obs_species)
+
   # specify job names
-  jobname = paste('XSTILT', site, timestr, obs_sensor, obs_species, sep = '_')
-  
-  if ( is.na(obs_sensor) )      # no obs involved - meaning no AK 
-    jobname = paste('XSTILT', site, timestr, 'ideal', sep = '_')
-  
-  if ( length(timestr) > 1 )    # multiple receptor times
-    jobname = paste('XSTILT', site, min(timestr), max(timestr), 
-                    obs_sensor, obs_species, sep = '_')
-
-  if ( length(obs_species) > 1 )    # multiple receptor times
-    jobname = paste('XSTILT', site, timestr, obs_sensor, 'multi', sep = '_')
-  
-  if ( length(timestr) > 1 & length(obs_species) > 1 )
-    jobname = paste('XSTILT', site, min(timestr), max(timestr), 
-                    obs_sensor, 'multi', sep = '_')
-
+  jn3 = timestr
+  if (length(timestr) > 1) jn3 = paste0(min(timestr), '-', max(timestr))
+  jn4 = ifelse(is.na(obs_sensor), 'ideal', obs_sensor)
+  jn5 = ifelse(length(obs_species) > 1, 'multi', obs_species)
+  jobname = paste('XSTILT', site, jn3, jn4, jn5, sep = '_')
   if (run_hor_err | run_ver_err) jobname = paste0(jobname, '_error')
 
 

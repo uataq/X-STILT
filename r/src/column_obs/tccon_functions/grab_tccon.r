@@ -48,7 +48,8 @@ grab_tccon = function(tccon_fn, timestr = NULL) {
 
     tccon_df = data.frame(lon, lat, alt, sza, saa, yr, datestr, 
                           timestr = all_timestr, ws, wd, xco_ppb, xco_err, 
-                          xch4_ppm, xch4_err, xco2_2019_ppm, xco2_2019_err)
+                          xch4_ppm, xch4_err, xco2_2007_ppm, 
+                          xco2_2019_ppm, xco2_2019_err)
 
     if ( !is.null(timestr) ) tccon_df = tccon_df[tccon_df$timestr %in% timestr,]
 

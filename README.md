@@ -2,7 +2,12 @@
 
 X-STILT is an atmospheric transport model that deals with vertically integrated column concentrations of various trace gases ([Wu et al., 2018, 2023](https://doi.org/10.5194/gmd-11-4843-2018)). The model code was built upon the Stochastic Time-Inverted Lagrangian Transport (STILT) model ([Lin et al., 2003](https://doi.org/10.1029/2002JD003161)) and its [latest version 2](https://github.com/uataq/stilt) ([Fasoli et al., 2018](https://doi.org/10.5194/gmd-11-2813-2018)). 
 
-The model framework can now work with OCO-2&3 XCO<sub>2</sub> and TROPOMI column CO ([Wu et al., ACP](https://acp.copernicus.org/articles/22/14547/2022/acp-22-14547-2022.html)), CH<sub>4</sub> (Li et al., and Tribby et al., in prep), and NO<sub>2</sub> ([Wu et al., EGUsphere: STILT-NOx](https://egusphere.copernicus.org/preprints/2023/egusphere-2023-876/)) and is testing for [TCCON and EM27](https://github.com/uataq/X-STILT/pull/6). :sunglasses: 
+The model framework can now work with 
+1) OCO-2&3 XCO<sub>2</sub>;
+2) TROPOMI column CO ([Wu et al., 2022](https://acp.copernicus.org/articles/22/14547/2022/acp-22-14547-2022.html)), CH<sub>4</sub> ([Li et al., 2024](https://pubs.acs.org/doi/full/10.1021/acs.est.3c09250)); and NO<sub>2</sub> ([Wu et al., 2023: STILT-NOx](https://gmd.copernicus.org/articles/16/6161/2023/)); 
+3) TCCON column CO<sub>2</sub>, CO, N<sub>2</sub>O, CH<sub>4</sub> (check out `run_xstilt_tccon.r`); 
+4) EM27/SUN (under construction...); 
+5) ideal column simulations without involving a specific satellite is doable (though no satellite AK applied to footprint calculation). :sunglasses: 
 
 This GitHub repo includes built-in scripts/functions for 
 1. running backward trajectories from an atmospheric column and column footprint (start with `run_xstilt.r` for either initial X-STILT or updated STILT-NOx); 
@@ -10,7 +15,7 @@ This GitHub repo includes built-in scripts/functions for
 3. estimating wind and PBL uncertainties and translating those into XCO<sub>2</sub> uncertainties (start with `run_xstilt.r`)
 4. simulating column CO<sub>2</sub>, CO, CH<sub>4</sub>, and NO<sub>2</sub> abundances at OCO-2/3 and TROPOMI soundings (STILT-NOx, start with `run_sim_multi.r`)
 
-Model developments are ongoing and contributions are welcomed and appreciated. Please contact Dien (dienwu@caltech.edu) if you are interested in other column sensors/species or have any questions.
+**Bugs are preferred to be reported by submitting a pull request. Please check out [Tips for debugging](#tips-for-debugging) section first. If no luck, please describe your error message and provide insights on any changes you made for your specific receptor location/time/type of obs/species chosen. Model developments are ongoing and contributions are welcomed/appreciated.** :dizzy:
 
 # X-STILT Features
 ## Table of Contents
@@ -22,6 +27,7 @@ Model developments are ongoing and contributions are welcomed and appreciated. P
 - [**Estimate horizontal and vertical transport errors**](#estimate-horizontal-and-vertical-transport-errors)
 - [**Atmospheric inversion on XCO<sub>2</sub>**](#atmospheric-inversion-on-xco2)
 - [**Example figures of column footprints and XCO<sub>2.ff</sub>**](#example-figures-of-column-footprints-and-xco2ff)
+- [**Tips for debugging**](#tips-for-debugging)
 - [**Reference**](#reference)
 
 Download and install model
@@ -127,6 +133,15 @@ Figure - Latitude integrated map of weighted column footprints [umol m-2 s-1] on
 Figure - Latitude integrated XCO<sub>2</sub>.ff contribution maps [ppm] on 12/29/2014 from 70+ selected sounding/receptor over Riyadh.
 
 
+Tips for debugging
+============
+#### Q1. How do I know the model runs smoothly?
+A: Go to your output directory -> /site -> /out_* -> /by-id -> /YYYYMMDDHH_LON_LAT_X and see if *_X_traj.rds* or *_X_foot.nc* were generated. 
+
+#### Q2: What if there are nothing in that folder? 
+A: Look for error messages under XSTILT/_rslurm_XSTILT_ folder. Then go back to the output folder and run STILT at Fortran level by `./hycs_std`, where hycs_std is the compiled fortran program of HYSPLIT-STILT. Look for error messages - Usually your receptors are outside the met fields or missing met fields for the backward time duration.  
+
+
 Reference
 ============
 ## Model development 
@@ -141,6 +156,9 @@ Lin, J.C., Gerbig, C., Wofsy, S.C., Andrews, A.E., Daube, B.C., Davis, K.J. and 
 
 **STILT error uncertainties**: 
 Lin, J. C., and Gerbig, C., Accounting for the effect of transport errors on tracer inversions, *Geophys. Res. Lett.*, 32, L01802, https://doi.org/10.1029/2004GL021127, 2005.
+
+**STILT-NOx**:
+Wu, D., Laughner, J. L., Liu, J., Palmer, P. I., Lin, J. C., and Wennberg, P. O.: A simplified non-linear chemistry transport model for analyzing NO2 column observations: STILT–NOx, Geosci. Model Dev., 16, 6161–6185, https://doi.org/10.5194/gmd-16-6161-2023, 2023.
 
 ## Model applications 
 **X-STILT for TROPOMI XCO**: Wu, D., Liu, J., Wennberg, P. O., Palmer, P. I., Nelson, R. R., Kiel, M., and Eldering, A.: Towards sector-based attribution using intra-city variations in satellite-based emission ratios between CO2 and CO, Atmos. Chem. Phys. Discuss. [preprint], https://doi.org/10.5194/acp-2021-1029, in review, 2022.

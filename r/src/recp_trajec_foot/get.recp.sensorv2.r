@@ -121,7 +121,7 @@ get.recp.sensorv2 = function(timestr, obs_filter = NULL, obs_fn, obs_sensor,
         if ( run_slant ) {
             
             if ( !'sza' %in% colnames(recp_info) | 
-                 !'saa' %in% colnames(recp_info)) 
+                 !'saa' %in% colnames(recp_info) ) 
             stop('You turned on slant column release @param run_slant, but no SZA/SAA found in the observation data for calc slant x-receptors...\n')
             
             recp_info = recp_info %>% dplyr::select(run_time = datestr, 
@@ -149,7 +149,7 @@ get.recp.sensorv2 = function(timestr, obs_filter = NULL, obs_fn, obs_sensor,
         # work on each row and calc the lon/lat along slant column 
         # make lati/long a list   
         recp_slant = NULL
-        for ( r in 1 : nrow(recp_info)) {
+        for ( r in 1 : nrow(recp_info) ) {
           
           tmp = recp_info[r, ]
           xhgt_min = min(unlist(tmp$zagl))

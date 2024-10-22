@@ -1,9 +1,10 @@
 
 # fix timestring, always convert it to character format
 # add a line to check if any met files exist; if so, skip it, DW, 10/20/2024
+# add n_met_min back, in case users prefer their own fields, DW, 10/22/2024
 download.met.arl = function(timestr, met_file_format, nhrs, met_path, 
                             met = c('wrf27km', 'hrrr', 'gfs0p25')[2], 
-                            run_trajec = F) {
+                            run_trajec = F, n_met_min = NA, selfTF = FALSE) {
 
     # quickly check if met fields exist 
     for (tmp_timestr in timestr) {
@@ -13,30 +14,32 @@ download.met.arl = function(timestr, met_file_format, nhrs, met_path,
         t_start = as.POSIXct(as.character(tmp_timestr), 'GMT', format = ff)
         met_fns = find_met_files(t_start, met_file_format, n_hours = nhrs, 
                                  met_path)
-        
-        t_end = t_start + nhrs * 3600
-        t_min = min(c(t_start, t_end)); t_max = max(c(t_start, t_end))
-        t_hrs = seq(t_min, t_max, by = 'hour')
-        
-        # according to ARL, 1hr for WRF27km, 6hr for HRRR, 1d for GFS
-        t_dys = unique(trunc(t_hrs, units = 'days')) + c(-1, 1) * 3600 * 24
-        if (met == 'wrf27km') { t_seq = '1 hour'; arl_format = '%Y%m%d%H' }
-        if (met == 'hrrr') { 
-            t_seq = '6 hour'
-            arl_format = ifelse(tmp_timestr < '2019070100', 
-                                '%Y%m%d.%Hz', '%Y%m%d_%H') 
-        }
-        if (met == 'gfs0p25') { t_seq = '1 day'; arl_format = '%Y%m%d' }
 
-        t_bound = seq(min(t_dys), max(t_dys), by = t_seq)
-        t_find_time = unique(t_bound[findInterval(t_hrs, t_bound)])
-        t_met = strftime(t_find_time, format = arl_format, tz = 'GMT')
-        n_met_min = length(t_met)
-        met_fns = do.call(c, lapply(t_met, 
+        # according to ARL, 1hr for WRF27km, 6hr for HRRR, 1d for GFS
+        if (!selfTF) {
+            t_end = t_start + nhrs * 3600
+            t_min = min(c(t_start, t_end))
+            t_max = max(c(t_start, t_end))
+            t_hrs = seq(t_min, t_max, by = 'hour')
+            t_dys = unique(trunc(t_hrs, units = 'days')) + c(-1, 1) * 3600 * 24
+            if (met == 'wrf27km') { t_seq = '1 hour'; arl_format = '%Y%m%d%H' }
+            if (met == 'hrrr') { 
+                t_seq = '6 hour'
+                arl_format = ifelse(tmp_timestr < '2019070100', 
+                                    '%Y%m%d.%Hz', '%Y%m%d_%H') 
+            }
+            if (met == 'gfs0p25') { t_seq = '1 day'; arl_format = '%Y%m%d' }
+            t_bound = seq(min(t_dys), max(t_dys), by = t_seq)
+            t_find_time = unique(t_bound[findInterval(t_hrs, t_bound)])
+            t_met = strftime(t_find_time, format = arl_format, tz = 'GMT')
+            if (is.na(n_met_min)) n_met_min = length(t_met)
+            met_fns = do.call(c, lapply(t_met, 
                                     function(x) met_fns[grepl(x, met_fns)] ))
+        }   # end if for downloading files from ARL
+        
         
         # downloading met fields if not found ----------------------------
-        if ( length(met_fns) < n_met_min & run_trajec ) {
+        if ( length(met_fns) < n_met_min & run_trajec & !selfTF) {
             cat('download.met.arl(): missing metfiles...downloading now...\n')
             
             arl_path = file.path('ftp://arlftp.arlhq.noaa.gov/archives', met)
@@ -68,10 +71,12 @@ download.met.arl = function(timestr, met_file_format, nhrs, met_path,
                     download.file(url, destfile = dest_fn)
             }
             
+        } else if ( length(met_fns) < n_met_min & run_trajec ) {
+            stop('Since you chose to your own met fields, insufficient met fields found...\n')
         } # end if
 
+        print(met_fns)
     }
-   
-    print(met_fns)
+
     return(n_met_min)
 }

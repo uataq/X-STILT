@@ -39,6 +39,7 @@
 # ---------------------------------------------------------------------------
 
 # !!!! to run this code in R session: source('run_xstilt.r')
+options(timeout = max(1500, getOption('timeout')))   # for download.file
 
 # ----------- Dependencies and API key for geolocation (must-have) ---------- #
 ## go to X-STILT dir and source functions and libraries
@@ -78,7 +79,7 @@ obs_ver = c('V11r', 'V10p4r', 'GGG2020', NA)[3]
 
 # currently only allow one species per time for OCO and TROPOMI
 # fine with multiple species for TCCON or EM27/SUN --------
-obs_species = c('CO2', 'CO', 'NO2', 'CH4', 'N2O')[c(1, 2, 5)]   
+obs_species = c('CO2', 'CO', 'NO2', 'CH4', 'N2O')[1]   
 
 # obs paths and files (including OCO-2/3, OCO SIF, TROPOMI, TCCON)
 oco_path = file.path(input_path, obs_sensor, paste0('L2_Lite_FP_', obs_ver))
@@ -117,7 +118,7 @@ odiac_path = file.path(input_path, 'ODIAC', paste0('ODIAC', odiac_ver))
 #' @param obs_sensor == TROPOMI - daily obs, time string provided by user
 #' @param obs_sensor == NA - ideal run w/o obs, time string provided by user
 #' @param timestr in format of YYYYMMDD or YYYYMMDDHH (either works)
-timestr = '20191007'
+timestr = '20200701'
 
 #' @param obs_sensor == OCO-2/3 - can help search for overpasses with #
 #' sufficient data over the entire area and/or near-field area around site
@@ -141,9 +142,9 @@ cat('Done with choosing cities & overpasses...\n')
 
 
 # --------------------- Basis X-STILT flags (must-have) --------------------- #
-run_trajec    = F    # if to generate trajec; T: may overwrite existing trajec
+run_trajec    = T    # if to generate trajec; T: may overwrite existing trajec
 run_slant     = T    # recalc recp loc based on SZA, VZA, AZA by obs geometry
-run_foot      = T    # if to generate footprint
+run_foot      = F    # if to generate footprint
 run_hor_err   = F    # T: set error parameters
 run_ver_err   = F    # T: set error parameters
 run_emiss_err = F    # T: get XCO2 error due to prior emiss err
@@ -187,8 +188,14 @@ num_bg_lat = num_bg_lon = num_nf_lat = num_nf_lon = NA
 # ------------------- ARL format meteo params (must-have) -------------------- #
 # see STILTv2 https://uataq.github.io/stilt/#/configuration?id=meteorological-data-input
 met = c('gfs0p25', 'hrrr', 'wrf27km')[2]         # choose met fields
-met_path = file.path(homedir, met)               # path of met fields
-met_list = download.met.arl(timestr, nhrs, run_trajec, met_path, met)
+met_path = file.path(homedir, met)     
+met_file_format = '%Y%m%d'                       # met file name convention
+
+#' if using your own metfields with no need to download files from ARL, 
+#' set @param n_met_min to the min # of files needed and @param selfTF to TRUE
+#' otherwise set @param n_met_min as NA and @param selfTF to FALSE
+n_met_min = download.met.arl(timestr, met_file_format, nhrs, met_path, met, 
+                             run_trajec, n_met_min = NA, selfTF = FALSE)
 
 # OPTION for subseting met fields if met_subgrid_enable is on, 
 # useful for large met fields like GFS or HRRR
@@ -267,12 +274,13 @@ if (run_emiss_err) {
 # mannually pull the development version from github by doing:
 #devtools::install_github('SESYNC-ci/rslurm')               # DW, 11/6/2020
 slurm = T                           # T: SLURM parallel computing
-n_nodes = 3
-n_cores = 7
+n_nodes = 12
+n_cores = 10
+if (!slurm) n_nodes = n_cores = 1
 timeout = 12 * 60 * 60              # time allowed before terminations in sec
 job_time = '12:00:00'               # total job time
 slurm_account = 'pow'
-slurm_partition = 'any'
+slurm_partition = 'expansion'
 
 # *** IF YOU EVER RAN INTO OOM-KILL ERROR, YOU CAN ENLARGE THE MAX MEM HERE *** 
 # The ammount of memory per node you need in MB, extending to 10 GB per core
@@ -291,13 +299,13 @@ namelist = list(ak_wgt = ak_wgt, ct_ver = ct_ver, ctflux_path = ctflux_path,
                 hnf_plume = hnf_plume, jitterTF = jitterTF, 
                 job_time = job_time, lon_lat = list(lon_lat), 
                 mem_per_node = mem_per_node, met = met,                 
-                met_file_format = met_list$met_file_format, 
-                met_path = met_path, met_subgrid_buffer = met_subgrid_buffer, 
+                met_file_format = met_file_format, met_path = met_path, 
+                met_subgrid_buffer = met_subgrid_buffer, 
                 met_subgrid_enable = met_subgrid_enable, 
                 met_subgrid_levels = met_subgrid_levels, minagl = minagl, 
                 maxagl = maxagl, nhrs = nhrs, n_cores = n_cores, 
-                n_met_min = met_list$n_met_min, n_nodes = n_nodes, 
-                nf_dlat = nf_dlat, nf_dlon = nf_dlon, num_jitter = num_jitter, 
+                n_met_min = n_met_min, n_nodes = n_nodes, nf_dlat = nf_dlat, 
+                nf_dlon = nf_dlon, num_jitter = num_jitter, 
                 num_bg_lat = num_bg_lat, num_bg_lon = num_bg_lon, 
                 num_nf_lat = num_nf_lat, num_nf_lon = num_nf_lon, 
                 numpar = numpar, obs_filter = list(obs_filter), obs_fn = obs_fn,
@@ -317,6 +325,7 @@ namelist = list(ak_wgt = ak_wgt, ct_ver = ct_ver, ctflux_path = ctflux_path,
                 timestr = timestr, varstrajec = varstrajec, 
                 xstilt_wd = xstilt_wd, zisf = zisf)
 cat('Done with creating namelist...\n')
+stop()
 config_xstilt(namelist)  # start X-STILT, either calc traj, foot or simulation
 q('no')
 # end of main script

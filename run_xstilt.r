@@ -92,8 +92,7 @@ if (!is.na(obs_ver)) store_path = file.path(store_path, obs_ver)
 # receptor time to `timestr` below. Each column needs to be separated by comma. 
 if (is.na(obs_sensor)) {   # X-simulations WOUT satellite data
   recp_fn = 'receptor_demo.csv'                               # <path/filename>
-  obs_ver = obs_species = obs_path = sif_path = NA
-
+  obs_ver = obs_path = sif_path = NA
 } else {                   # X-simulations WITH satellite data
   recp_fn = NA
   obs_path = ifelse(obs_sensor == 'TROPOMI', trp_path, oco_path)
@@ -111,17 +110,16 @@ odiac_path = file.path(input_path, 'ODIAC', paste0('ODIAC', odiac_ver))
 #' @param obs_sensor == TROPOMI - daily obs, time string provided by user
 #' @param obs_sensor == NA - ideal run w/o obs, time string provided by user
 #' @param timestr in format of YYYYMMDD or YYYYMMDDHH (either works)
-#timestr = '20191007'
-timestr = NA 
+timestr = '20240912'    
+if (is.na(obs_sensor)) timestr = unique(read.csv(recp_fn)$time)
 
 #' @param obs_sensor == OCO-2/3 - can help search for overpasses with #
 #' sufficient data over the entire area and/or near-field area around site
 if (grepl('OCO', obs_sensor)) 
   timestr = get_timestr(site, lon_lat, obs_sensor, obs_ver, obs_path, 
                         store_path, recp_fn, plotTF = FALSE, qfTF = TRUE, 
-                        nfTF = TRUE, nf_dlon, nf_dlat, sif_path, 
-                        searchTF = FALSE, date_range = c('20140101','20221231'))
-
+                        nfTF = TRUE, nf_dlon, nf_dlat, sif_path, searchTF = F,
+                        date_range = c('20140101', '20221231'))
 cat('Done with choosing cities & overpasses...\n')
 # --------------------------------------------------------------------------- #
 
@@ -175,8 +173,12 @@ num_bg_lat = num_bg_lon = num_nf_lat = num_nf_lon = NA
 met = c('gfs0p25', 'hrrr', 'wrf27km')[2]         # choose met fields
 met_path = file.path(homedir, met)     
 met_file_format = '%Y%m%d'                       # met file name convention
+
+#' if you prefer to use your own metfields without downloading files from ARL, 
+#' set @param n_met_min to the min # of files needed and @param selfTF to TRUE
+#' otherwise set @param n_met_min as NA and @param selfTF to FALSE
 n_met_min = download.met.arl(timestr, met_file_format, nhrs, met_path, met, 
-                             run_trajec)
+                             run_trajec, n_met_min = NA, selfTF = FALSE)
 
 # OPTION for subseting met fields if met_subgrid_enable is on, 
 # useful for large met fields like GFS or HRRR
