@@ -35,10 +35,15 @@ wgt.trajec.foot.tccon = function(output, tccon.fn = NA,
 	# use retrieved surface pressure and height for pressure weighting
 	# use retrieved Ak for AK weighting
     #source('r/dependencies.r')
-	xstilt.prof = get.wgt.tccon.func(output, tccon.fn, tccon.species) %>% 
-			      dplyr::select(-c('pres')) %>% filter(stiltTF == TRUE)
-	colnames(xstilt.prof)[ colnames(xstilt.prof) == 'ap_gas_wet'] = 
+
+	combine.prof = get.wgt.tccon.func(output, tccon.fn, tccon.species)
+	colnames(combine.prof)[ colnames(combine.prof) == 'ap_gas_wet'] = 
 		paste0('ap_', tolower(tccon.species), '_wet')
+
+	output$combine.prof = combine.prof
+	
+	xstilt.prof = combine.prof %>% filter(stiltTF == TRUE) %>% 
+					dplyr::select(-c('pres'))
 
 	### STARTing weighting trajec based on profile
 	# weighting foot by multipling AK and PW profiles from 'xstiltprof'
@@ -72,7 +77,7 @@ wgt.trajec.foot.tccon = function(output, tccon.fn = NA,
 
 
 	# return both weighting profiles and weighted trajec
-	saveRDS(output, output$file) 	# overwrite the "X_traj.rds" file
+	#saveRDS(output, output$file) 	# overwrite the "X_traj.rds" file
 	return(output)
 
 }  # end of subroutine
