@@ -133,6 +133,7 @@ run_ver_err   = F    # T: set error parameters
 run_emiss_err = F    # T: get XCO2 error due to prior emiss err
 run_wind_err  = F    # T: calc wind error based on RAOB 
 run_sim       = F    # T: calc XFF or error with existing foot (only for CO2)
+store_totx    = F    # T: store particles info from columns above release hgt
 nhrs          = -12  # number of hours backward (-) or forward (+)
 
 # output variable names required in trajec.rds
@@ -170,15 +171,17 @@ num_bg_lat = num_bg_lon = num_nf_lat = num_nf_lon = NA
 
 # ------------------- ARL format meteo params (must-have) -------------------- #
 # see STILTv2 https://uataq.github.io/stilt/#/configuration?id=meteorological-data-input
-met = c('gfs0p25', 'hrrr', 'wrf27km')[2]         # choose met fields
+met = c('gfs0p25', 'hrrr', 'wrf27km')[1]            # choose met fields
+met_file_tres = c('1 day', '6 hours', '1 hour')[1]  # met temporal resolution
 met_path = file.path(homedir, met)     
-met_file_format = '%Y%m%d'                       # met file name convention
+met_file_format = '%Y%m%d'                          # met file name convention
 
 #' if you prefer to use your own metfields without downloading files from ARL, 
 #' set @param n_met_min to the min # of files needed and @param selfTF to TRUE
 #' otherwise set @param n_met_min as NA and @param selfTF to FALSE
 n_met_min = download.met.arl(timestr, met_file_format, nhrs, met_path, met, 
-                             run_trajec, n_met_min = NA, selfTF = FALSE)
+                             met_file_tres, run_trajec, n_met_min = NA, 
+                             selfTF = FALSE)
 
 # OPTION for subseting met fields if met_subgrid_enable is on, 
 # useful for large met fields like GFS or HRRR
@@ -282,7 +285,8 @@ namelist = list(ak_wgt = ak_wgt, ct_ver = ct_ver, ctflux_path = ctflux_path,
                 hnf_plume = hnf_plume, jitterTF = jitterTF, 
                 job_time = job_time, lon_lat = list(lon_lat), 
                 mem_per_node = mem_per_node, met = met,                 
-                met_file_format = met_file_format, met_path = met_path, 
+                met_file_format = met_file_format, 
+                met_file_tres = met_file_tres, met_path = met_path, 
                 met_subgrid_buffer = met_subgrid_buffer, 
                 met_subgrid_enable = met_subgrid_enable, 
                 met_subgrid_levels = met_subgrid_levels, minagl = minagl, 
@@ -303,9 +307,9 @@ namelist = list(ak_wgt = ak_wgt, ct_ver = ct_ver, ctflux_path = ctflux_path,
                 site = site, slurm = slurm, slurm_account = slurm_account,
                 slurm_partition = slurm_partition,
                 smooth_factor = smooth_factor, store_path = store_path, 
-                time_integrate = time_integrate, 
+                store_totx = store_totx, time_integrate = time_integrate, 
                 time_integrate2 = list(time_integrate2), timeout = timeout, 
-                timestr = timestr, varstrajec = varstrajec, 
+                timestr = list(timestr), varstrajec = varstrajec, 
                 xstilt_wd = xstilt_wd, zisf = zisf)
 cat('Done with creating namelist...\n')
 
