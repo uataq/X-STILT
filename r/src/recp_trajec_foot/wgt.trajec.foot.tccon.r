@@ -34,12 +34,11 @@ wgt.trajec.foot.tccon = function(output, tccon.fn = NA,
 	# ------------------------------------------------------------------------ #
 	# use retrieved surface pressure and height for pressure weighting
 	# use retrieved Ak for AK weighting
-    #source('r/dependencies.r')
 	xstilt.prof = get.wgt.tccon.func(output, tccon.fn, tccon.species) %>% 
 			      dplyr::select(-c('pres')) %>% filter(stiltTF == TRUE)
 	colnames(xstilt.prof)[ colnames(xstilt.prof) == 'ap_gas_wet'] = 
 		paste0('ap_', tolower(tccon.species), '_wet')
-
+	
 	### STARTing weighting trajec based on profile
 	# weighting foot by multipling AK and PW profiles from 'xstiltprof'
 	# need to multiple PWF for model levels with number of particles 

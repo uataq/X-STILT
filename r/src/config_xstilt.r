@@ -19,13 +19,13 @@ config_xstilt = function(namelist){
   xstilt_wd = namelist$xstilt_wd
   lib.loc   = .libPaths()[1]
   site      = namelist$site
-  timestr   = namelist$timestr[[1]]
   lon_lat   = namelist$lon_lat[[1]]
   obs_path  = namelist$obs_path
   obs_fn    = namelist$obs_fn
   obs_sensor = namelist$obs_sensor
   obs_species = unlist(namelist$obs_species)
   store_path = namelist$store_path
+  timestr    = namelist$timestr[[1]]
 
   # make sure obs_* are set to NA and no AK weighting for ideal runs
   if (is.na(obs_sensor)) { 
@@ -74,6 +74,7 @@ config_xstilt = function(namelist){
   met_path  = namelist$met_path
   n_met_min = namelist$n_met_min
   met_file_format = namelist$met_file_format
+  met_file_tres = namelist$met_file_tres
   met_subgrid_buffer = namelist$met_subgrid_buffer
   met_subgrid_enable = namelist$met_subgrid_enable
   met_subgrid_levels = namelist$met_subgrid_levels
@@ -433,6 +434,7 @@ config_xstilt = function(namelist){
                         maxdim = maxdim,
                         maxpar = maxpar,
                         met_file_format = met_file_format,
+                        met_file_tres = met_file_tres, 
                         met_path = met_path,
                         met_subgrid_buffer = met_subgrid_buffer,
                         met_subgrid_enable = met_subgrid_enable,
@@ -511,8 +513,10 @@ config_xstilt = function(namelist){
                         xres2 = list(namelist$foot_res2), 
                         yres2 = list(namelist$foot_res2), 
                         time_integrate2 = list(time_integrate2), 
+                        store_totx = namelist$store_totx, 
                         foot_nhrs = namelist$foot_nhrs,
                         run_hor_err = run_hor_err,
+                        run_slant = run_slant, 
                         emiss_fn = emiss_fn, 
                         ct_ver = namelist$ct_ver, 
                         ctflux_path = namelist$ctflux_path, 
@@ -524,15 +528,15 @@ config_xstilt = function(namelist){
 # for debugging
 if (F) {
   
-  X = 1
+  X = 2
   r_run_time = receptors$run_time[X]
   r_lati = receptors$lati[X]
   r_long = receptors$long[X]
   r_zagl = receptors$zagl[X]
-
-  simulation_id_format = paste0('%Y%m%d%H%M_', r_long, '_', r_lati, '_X')
-  simulation_id = strftime(r_run_time, simulation_id_format, 'UTC')
-
+  simulation_id = simulation_id[X]
+  # simulation_id_format = paste0('%Y%m%d%H%M_', r_long, '_', r_lati, '_X')
+  # simulation_id = strftime(r_run_time, simulation_id_format, 'UTC')
+  
   args = list(obs_sensor = obs_sensor, 
               obs_species = list(obs_species),
               obs_fn = obs_fn, 
@@ -541,13 +545,18 @@ if (F) {
               xres2 = list(namelist$foot_res2), 
               yres2 = list(namelist$foot_res2), 
               time_integrate2 = list(time_integrate2), 
+              store_totx = namelist$store_totx, 
               foot_nhrs = namelist$foot_nhrs,
               run_hor_err = run_hor_err,
+              run_slant = run_slant, 
               emiss_fn = NA, 
               ct_ver = namelist$ct_ver, 
               ctflux_path = namelist$ctflux_path, 
               ctmole_path = namelist$ctmole_path)
 
+  before_footprint = before_footprint_xstilt
+  before_trajec    = before_trajec_xstilt
+  
   rundir = file.path(output_wd, 'by-id', simulation_id)
   output = list()
   output$file = file.path(rundir, paste0(simulation_id, '_traj.rds'))
