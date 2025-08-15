@@ -37,6 +37,9 @@ get.tccon.info = function(tccon.fn, receptor,
     ap_gas_wet = ncvar_get(dat, paste0('prior_', tolower(tccon.species)))[, time_indx]
     ap_h2o_wet = ncvar_get(dat, 'prior_h2o')[, time_indx]
 
+    # prior pressure in hPa, for int_op, ap_gas_wet, ap_h2o_wet
+    prior_pres = ncvar_get(dat, 'prior_pressure')[, time_indx] * 1013.25
+
     # now for AKs [levels, timestamps]
     # Median pressure for the column averaging kernels vertical grid, hPa
     ak_pres = ncvar_get(dat, 'ak_pressure')
@@ -46,7 +49,7 @@ get.tccon.info = function(tccon.fn, receptor,
     
     # store 2D array of int operator and AKs --------------------
     wgt_df = data.frame(ak_pres, ak_norm, ap_gas_wet = ap_gas_wet, 
-                        ap_h2o_wet = ap_h2o_wet, int_op)
+                        ap_h2o_wet = ap_h2o_wet, int_op, prior_pres)
     info = list(species = tccon.species, zasl_m = zasl_m, psfc_hpa = pres_hpa, 
                 xh2o_ppm = xh2o_ppm, x_gas = x_gas, xap_gas = xap_gas, 
                 wgt = wgt_df)

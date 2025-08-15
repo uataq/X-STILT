@@ -70,6 +70,12 @@ before_footprint_xstilt = function() {
         # ---------------------------------------------------------------------
         cat('based on TCCON AK and integration operators\n')
 
+        output_combined <- NULL
+        output_combined$file = output$file
+        output_combined$receptor = output$receptor
+        output_combined$qt_prof = output$qt_prof
+        output_combined$params = output$params
+
         # if there are more than one non-CO2 species, calc footprint first
         non_co2_species = obs_species[ obs_species != 'CO2' ]
 
@@ -79,6 +85,9 @@ before_footprint_xstilt = function() {
                 tmp_output = wgt.trajec.foot.tccon(output = output, 
                                                    tccon.fn = obs_fn, 
                                                    tccon.species = ss)
+                
+                output_combined[[paste('particle', tolower(ss), sep='_')]] = tmp_output$particle
+                output_combined[[paste('combine.prof', tolower(ss), sep='_')]] = tmp_output$combine.prof
                 
                 # then generated foots for non-CO2 species
                 tmp_fn = file.path(rundir, paste0(simulation_id, '_', ss, 
@@ -97,6 +106,10 @@ before_footprint_xstilt = function() {
         # default footprint weighting is to use CO2 weighting profiles 
         output = wgt.trajec.foot.tccon(output = output, tccon.fn = obs_fn, 
                                        tccon.species = 'CO2')
+        
+        output_combined[['particle_co2']] = output$particle
+        output_combined[['combine.prof_co2']] = output$combine.prof
+        saveRDS(output_combined, output$file)
     }
     
     cat('before_footprint_xstilt(): DONE with footprint weighting...\n')
