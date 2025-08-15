@@ -102,7 +102,7 @@ before_footprint_xstilt = function() {
                                ymn = ymn, ymx = ymx, yres = yres)
             }   # end for
         } 
-
+        
         # default footprint weighting is to use CO2 weighting profiles 
         output = wgt.trajec.foot.tccon(output = output, tccon.fn = obs_fn, 
                                        tccon.species = 'CO2')

@@ -4,6 +4,7 @@
 # add n_met_min back, in case users prefer their own fields, DW, 10/22/2024
 download.met.arl = function(timestr, met_file_format, nhrs, met_path, 
                             met = c('wrf27km', 'hrrr', 'gfs0p25')[2], 
+                            met_file_tres = c('1 hour', '6 hours', '1 day')[2], 
                             run_trajec = F, n_met_min = NA, selfTF = FALSE) {
 
     # quickly check if met fields exist 
@@ -12,8 +13,8 @@ download.met.arl = function(timestr, met_file_format, nhrs, met_path,
         if ( nchar(tmp_timestr) == 8) ff = '%Y%m%d'
         if ( nchar(tmp_timestr) == 10) ff = '%Y%m%d%H'
         t_start = as.POSIXct(as.character(tmp_timestr), 'GMT', format = ff)
-        met_fns = find_met_files(t_start, met_file_format, n_hours = nhrs, 
-                                 met_path)
+        met_fns = find_met_files(t_start, n_hours = nhrs, met_path, 
+                                 met_file_format, met_file_tres)
 
         # according to ARL, 1hr for WRF27km, 6hr for HRRR, 1d for GFS
         if (!selfTF) {
@@ -22,14 +23,13 @@ download.met.arl = function(timestr, met_file_format, nhrs, met_path,
             t_max = max(c(t_start, t_end))
             t_hrs = seq(t_min, t_max, by = 'hour')
             t_dys = unique(trunc(t_hrs, units = 'days')) + c(-1, 1) * 3600 * 24
-            if (met == 'wrf27km') { t_seq = '1 hour'; arl_format = '%Y%m%d%H' }
-            if (met == 'hrrr') { 
-                t_seq = '6 hour'
+            if (met == 'wrf27km') arl_format = '%Y%m%d%H'
+            if (met == 'hrrr') 
                 arl_format = ifelse(tmp_timestr < '2019070100', 
                                     '%Y%m%d.%Hz', '%Y%m%d_%H') 
-            }
-            if (met == 'gfs0p25') { t_seq = '1 day'; arl_format = '%Y%m%d' }
-            t_bound = seq(min(t_dys), max(t_dys), by = t_seq)
+        
+            if (met == 'gfs0p25') arl_format = '%Y%m%d'
+            t_bound = seq(min(t_dys), max(t_dys), by = met_file_tres)
             t_find_time = unique(t_bound[findInterval(t_hrs, t_bound)])
             t_met = strftime(t_find_time, format = arl_format, tz = 'GMT')
             if (is.na(n_met_min)) n_met_min = length(t_met)

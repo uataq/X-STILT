@@ -54,8 +54,8 @@ create.outwd = function(timestr, obs_species, obs_sensor, obs_path, obs_fn = NA,
     # path for storing trajec, foot for OCO-2/3, DW, 07/31/2018
     if ( length(timestr) > 1) {
       output_wd = file.path(store_path, 
-                            paste('out', min(timestr), max(timestr), met, 
-                                  obs_sensor, sep = '_'))
+                            paste0('out_', min(timestr), '-', max(timestr), 
+                                   '_', met, '_', obs_sensor))
     } else output_wd = file.path(store_path, paste('out', timestr, met, obs_sensor, sep = '_'))
 
   } else stop("ONLY TROPOMI, OCO-2, OCO-3, NA are currently implemented, please check @param obs_sensor...\n")

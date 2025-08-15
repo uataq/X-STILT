@@ -133,7 +133,7 @@ if ( grepl('OCO', obs_sensor) )
 if ( grepl('TCCON', obs_sensor) ) {
   sep = c('week', 'day', 'hour', 'min')[4]
   dates = seq(as.POSIXct('2020-07-01 20:00:00', tz = 'UTC'), 
-              as.POSIXct('2020-07-01 20:59:59', tz = 'UTC'), by = sep)
+              as.POSIXct('2020-07-01 22:59:59', tz = 'UTC'), by = sep)
   timestr = unique(format(dates, tz = 'UTC', format = '%Y%m%d%H'))
 }
 
@@ -150,7 +150,8 @@ run_ver_err   = F    # T: set error parameters
 run_emiss_err = F    # T: get XCO2 error due to prior emiss err
 run_wind_err  = F    # T: calc wind error based on RAOB 
 run_sim       = F    # T: calc XFF or error with existing foot (only for CO2)
-nhrs          = -1  # number of hours backward (-) or forward (+)
+store_totx    = T    # T: whether to store all columns above the release hgt
+nhrs          = -1   # number of hours backward (-) or forward (+)
 
 # output variable names required in trajec.rds
 varstrajec = c('time', 'indx', 'lati', 'long', 'zagl', 'zsfc', 'foot', 'samt',
@@ -187,15 +188,17 @@ num_bg_lat = num_bg_lon = num_nf_lat = num_nf_lon = NA
 
 # ------------------- ARL format meteo params (must-have) -------------------- #
 # see STILTv2 https://uataq.github.io/stilt/#/configuration?id=meteorological-data-input
-met = c('gfs0p25', 'hrrr', 'wrf27km')[2]         # choose met fields
+met = c('gfs0p25', 'hrrr', 'wrf27km')[1]            # choose met fields
+met_file_tres = c('1 day', '6 hours', '1 hour')[1]  # met temporal resolution
 met_path = file.path(homedir, met)     
-met_file_format = '%Y%m%d'                       # met file name convention
+met_file_format = '%Y%m%d'                          # met file name convention
 
 #' if using your own metfields with no need to download files from ARL, 
 #' set @param n_met_min to the min # of files needed and @param selfTF to TRUE
 #' otherwise set @param n_met_min as NA and @param selfTF to FALSE
 n_met_min = download.met.arl(timestr, met_file_format, nhrs, met_path, met, 
-                             run_trajec, n_met_min = NA, selfTF = FALSE)
+                             met_file_tres, run_trajec, n_met_min = NA, 
+                             selfTF = FALSE)
 
 # OPTION for subseting met fields if met_subgrid_enable is on, 
 # useful for large met fields like GFS or HRRR
@@ -273,9 +276,9 @@ if (run_emiss_err) {
 # *** there is a current bug with the rslurm package, you may need to 
 # mannually pull the development version from github by doing:
 #devtools::install_github('SESYNC-ci/rslurm')               # DW, 11/6/2020
-slurm = T                           # T: SLURM parallel computing
-n_nodes = 12
-n_cores = 10
+slurm = F                           # T: SLURM parallel computing
+n_nodes = 1
+n_cores = 1
 if (!slurm) n_nodes = n_cores = 1
 timeout = 12 * 60 * 60              # time allowed before terminations in sec
 job_time = '12:00:00'               # total job time
@@ -299,7 +302,8 @@ namelist = list(ak_wgt = ak_wgt, ct_ver = ct_ver, ctflux_path = ctflux_path,
                 hnf_plume = hnf_plume, jitterTF = jitterTF, 
                 job_time = job_time, lon_lat = list(lon_lat), 
                 mem_per_node = mem_per_node, met = met,                 
-                met_file_format = met_file_format, met_path = met_path, 
+                met_file_format = met_file_format, 
+                met_file_tres = met_file_tres, met_path = met_path, 
                 met_subgrid_buffer = met_subgrid_buffer, 
                 met_subgrid_enable = met_subgrid_enable, 
                 met_subgrid_levels = met_subgrid_levels, minagl = minagl, 
@@ -320,9 +324,9 @@ namelist = list(ak_wgt = ak_wgt, ct_ver = ct_ver, ctflux_path = ctflux_path,
                 site = site, slurm = slurm, slurm_account = slurm_account,
                 slurm_partition = slurm_partition,
                 smooth_factor = smooth_factor, store_path = store_path, 
-                time_integrate = time_integrate, 
+                store_totx = store_totx, time_integrate = time_integrate, 
                 time_integrate2 = list(time_integrate2), timeout = timeout, 
-                timestr = timestr, varstrajec = varstrajec, 
+                timestr = list(timestr), varstrajec = varstrajec, 
                 xstilt_wd = xstilt_wd, zisf = zisf)
 cat('Done with creating namelist...\n')
 stop()

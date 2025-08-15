@@ -34,7 +34,7 @@ wgt.trajec.foot.tccon = function(output, tccon.fn = NA,
 	# ------------------------------------------------------------------------ #
 	# use retrieved surface pressure and height for pressure weighting
 	# use retrieved Ak for AK weighting
-    #source('r/dependencies.r')
+  #source('r/dependencies.r')
 
 	combine.prof = get.wgt.tccon.func(output, tccon.fn, tccon.species)
 	colnames(combine.prof)[ colnames(combine.prof) == 'ap_gas_wet'] = 
