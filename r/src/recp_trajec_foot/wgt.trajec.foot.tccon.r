@@ -15,7 +15,7 @@ wgt.trajec.foot.tccon = function(output, tccon.fn = NA,
 	# use 'foot_before_weight' as initial footprint ('foot') to redo weighting
 	if ( 'foot_before_weight' %in% colnames(p) ) 
 		p = p %>% dplyr::select(-starts_with('ak.norm'), -starts_with('ap'), 
-							 -c('foot', 'stiltTF', 'pwf', 'ak.pwf', 'wgt')) %>%
+							 -c('foot', 'stiltTF', 'pwf', 'ak.pwf', 'wgt', 'sf.wet')) %>%
 				  dplyr::rename(foot = foot_before_weight)
 
 	# add PW and Ak weighting for trajec with error as well, DW, 10/21/2018
@@ -26,7 +26,7 @@ wgt.trajec.foot.tccon = function(output, tccon.fn = NA,
 			p.err = p.err %>% 
 					dplyr::select(-starts_with('ak.norm'), -starts_with('ap'), 
 								  -starts_with('wgt'), 
-								  -c('foot', 'stiltTF', 'pwf', 'ak.pwf')) %>% 
+								  -c('foot', 'stiltTF', 'pwf', 'ak.pwf', 'sf.wet')) %>% 
 				  	rename(foot = foot_before_weight)
 	}	# end if errTF
 
@@ -34,10 +34,15 @@ wgt.trajec.foot.tccon = function(output, tccon.fn = NA,
 	# ------------------------------------------------------------------------ #
 	# use retrieved surface pressure and height for pressure weighting
 	# use retrieved Ak for AK weighting
-	xstilt.prof = get.wgt.tccon.func(output, tccon.fn, tccon.species) %>% 
-			      dplyr::select(-c('pres')) %>% filter(stiltTF == TRUE)
-	colnames(xstilt.prof)[ colnames(xstilt.prof) == 'ap_gas_wet'] = 
+
+	combine.prof = get.wgt.tccon.func(output, tccon.fn, tccon.species)
+
+	colnames(combine.prof)[colnames(combine.prof) == 'ap_gas_wet'] = 
 		paste0('ap_', tolower(tccon.species), '_wet')
+
+	xstilt.prof = combine.prof %>% 
+			      dplyr::select(-c('pres')) %>% filter(stiltTF == TRUE)
+
 	
 	### STARTing weighting trajec based on profile
 	# weighting foot by multipling AK and PW profiles from 'xstiltprof'
@@ -58,17 +63,30 @@ wgt.trajec.foot.tccon = function(output, tccon.fn = NA,
 			 geom_point(aes(pwf * npar, xhgt, color = 'interpolated int operator'), size = 0.1)
 	}
 
-	colnames(p.wgt)
-	output$particle = p.wgt 
+	p.wgt[paste0('foot_', tolower(tccon.species))] = p.wgt$foot
+
+	output$particle = p.wgt
 
 	if (errTF) {
 		p.err.wgt = p.err %>% left_join(xstilt.prof, by = 'indx') %>%
 					mutate(wgt = ak.pwf * sf.wet * npar, 
 						   foot_wgt = foot * wgt) %>% 
 					rename(foot_before_weight = foot, foot = foot_wgt)
+		p.err.wgt[paste0('foot_', tolower(tccon.species))] = p.err.wgt$foot
 		output$particle_error = p.err.wgt
 	}
 
+
+	if (store_totx) {
+		combine.prof = combine.prof %>% rename(setNames('ak.norm', paste0('ak.norm_', tolower(tccon.species))),
+											   setNames('ak.pwf', paste0('ak.pwf_', tolower(tccon.species))))
+
+		if (! is.null(output$combine.prof)) {
+			combine.prof = combine.prof %>% 
+				left_join(output$combine.prof, by = c('pwf', 'sf.wet', 'pres', 'ap_h2o_dry', 'indx', 'stiltTF'))
+		}
+		output$combine.prof = combine.prof
+	}
 
 	# return both weighting profiles and weighted trajec
 	saveRDS(output, output$file) 	# overwrite the "X_traj.rds" file

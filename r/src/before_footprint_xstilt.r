@@ -76,7 +76,7 @@ before_footprint_xstilt = function() {
         if ( length(non_co2_species) > 0 ) {    
             for ( ss in non_co2_species) {
                 cat('\n\nbefore_footprint_xstilt(): working on', ss, '\n')
-                tmp_output = wgt.trajec.foot.tccon(output = output, 
+                output = wgt.trajec.foot.tccon(output = output, 
                                                    tccon.fn = obs_fn, 
                                                    tccon.species = ss)
                 
@@ -85,15 +85,19 @@ before_footprint_xstilt = function() {
                                                   '_foot.nc'))
 
                 # use weighted output for footprint
-                calc_footprint(p = tmp_output$particle, output = tmp_fn, 
+                calc_footprint(p = output$particle, output = tmp_fn, 
                                r_run_time = r_run_time, 
                                smooth_factor = smooth_factor,
                                time_integrate = time_integrate,
                                xmn = xmn, xmx = xmx, xres = xres,
                                ymn = ymn, ymx = ymx, yres = yres)
+
+                # Symlink non-co2 footprints to out/footprints
+                link_files(tmp_fn, file.path(output_wd, 'footprints'))
+
             }   # end for
         } 
-        
+        cat('\n\nbefore_footprint_xstilt(): working on CO2\n')
         # default footprint weighting is to use CO2 weighting profiles 
         output = wgt.trajec.foot.tccon(output = output, tccon.fn = obs_fn, 
                                        tccon.species = 'CO2')
