@@ -91,6 +91,10 @@ before_footprint_xstilt = function() {
                                time_integrate = time_integrate,
                                xmn = xmn, xmx = xmx, xres = xres,
                                ymn = ymn, ymx = ymx, yres = yres)
+
+                # Symlink non-co2 footprints to out/footprints
+                link_files(tmp_fn, file.path(output_wd, 'footprints'))
+
             }   # end for
         } 
         cat('\n\nbefore_footprint_xstilt(): working on CO2\n')
