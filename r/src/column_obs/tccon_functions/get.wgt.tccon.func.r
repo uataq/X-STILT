@@ -32,7 +32,7 @@ get.wgt.tccon.func = function(output, tccon.fn, tccon.species) {
 			 geom_point(aes(ap_gas_dry, ak_pres, color = 'dry MF'))
 	}
 
-	tccon.pres.bound = sort(as.numeric(tccon.df$ak_pres))
+	tccon.pres.bound = sort(as.numeric(tccon.df$prior_pres))
 	tccon.ak.norm = as.numeric(tccon.df$ak_norm)
 	tccon.zsfc = tccon.info$zasl_m				# alt above sea level in m
 	tccon.psfc = tccon.info$psfc_hpa		    # in hPa
@@ -71,22 +71,22 @@ get.wgt.tccon.func = function(output, tccon.fn, tccon.species) {
 
 	# calculate diff in pressure between particles based on release heights
 	dp_par = abs(c(tccon.psfc - max(sel.p$xpres), diff(sel.p$xpres)))
-	dp_tccon = abs(c(tccon.psfc - max(tccon.df$ak_pres), 
-				     diff(tccon.df$ak_pres)))	# in mb
-	dp_df = data.frame(ak_pres = tccon.df$ak_pres, dp_tccon)
+	dp_tccon = abs(c(tccon.psfc - max(tccon.df$prior_pres),
+					 diff(tccon.df$prior_pres)))	# in mb
+	dp_df = data.frame(prior_pres = tccon.df$prior_pres, dp_tccon)
 
 	# interpolate TCCON profiles to column receptors according to pressure
 	rev.p = sel.p %>% 
-			mutate(dp_tccon = approx(dp_df$ak_pres, dp_df$dp_tccon, 
+			mutate(dp_tccon = approx(dp_df$prior_pres, dp_df$dp_tccon, 
 									 xout = xpres, rule = 2)$y,
 				   dp_par = dp_par, 
 				   ak_norm = approx(tccon.df$ak_pres, tccon.df$ak_norm, 
 									xout = xpres, rule = 2)$y, 
-				   pwf = approx(tccon.df$ak_pres, tccon.df$int_op, 
+				   pwf = approx(tccon.df$prior_pres, tccon.df$int_op, 
 								xout = xpres, rule = 2)$y * dp_par / dp_tccon,
-				   ap_h2o_dry = approx(tccon.df$ak_pres, tccon.df$ap_h2o_dry,
+				   ap_h2o_dry = approx(tccon.df$prior_pres, tccon.df$ap_h2o_dry,
 									   xout = xpres, rule = 2)$y, 
-				   ap_gas_wet = approx(tccon.df$ak_pres, tccon.df$ap_gas_wet,
+				   ap_gas_wet = approx(tccon.df$prior_pres, tccon.df$ap_gas_wet,
 									   xout = xpres, rule = 2)$y, 
 
 				   # calculate the scaling factor that convert dry air mole fraction to wet air mole fraction to wet the modeled concentration/footprint 
@@ -98,10 +98,11 @@ get.wgt.tccon.func = function(output, tccon.fn, tccon.species) {
 	# -------------------------------------------------------------------------
 	# 3. lastly locate the OCO-2 levels that above the STILT particles 
 	min.pres.xstilt = min(sel.p$xpres)
-	upper.tccon.df = tccon.df %>% filter(ak_pres < min.pres.xstilt) %>% 
-					 arrange(desc(ak_pres)) %>% mutate(sf.wet = 1) %>%
+	upper.tccon.df = tccon.df %>% filter(prior_pres < min.pres.xstilt) %>% 
+					 arrange(desc(prior_pres)) %>% mutate(sf.wet = 1) %>%
 					 dplyr::select(ak_norm, pwf = int_op, sf.wet, 
-					 			   pres = ak_pres, ap_gas_wet, ap_h2o_dry)
+					 			   pres = prior_pres, ap_gas_wet, ap_h2o_dry)	
+
 	npar = max(rev.p$indx)
 	upper.tccon.df$indx = seq(npar + 1, npar + nrow(upper.tccon.df))
 
