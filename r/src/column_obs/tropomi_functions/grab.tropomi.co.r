@@ -41,7 +41,7 @@ grab.tropomi.co = function(tropomi.path = NULL, timestr = NULL, lon_lat,
 
     time = substr(ncvar_get(dat, 'PRODUCT/time_utc'), 1, 19)  # UTC
     timestr = format(as.POSIXct(time, format = '%Y-%m-%dT%H:%M:%S'), 
-                    format = '%Y%m%d%H%M%S')
+                     format = '%Y%m%d%H%M%S')
     time_mtrx = t(replicate(length(indx_across_track), as.numeric(timestr)))
 
     # A continuous quality descriptor, varying between 0 (no data) and 1 (full quality data). 
@@ -106,22 +106,38 @@ grab.tropomi.co = function(tropomi.path = NULL, timestr = NULL, lon_lat,
     # ----------------------- if grab CO AK and convert from matrix to df
     if (getakTF) {
         cat('reading CO column averaging kernel...\n')
-        ak = ncvar_get(dat, 'PRODUCT/SUPPORT_DATA/DETAILED_RESULTS/column_averaging_kernel') #ak in m
-        
+
+        # could be AK in meters from TROPOMI v1 or normalized AK from TROPOMI V2
+        ak.var = 'PRODUCT/SUPPORT_DATA/DETAILED_RESULTS/column_averaging_kernel'
+
+        # check AK units, DW, Aug 20, 2026 and obtain AK
+        ak.units = ncatt_get(dat, ak.var, 'units')
+        if (!isTRUE(ak.units$hasatt))
+            stop('grab.tropomi.co(): column_averaging_kernel has no units attribute')
+        ak.unit = tolower(trimws(as.character(ak.units$value)))
+        ak = ncvar_get(dat, ak.var)
         layer = ncvar_get(dat, 'PRODUCT/layer')    # height in m
         dimnames(ak) = list(layer, indx_across_track, indx_along_track)
-        
+
+        if (ak.unit %in% c('1', 'unitless', 'dimensionless')) {
+            ak.name = 'ak.norm'
+        } else if (ak.unit %in% c('m', 'meter', 'metre', 'meters', 'metres')) {
+            ak.name = 'ak'
+        } else stop('Unknown TROPOMI CO AK unit: ', ak.units$value)
+
+        # convert AK to data frame
         ak.df = melt(ak) %>% rename(hgt = Var1, indx_across_track = Var2, 
-                                    indx_along_track = Var3, ak = value) 
+                                    indx_along_track = Var3) 
+        names(ak.df)[names(ak.df) == 'value'] = ak.name
         
         # will calculate the surface normalized AK and 
         sel_df = ak.df %>% na.omit() %>% 
-                  left_join(var_df, 
-                            by = c('indx_across_track', 'indx_along_track')) %>%
-                  filter(center_lon >= lon_lat$minlon, 
-                         center_lon <= lon_lat$maxlon,
-                         center_lat >= lon_lat$minlat, 
-                         center_lat <= lon_lat$maxlat) %>% ungroup()
+                 left_join(var_df, 
+                           by = c('indx_across_track', 'indx_along_track')) %>%
+                 filter(center_lon >= lon_lat$minlon, 
+                        center_lon <= lon_lat$maxlon,
+                        center_lat >= lon_lat$minlat, 
+                        center_lat <= lon_lat$maxlat) %>% ungroup()
     }   # end if
     
     nc_close(dat)
@@ -147,4 +163,3 @@ grab.tropomi.co = function(tropomi.path = NULL, timestr = NULL, lon_lat,
     return(all_df)
 }
 # end of subroutinr
-
