@@ -20,7 +20,7 @@ get.wgt.tropomi.func = function(output, tropomi.fn, tropomi.speci,
 	qt.prof = output$qt_prof
 	if (is.null(qt.prof)) 
 		stop('get.wgt.tropomi.func(): no extracted q and T profiles found...\n')
-
+	
     # grab receptor info and select the particles at first time step back
     receptor = output$receptor
 	p = output$particle
@@ -30,8 +30,9 @@ get.wgt.tropomi.func = function(output, tropomi.fn, tropomi.speci,
 
 	# get useful info from TROPOMI column CO and/or NO2 data, DW, 09/05/2020 
 	# e.g., surface pressure/height, AK, vertical pressures, retrieved obs...
-	trp.info = get.tropomi.prof(receptor, tropomi.speci, tropomi.fn =tropomi.fn)
-
+	trp.info = get.tropomi.profv2(receptor, tropomi.speci, 
+								  tropomi.fn = tropomi.fn)
+	
 	# encountered NAs for AKs, AMFs, and NO2 VCDs from L2 NO2 PAL files, 
 	# DW, Jan 9, 2023 
 	if (tropomi.speci == 'NO2') {
@@ -109,8 +110,7 @@ get.wgt.tropomi.func = function(output, tropomi.fn, tropomi.speci,
 			 mutate(lower_pres = trp.pres.bound[findInterval(pres, trp.pres.bound) + 1]) %>% 
 			 group_by(lower_pres) %>% summarise_all(mean) %>% 
 			 ungroup() %>% dplyr::select(-pres) %>% 
-			 right_join(trp.df, by = 'lower_pres') %>% 
-			 arrange(lower_pres) %>%
+			 right_join(trp.df, by = 'lower_pres') %>% arrange(lower_pres) %>%
 			 mutate_if(is.numeric, ~ if_else(is.na(.x), 0, .x))
 
 	# if for CO, we need to normalize AK for TROPOMI CO
