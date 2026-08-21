@@ -32,18 +32,15 @@ ggplot.map = function(map = c('black', 'ggmap'), maptype = 'roadmap',
 
     # load map, from https://susanejohnston.wordpress.com/
     # 2012/07/03/creating-a-large-scale-map-using-ggplot2-a-step-by-step-guide/
-    library(ggplot2); library(maptools); library(maps); gpclibPermit()
-
+    library(ggplot2); library(maps)#; gpclibPermit()#; library(maptools)
     usstates = map_data('state')
-    #worldmap = readShapeSpatial(shape.file)
-    worldmap = rgdal::readOGR(shape.file)
-    worldmap = fortify(worldmap)
+    worldmap = map_data("world")
 
     # plot 2D map first
     latlimits = c(minlat, maxlat)
     lonlimits = c(minlon, maxlon)
 
-    ticks  = c(0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 20, 50, 100)
+    ticks  = c(0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 20, 30, 50, 60, 100)
     latindx = findInterval((maxlat - minlat) / 5, ticks)
     lonindx = findInterval((maxlon - minlon) / 5, ticks)
     if (latindx == 0) latindx = 1

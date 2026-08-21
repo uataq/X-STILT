@@ -50,7 +50,7 @@ wgt.trajec.foot.tropomi = function(output, tropomi.fn,
 		# grab press weighting function, pressures, normalized AK
 		co.fn  = tropomi.fn[grep('CO', tropomi.fn)]
 		out.co = get.wgt.tropomi.func(output, co.fn, 'CO') 
-
+		
 		# combine weighting functions with particles
 		xstilt.prof.co = out.co$combine.prof %>% filter(stiltTF == TRUE) %>%
 				  		 dplyr::select(indx, ak.norm.co = ak.norm, 
