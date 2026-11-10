@@ -4,10 +4,11 @@ X-STILT is an atmospheric transport model that deals with vertically integrated 
 
 The model framework can now work with 
 1) OCO-2&3 XCO<sub>2</sub>;
-2) TROPOMI column CO ([Wu et al., 2022](https://acp.copernicus.org/articles/22/14547/2022/acp-22-14547-2022.html)), CH<sub>4</sub> ([Li et al., 2024](https://pubs.acs.org/doi/full/10.1021/acs.est.3c09250)); and NO<sub>2</sub> ([Wu et al., 2023: STILT-NOx](https://gmd.copernicus.org/articles/16/6161/2023/)); 
-3) TCCON column CO<sub>2</sub>, CO, N<sub>2</sub>O, CH<sub>4</sub> (check out `run_xstilt_tccon.r`); 
-4) EM27/SUN (under construction...); 
-5) ideal column simulations without involving a specific satellite is doable (though no satellite AK applied to footprint calculation). :sunglasses: 
+2) TROPOMI column CO ([Wu et al., 2022](https://acp.copernicus.org/articles/22/14547/2022/acp-22-14547-2022.html)), CH<sub>4</sub> ([Li et al., 2024](https://pubs.acs.org/doi/full/10.1021/acs.est.3c09250)); NO<sub>2</sub> ([Wu et al., 2023: STILT-NOx](https://gmd.copernicus.org/articles/16/6161/2023/)), and Total Column Water Vapor (TCWV); 
+3) TEMPO tropospheric column NO<sub>2</sub>; 
+4) TCCON column CO<sub>2</sub>, CO, N<sub>2</sub>O, CH<sub>4</sub> (check out `run_xstilt_tccon.r`); 
+5) EM27/SUN (under construction...); 
+6) ideal column simulations without involving a specific satellite is doable (though no satellite AK applied to footprint calculation). :sunglasses: 
 
 This GitHub repo includes built-in scripts/functions for 
 1. running backward trajectories from an atmospheric column and column footprint (start with `run_xstilt.r` for either initial X-STILT or updated STILT-NOx); 
