@@ -15,7 +15,7 @@ update_akv2 = function(receptor, p_chem, no2_fn, no2_info_v1) {
     air_vcd_tropo = no2_info_v1$air_vcd_tropo
 
     # get NO2 profile from updated version
-    no2_info_v2 = get.tropomi.prof(receptor, 'NO2', tropomi.fn = no2_fn)
+    no2_info_v2 = get.tropomi.profv2(receptor, 'NO2', tropomi.fn = no2_fn)
     no2_info_v1$tno2_ppb_v2 = no2_info_v2$no2_vcd_tropo / air_vcd_tropo * 1e9
     no2_info_v1$tno2_uncert_ppb_v2 = no2_info_v2$no2_vcd_tropo_uncert / air_vcd_tropo * 1e9
 
