@@ -150,6 +150,10 @@ grab.tropomi.no2 = function(tropomi.path = NULL, timestr = NULL, lon_lat,
                       tno2 = no2_vcd_tropo / air_vcd_tropo * 1E9, 
                       tno2_uncert = no2_vcd_tropo_uncert / air_vcd_tropo * 1E9)
 
+    # receptor time as POSIXlt in UTC (moved from get.sensor.obs), DW, 11/09/2026
+    if (!is.null(merge_df)) 
+        merge_df$datestr = as.POSIXlt(as.character(merge_df$time_utc), 'UTC', 
+                                   format = '%Y%m%d%H%M%S')
     return(merge_df)
 }
 # end of subroutinr
@@ -263,6 +267,10 @@ grab.tropomi.no2.lite = function(tropomi.path = NULL, timestr = NULL, lon_lat,
                 filter(!is.na(no2_vcd_tropo))
     
 
+    # receptor time as POSIXlt in UTC (moved from get.sensor.obs), DW, 11/09/2026
+    if (!is.null(merge_df)) 
+        merge_df$datestr = as.POSIXlt(as.character(merge_df$time_utc), 'UTC', 
+                                   format = '%Y%m%d%H%M%S')
     return(merge_df)
 }
 # end of subroutinr

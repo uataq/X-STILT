@@ -3,7 +3,7 @@
 
 # tccon aks: 'ak_xh2o', 'ak_xhdo', 'ak_xco', 'ak_xn2o', 'ak_xo2', 'ak_xhf', 'ak_xch4', 'ak_xlco2', 'ak_xwco2', 'ak_xco2', 'ak_pressure'
 
-grab_tccon = function(tccon_fn, timestr = NULL) {
+grab.tccon = function(tccon_fn, timestr = NULL) {
 
     library(ncdf4)
     dat = nc_open(tccon_fn)

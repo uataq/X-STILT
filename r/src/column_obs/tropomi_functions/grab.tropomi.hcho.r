@@ -131,6 +131,10 @@ grab.tropomi.hcho = function(tropomi.path = NULL, timestr = NULL, lon_lat,
                       xhcho = hcho_vcd / air_vcd * 1E9, 
                       xhcho_uncert = hcho_vcd_uncert / air_vcd * 1E9)
 
+    # receptor time as POSIXlt in UTC (moved from get.sensor.obs), DW, 11/09/2026
+    if (!is.null(merge_df)) 
+        merge_df$datestr = as.POSIXlt(as.character(merge_df$time_utc), 'UTC', 
+                                   format = '%Y%m%d%H%M%S')
     return(merge_df)
 }
 # end of subroutinr

@@ -10,8 +10,8 @@
 # allows for generate footprints with different resolutions, DW, 02/11/2019 
 # add additional variables due to changes in simulation_step()'s argument, DW, 07/02/2020
 # add/remove variables as migrating to STILT-HYSPLIT, DW, 07/03/2020 
-# refactoring: move some of the calculation in the main script to this function
-# DW, 10/26/2020
+# move some calculations in the main script to this function, DW, 10/26/2020
+# add TEMPO support, DW, 10/20/2026
 
 config_xstilt = function(namelist){
 
@@ -22,6 +22,7 @@ config_xstilt = function(namelist){
   lon_lat   = namelist$lon_lat[[1]]
   obs_path  = namelist$obs_path
   obs_fn    = namelist$obs_fn
+  obs_level = namelist$obs_level
   obs_sensor = namelist$obs_sensor
   obs_species = unlist(namelist$obs_species)
   store_path = namelist$store_path
@@ -35,7 +36,7 @@ config_xstilt = function(namelist){
     jitterTF = FALSE
   }
 
-  if ( obs_sensor == 'TROPOMI' & length(obs_species) > 1) 
+  if ( obs_sensor %in% c('TROPOMI', 'TEMPO') & length(obs_species) > 1) 
     stop('Please only choose one atmospheric species per time for TROPOMI, denoted by @param obs_species...\n')
 
   # Model control -------------------------------------------------------------
@@ -121,16 +122,17 @@ config_xstilt = function(namelist){
 
 
   # Create output directory ------------------------------------------------
-  outlist = create.outwd(timestr, obs_species, obs_sensor, obs_path, obs_fn, 
-                         lon_lat, store_path, met, run_hor_err)
-  obs_info = outlist$obs_info         # get obs file name if satellite is used
+  # add TEMPO NO2 and TROPOMI TCWV support, DW, 11/09/2026
+  outlist   = create.outwd(timestr, obs_species, obs_sensor, obs_path, obs_fn, 
+                           lon_lat, store_path, met, run_hor_err)
+  obs_info  = outlist$obs_info         # get obs file name if satellite is used
   output_wd = outlist$output_wd
-
-  if ( length(unique(obs_info$fn)) > 1 ) {  # if multiple tracks per day
+  
+  # if multiple TROPOMI tracks per day or multiple TEMPO tracks per hour range
+  if ( length(unique(obs_info$fn)) > 1 ) {  
     track_indx = which(obs_info$tot.count == max(obs_info$tot.count))
     obs_fn = obs_info$fn[track_indx]
     if (length(output_wd) > 1) output_wd = output_wd[track_indx]
-
   } else obs_fn = unique(obs_info$fn)
   cat(paste('Obs file -', obs_fn, '\n'))
 
@@ -181,8 +183,9 @@ config_xstilt = function(namelist){
   if ( is.null(receptors) ) {
     receptors = get.recp.sensorv2(timestr, 
                                   obs_filter = unlist(namelist$obs_filter), 
-                                  obs_fn, obs_sensor, obs_path, obs_species, 
-                                  lon_lat, jitterTF = namelist$jitterTF, 
+                                  obs_fn, obs_sensor, obs_level, obs_path, 
+                                  obs_species, lon_lat, 
+                                  jitterTF = namelist$jitterTF, 
                                   num_jitter = namelist$num_jitter, numpar, 
                                   nf_dlat = namelist$nf_dlat, 
                                   nf_dlon = namelist$nf_dlon, 
@@ -281,6 +284,7 @@ config_xstilt = function(namelist){
   z_top       = 25000
   if (toupper(met) == 'NARR') z_top = 15000 
   if (toupper(met) == 'HRRR') z_top = 20000
+  if (toupper(met) == 'WRF') z_top = 20000
 
   # Aggregate STILT/HYSPLIT namelist
   simstep_namelist = list(capemin = capemin, cmass = cmass, conage = conage,

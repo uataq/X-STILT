@@ -144,6 +144,10 @@ grab.tropomi.co = function(tropomi.path = NULL, timestr = NULL, lon_lat,
     all_df = rbind(all_df, merge_df)
     }
 
+    # receptor time as POSIXlt in UTC (moved from get.sensor.obs), DW, 11/09/2026
+    if (!is.null(all_df)) 
+        all_df$datestr = as.POSIXlt(as.character(all_df$time_utc), 'UTC', 
+                                   format = '%Y%m%d%H%M%S')
     return(all_df)
 }
 # end of subroutinr

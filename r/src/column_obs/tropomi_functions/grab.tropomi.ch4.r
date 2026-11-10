@@ -20,6 +20,10 @@ grab.tropomi.ch4 = function(tropomi.path = NULL, timestr = NULL, lon_lat,
     if ( unique(grepl('S5P_', fn)) ) 
         df = load.tropomi.ch4.hh(fn, getakTF, lon_lat)
 
+    # receptor time as POSIXlt in UTC (moved from get.sensor.obs), DW, 11/09/2026
+    if (!is.null(df)) 
+        df$datestr = as.POSIXlt(as.character(df$time_utc), 'UTC', 
+                                   format = '%Y%m%d%H%M%S')
     return(df)
 }
 

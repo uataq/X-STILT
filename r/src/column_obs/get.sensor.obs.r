@@ -7,20 +7,30 @@
 if (F) {
     sensor = obs_sensor
     sensor_gas = obs_species
+    sensor_level = c('L2', 'L3')[2]
     tropomi.fn = sensor_fn = obs_fn
     tropomi.path = sensor_path = obs_path
 }
 
+
 # for TROPOMI vertical column density (VCD), convert to mixing ratio in ppb 
 #' get rid of @param sensor.ver for grabbing warn levels, DW, 07/23/2021
 #' add sections for loading TCCON data, DW, 04/21/2023 
-#' 
-get.sensor.obs = function(site, timestr, 
-                          sensor = c('OCO-2', 'OCO-3', 'TROPOMI', 'TCCON')[1], 
-                          sensor_gas = c('CO2', 'CO', 'NO2', 'CH4', 'HCHO')[1], 
-                          sensor_fn = NULL, sensor_path, qfTF = T, 
-                          tropomi_qa = c(0, 0.4, 0.5, 0.7, 1)[1], 
-                          lon_lat = NULL) {
+#' add sections for loading TEMPO L3 and TROPOMI TCWV L3, DW, 11/09/2026
+#' default QA filtering for TEMPO (qa = 0, ecf < 0.1 and non-NA tno2)
+
+get.sensor.obs = function(
+        site, 
+        timestr, 
+        sensor = c('OCO-2', 'OCO-3', 'TROPOMI', 'TCCON', 'TEMPO')[5], 
+        sensor_gas = c('CO2', 'CO', 'NO2', 'CH4', 'HCHO')[3],
+        sensor_level = c('L2', 'L3')[3], 
+        sensor_fn = NULL, 
+        sensor_path, 
+        qfTF = T, 
+        trp_qa = c(0, 0.4, 0.5, 0.7, 1)[1], 
+        lon_lat = NULL
+    ) {
 
     # --------------------------- STEP 1 ------------------------------------- #
     # grab satellite observations (OCO-2/3, TROPOMI CO and NO2)
@@ -40,58 +50,83 @@ get.sensor.obs = function(site, timestr,
     
     # TCCON gases, XCO in ppb, others in ppm, DW, 04/21/2023
     if ( grepl('TCCON', sensor)) {      
-        obs = grab_tccon(tccon_fn = sensor_fn, timestr)
+        obs = grab.tccon(tccon_fn = sensor_fn, timestr)
         if ( is.null(obs) ) { cat(err_message); return() }
     }
 
-    # TROPOMI CO VCD and mixing ratio XCO in ppb
+    # TROPOMI CO VCD and mixing ratio XCO in ppb ---------------------------
     if ( grepl('TROPOMI', sensor) & 'CO' %in% sensor_gas ) {      
         obs = grab.tropomi.co(tropomi.path = sensor_path, timestr, lon_lat, 
                               tropomi.fn = sensor_fn) 
         if ( is.null(obs) ) { cat(err_message); return() }
         if ( nrow(obs) == 0) { cat(err_message); return() }
-        obs$datestr = as.POSIXlt(as.character(obs$time_utc), 'UTC', 
-                                 format = '%Y%m%d%H%M%S')
-        if (qfTF) obs = obs %>% filter(qa >= tropomi_qa)
+        if (qfTF) obs = obs %>% filter(qa >= trp_qa)
     }
     
-    # TROPOMI NO2, final mixing ratio of tropo NO2 in ppb
+    # TROPOMI NO2, final mixing ratio of tropo NO2 in ppb -------------------
     if ( grepl('TROPOMI', sensor) & 'NO2' %in% sensor_gas ) {      
         obs = grab.tropomi.no2(tropomi.path = sensor_path, timestr, lon_lat, 
                                tropomi.fn = sensor_fn) 
         if ( is.null(obs) ) { cat(err_message); return() }
         if ( nrow(obs) == 0) { cat(err_message); return() }
-        obs$datestr = as.POSIXlt(as.character(obs$time_utc), 'UTC', 
-                                 format = '%Y%m%d%H%M%S')
-        if (qfTF) obs = obs %>% filter(qa >= tropomi_qa)
+        if (qfTF) obs = obs %>% filter(qa >= trp_qa)
     }
 
-    # TROPOMI CH4
+    # TROPOMI CH4 ----------------------------------------------------------
     if ( grepl('TROPOMI', sensor) & 'CH4' %in% sensor_gas ) {      
         obs = grab.tropomi.ch4(tropomi.path = sensor_path, timestr, lon_lat, 
                                tropomi.fn = sensor_fn) 
         if ( is.null(obs) ) { cat(err_message); return() }
         if ( nrow(obs) == 0) { cat(err_message); return() }
-        obs$datestr = as.POSIXlt(as.character(obs$time_utc), 'UTC', 
-                                 format = '%Y%m%d%H%M%S')
-        if (qfTF) obs = obs %>% filter(qa >= tropomi_qa)
+        if (qfTF) obs = obs %>% filter(qa >= trp_qa)
     }
 
-    # TROPOMI HCHO
+    # TROPOMI HCHO ---------------------------------------------------------
     if ( grepl('TROPOMI', sensor) & 'HCHO' %in% sensor_gas ) {      
         obs = grab.tropomi.hcho(tropomi.path = sensor_path, timestr, lon_lat, 
                                 tropomi.fn = sensor_fn) 
         if ( is.null(obs) ) { cat(err_message); return() }
         if ( nrow(obs) == 0) { cat(err_message); return() }
-        obs$datestr = as.POSIXlt(as.character(obs$time_utc), 'UTC', 
-                                 format = '%Y%m%d%H%M%S')
-        if (qfTF) obs = obs %>% filter(qa >= tropomi_qa)
+        if (qfTF) obs = obs %>% filter(qa >= trp_qa)
+    } 
+
+
+    # TROPOMI TCWV, added on Nov 9, 2026, DW ---------------------------------
+    if ( grepl('TROPOMI', sensor) & 'TCWV' %in% sensor_gas ) {      
+        if ( isTRUE(sensor_level == 'L3') ) {     # daily gridded HARP file
+            obs = grab.tropomi.tcwv.l3(tropomi.path = sensor_path, timestr, 
+                                       lon_lat, tropomi.fn = sensor_fn) 
+        } else obs = grab.tropomi.tcwv.l2(tropomi.path = sensor_path, timestr,
+                                          lon_lat, tropomi.fn = sensor_fn) 
+        if ( is.null(obs) ) { cat(err_message); return() }
+        if ( nrow(obs) == 0) { cat(err_message); return() }
+        if (qfTF) obs = obs %>% filter(qa >= trp_qa)
+    }
+    
+
+    # TEMPO NO2, added on Nov 9, 2026, DW -----------------------------------
+    if ( grepl('TEMPO', sensor) & 'NO2' %in% sensor_gas ) {      
+        if (sensor_level == 'L3') 
+            obs = grab.tempo.no2.l3(tempo.path = sensor_path, timestr, 
+                                    lon_lat, tempo.fn = sensor_fn)
+
+        if (sensor_level == 'L2') 
+            obs = grab.tempo.no2.l2(tempo.path = sensor_path, timestr, 
+                                    lon_lat, tempo.fn = sensor_fn)
+
+        if ( is.null(obs) ) { cat(err_message); return() }
+        if ( nrow(obs) == 0) { cat(err_message); return() }
+
+        # TEMPO QA, 0 normal, 1 suspicious, 2 bad, ECF < 10%
+        if (qfTF) obs = obs %>% filter(qa == 0 & ecf < 0.1 & !is.na(tno2_vcd))
     }
 
     if ( is.null(obs) ) { cat(err_message2); return() }
     if ( nrow(obs) == 0 ) { cat(err_message2); return() }
 
-    if ( grepl('OCO', sensor) ) { 
+
+    # OCO-2 or 3 ----------------------------------------------------------
+    if ( grepl('OCO', sensor) ) {   
 
         # initiate swath number as 1 and add row number, DW, 03/09/2021
         obs$row = seq(1, nrow(obs))
