@@ -37,7 +37,9 @@ find.tropomi = function(tropomi_path, timestr, lon_lat, bufferTF = F){
         datestr = as.POSIXct(paste0(YYYYMMDD, HH), 'UTC', format = '%Y%m%d%H')
         HH_fns = strsplit.to.df(basename(fns))
 
-        if (unique(HH_fns$V5) == 'CO' | TRUE %in% grepl('PAL', fns)) {
+        if (TRUE %in% grepl('TCWV', fns)) { # S5P_PAL__L2__TCWV___<start>_<end>
+            HH_fns = HH_fns %>% dplyr::select(mn = V9, mx = V10)
+        } else if (unique(HH_fns$V5) == 'CO' | TRUE %in% grepl('PAL', fns)) {
             HH_fns = HH_fns %>% dplyr::select(mn = V10, mx = V11)
         } else if (unique(HH_fns$V5) == 'HCHO') {
             HH_fns = HH_fns %>% dplyr::select(mn = V8, mx = V9)
@@ -94,7 +96,7 @@ find.tropomi = function(tropomi_path, timestr, lon_lat, bufferTF = F){
             }   # end if
 
         } else {
-
+            
             dat = nc_open(fn)
             indx_along_track  = ncvar_get(dat, 'PRODUCT/scanline')
             indx_across_track = ncvar_get(dat, 'PRODUCT/ground_pixel')
@@ -102,24 +104,41 @@ find.tropomi = function(tropomi_path, timestr, lon_lat, bufferTF = F){
             # [ground_pixel, scanline, time]
             lat = ncvar_get(dat, 'PRODUCT/latitude')    
             lon = ncvar_get(dat, 'PRODUCT/longitude') 
-            time = substr(ncvar_get(dat, 'PRODUCT/time_utc'), 1, 19)  # UTC
-    
+
+            # TCWV (PAL) files have no time_utc, DW, 11/09/2026
+            if ('PRODUCT/time_utc' %in% names(dat$var)) {
+                time = substr(ncvar_get(dat, 'PRODUCT/time_utc'), 1, 19)  # UTC
+            } else time = ''
+
             if ('' %in% time) {
+
                 # for HCHO  seconds since 2010-01-01 00:00:00
                 ref_time = ncvar_get(dat, 'PRODUCT/time') # ref time in sec
                 
                 # offset from reference start time of measurement
-                # milliseconds since @param time, [ground_pix, scaline]
-                dt   = ncvar_get(dat, 'PRODUCT/delta_time') * 1E-3      # second
-                time = matrix(ref_time, nrow = nrow(dt), ncol = ncol(dt)) + dt
-                dimnames(time) = list(indx_across_track, indx_along_track)
+                # milliseconds since @param time, [ground_pix, scaline] for 
+                # HCHO, or [scanline] only for TCWV, DW, 11/09/2026
+                dt = ncvar_get(dat, 'PRODUCT/delta_time') * 1E-3      # second
                 
-                time_df = melt(time) %>% 
-                          rename(indx_across_track = Var1, 
-                                 indx_along_track = Var2, timestr = value) %>% 
-                          mutate(timestr = as.POSIXct(timestr, 'UTC', 
-                                               origin = '2010-01-01 00:00:00'), 
-                                 timestr = format(timestr, format = '%Y%m%d%H%M%S'))
+                if (length(dim(dt)) < 2) {      # one time per scanline
+                    time = as.POSIXct(as.numeric(ref_time) + as.numeric(dt), 'UTC', origin = '2010-01-01 00:00:00')
+
+                    time_df = data.frame(
+                                timestr = format(time, format = '%Y%m%d%H%M%S'), 
+                                indx_along_track, 
+                                stringsAsFactors = F)
+
+                } else {
+                    time = matrix(ref_time, nrow = nrow(dt), ncol = ncol(dt)) + dt
+                    dimnames(time) = list(indx_across_track, indx_along_track)
+                    
+                    time_df = melt(time) %>% 
+                              rename(indx_across_track = Var1, 
+                                     indx_along_track = Var2, timestr = value) %>% 
+                              mutate(timestr = as.POSIXct(timestr, 'UTC', 
+                                                   origin = '2010-01-01 00:00:00'), 
+                                     timestr = format(timestr, format = '%Y%m%d%H%M%S'))
+                }
 
             } else {
                 timestr = as.POSIXct(time, 'UTC', 
@@ -147,6 +166,10 @@ find.tropomi = function(tropomi_path, timestr, lon_lat, bufferTF = F){
 
             if (unique(grepl('_HCHO_', fn))) 
                 val = ncvar_get(dat, 'PRODUCT/formaldehyde_tropospheric_vertical_column')
+
+            # total column water vapor in kg m-2, DW, 11/09/2026
+            if (unique(grepl('_TCWV_', fn))) 
+                val = ncvar_get(dat, 'PRODUCT/total_column_water_vapor')
 
             # total vertical column of sulfur dioxide for the polluted scenario derived from the total slant column
             # Recommend to ignore data with qa_value < 0.5
@@ -194,10 +217,15 @@ find.tropomi = function(tropomi_path, timestr, lon_lat, bufferTF = F){
 
 
             if (nrow(sel_df) > 0) { # if found one file, return value
+
                 cat(paste0('found the data that match the criteria; see nc file: ', basename(fn), '\n'))
                 fn_df = strsplit.to.df(basename(fn)) 
 
-                if ( unique(grepl('_CO_', fn)) | grepl('_PAL_', fn) ) { 
+                if ( grepl('_TCWV_', fn) ) {           # DW, 11/09/2026
+                    start.time = fn_df$V9
+                    end.time = fn_df$V10 
+
+                } else if ( unique(grepl('_CO_', fn)) | grepl('_PAL_', fn) ) { 
                     start.time = fn_df$V10
                     end.time = fn_df$V11 
                 } else if (unique(grepl('_NO2_', fn)) | 
@@ -210,16 +238,16 @@ find.tropomi = function(tropomi_path, timestr, lon_lat, bufferTF = F){
                     start.time = fn_df$V8
                     end.time = fn_df$V9 
                 } 
-        
+
                 overpass.timestr = unique(substr(sel_df$timestr, 1, 14))
                 tmp_df = data.frame(start.time = start.time, 
                                     end.time = end.time, 
                                     overpass.start.time = min(overpass.timestr),
                                     overpass.end.time = max(overpass.timestr), 
                                     tot.count = nrow(sel_df), 
-                                    qa0p5.count = nrow(sel_df %>% filter(qa>= 0.5)),
-                                    qa0p4.count = nrow(sel_df %>% filter(qa>= 0.4)),
-                                    qa0p7.count = nrow(sel_df %>% filter(qa>= 0.7)),
+                                    qa0p5.count = nrow(sel_df %>% filter(qa >= 0.5)),
+                                    qa0p4.count = nrow(sel_df %>% filter(qa >= 0.4)),
+                                    qa0p7.count = nrow(sel_df %>% filter(qa >= 0.7)),
                                     fn = fn, stringsAsFactors = F)
                 
                 # if no soundings with QA >= 0.4, look for the next TROPOMI file

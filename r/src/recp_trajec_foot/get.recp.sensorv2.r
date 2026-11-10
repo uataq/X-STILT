@@ -15,27 +15,35 @@
 
 # attempt to evenly select satellite soundings, DW, 06/17/2022 
 # implement slant column release (recalc recp lon/lat based on SZA and SAA), DW, 04/21/2023
+# add TEMPO NO2 capacity, DW, 11/09/2026 
 
-get.recp.sensorv2 = function(timestr, obs_filter = NULL, obs_fn, obs_sensor, 
-                             obs_path, obs_spescies, lon_lat, jitterTF = FALSE, 
-                             num_jitter, numpar, nf_dlat, nf_dlon, num_bg_lat, 
-                             num_bg_lon, num_nf_lat, num_nf_lon, agl, run_trajec, run_slant = FALSE, output_wd, 
+get.recp.sensorv2 = function(timestr, obs_filter = NULL, obs_fn = NULL, 
+                             obs_sensor, obs_level, obs_path, obs_species, 
+                             lon_lat, jitterTF = FALSE, num_jitter, numpar, 
+                             nf_dlat, nf_dlon, num_bg_lat, num_bg_lon, 
+                             num_nf_lat, num_nf_lon, agl, run_trajec, 
+                             run_slant = FALSE, output_wd, 
                              combine_locTF = FALSE, oco_path = NULL){
     
     # -------------------------------------------------------------------------
-    # 1 - grab all available OCO or TROPOMI data first 
+    # 1 - grab all available OCO/TROPOMI/TEMPO data first 
     # -------------------------------------------------------------------------
     qfTF = FALSE
-    if (!is.null(obs_filter)) { 
-        qfTF = T; tropomi_qa = as.numeric(obs_filter[2]) }
-
+    if (!is.null(obs_filter)) { qfTF = T; qa = as.numeric(obs_filter[2]) }
+    
     # make sure selTF is correct based on num_*
     selTF = TRUE; if (is.na(num_bg_lat) | is.na(num_nf_lat)) selTF = FALSE
-    obs_df = get.sensor.obs(site, timestr, sensor = obs_sensor, 
-                            sensor_gas = obs_species, sensor_fn = obs_fn, 
-                            sensor_path = obs_path, qfTF, tropomi_qa, lon_lat) 
+    obs_df = get.sensor.obs(site, timestr, 
+                            sensor = obs_sensor, 
+                            sensor_gas = obs_species, 
+                            sensor_level = obs_level,
+                            sensor_fn = obs_fn, 
+                            sensor_path = obs_path, 
+                            qfTF = qfTF, trp_qa = qa, 
+                            lon_lat = lon_lat)
     
-    rename_lookup = c(lon = 'center_lon', lat = 'center_lat', 
+    rename_lookup = c(lon = 'center_lon', 
+                      lat = 'center_lat', 
                       vertices = 'corner')
     obs_df = obs_df %>% rename(any_of(rename_lookup))
     

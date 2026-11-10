@@ -59,6 +59,8 @@ calc.bg.forward.trajec = function(site, timestr, sensor, sensor_path,
       obs_df = obs_df %>% rename(val = tno2, val_uncert = tno2_uncert)
     if (sensor_gas == 'CH4') 
       obs_df = obs_df %>% rename(val = ch4_bc, val_uncert = ch4_uncert)
+    if (sensor_gas == 'TCWV')     # XH2O in ppm, DW, 11/09/2026
+      obs_df = obs_df %>% rename(val = xh2o, val_uncert = xh2o_uncert)
 
     # change to use orbit as ref, instead of timestr, DW, 05/25/2021
     # as TROPOMI does not have swath, create fake 'orbit' based on timestr

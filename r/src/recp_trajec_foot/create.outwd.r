@@ -1,11 +1,16 @@
 # read satellite data and craete output dir for TROPOMI or OCO-3, DW, 07/02/2021
 # add TCCON, DW, 04/21/2023
+# add TEMPO, DW, 10/20/2026
+
 
 # obs_* can be NA, for column simulations without satellite data
 create.outwd = function(timestr, obs_species, obs_sensor, obs_path, obs_fn = NA,
                         lon_lat, store_path, met, run_hor_err) {
   
+  # -------------------------------------
+  # Determine output working directory based on observation sensor and time
   if ( is.na(obs_sensor) ) {    # ideal run without satellite data
+  
     obs_info = data.frame(timestr = timestr, fn = NA, stringsAsFactors = F)
 
     if (length(timestr) > 1) {
@@ -14,15 +19,18 @@ create.outwd = function(timestr, obs_species, obs_sensor, obs_path, obs_fn = NA,
       dir_wd = ifelse(is.na(timestr), '',  timestr)
     }
   
-    output_wd = file.path(store_path, 
-                          paste0('out_', dir_wd, '_', met, '_ideal'))
-    
+    output_wd = file.path(store_path, paste0('out_', dir_wd, '_', met, '_ideal'))
+  
+
   } else if ( obs_sensor == 'TROPOMI' ) {
     
+    # -------------------------------------
     # get satellite info (need to look for the correct nc file for TROPOMI) ----
     cat(paste('\n\n --- Obtaining TROPOMI', obs_species, 'info --- \n'))
+    
     obs_info = find.tropomi(tropomi_path = obs_path, timestr, lon_lat) 
     if (is.null(obs_info)) stop('NO TROPOMI overpass found...terminating...\n')
+
     obs_info = obs_info %>% mutate(species = obs_species)
     
     # get TROPOMI overpass hour near the site of interest ----
@@ -35,9 +43,12 @@ create.outwd = function(timestr, obs_species, obs_sensor, obs_path, obs_fn = NA,
 
   } else if ( grepl('OCO', obs_sensor) ) {
     
+    # -------------------------------------
+    # get OCO-2/3 file information based on the observation path and time
     cat(paste('\n\n --- Obtaining', obs_sensor, obs_species, 'info --- \n'))
     obs_fn = list.files(obs_path, paste0('_', substr(timestr, 3, 8), '_'), 
                         full.names = T, recursive = T)
+
     if (length(obs_fn) == 0) 
       stop('NO OCO-2/3 files found for this time, please check...\n')
 
@@ -48,17 +59,38 @@ create.outwd = function(timestr, obs_species, obs_sensor, obs_path, obs_fn = NA,
 
   } else if ( grepl ('TCCON', obs_sensor) ) {
     
+    # -------------------------------------
+    # get TCCON file information based on the observation path and time
     if ( is.na(obs_fn) ) stop('create.outwd(): NO TCCON file assigned...\n')
     obs_info = data.frame(timestr = timestr, fn = obs_fn, stringsAsFactors = F)
 
-    # path for storing trajec, foot for OCO-2/3, DW, 07/31/2018
+    # path for storing trajec, foot for TCCON, DW, 07/31/2018
     if ( length(timestr) > 1) {
       output_wd = file.path(store_path, 
                             paste0('out_', min(timestr), '-', max(timestr), 
                                    '_', met, '_', obs_sensor))
-    } else output_wd = file.path(store_path, paste('out', timestr, met, obs_sensor, sep = '_'))
+    } else output_wd = file.path(store_path, paste('out', timestr, met, 
+                                                   obs_sensor, sep = '_'))
 
-  } else stop("ONLY TROPOMI, OCO-2, OCO-3, NA are currently implemented, please check @param obs_sensor...\n")
+  } else if ( grepl('TEMPO', obs_sensor) ) {
+    
+    # -------------------------------------
+    # get TEMPO file information based on the observation path and time
+    cat(paste('\n\n --- Obtaining TEMPO', obs_species, 'info --- \n'))
+    obs_info = find.tempo(tempo_path = obs_path, timestr, lon_lat) 
+
+    if (is.null(obs_info)) stop('NO TEMPO overpass found...terminating...\n')
+    obs_info = obs_info %>% mutate(species = obs_species)
+
+    # get TEMPO overpass hour near the site of interest ----
+    timestr = unique(substr(obs_info$overpass.start.time, 1, 10))
+
+    # path for storing trajec, foot for TEMPO, DW, 10/20/2026
+    output_wd = file.path(store_path, 
+                          paste('out', timestr, met, obs_sensor, sep = '_'), 
+                          obs_species)
+
+  } else stop("ONLY TROPOMI, OCO-2, OCO-3, TCCON, TEMPO are currently implemented, please check @param obs_sensor...\n")
 
   if (run_hor_err)  # for error output 
     output_wd = gsub(paste0('out_', timestr), 

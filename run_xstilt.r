@@ -36,6 +36,7 @@
 # 3. allow for working with TROPOMI data, 07/03/2021
 # 4. allow for sounding selection (OCO and TROPOMI) within NEAR- or FAR-FIELD, 
 #    see comments around L53-60, L154-160), 06/17/2022
+# 5. allow for working with TEMPO data and AWS downloads for meteo, 10/20/2026
 # ---------------------------------------------------------------------------
 
 # !!!! to run this code in R session: source('run_xstilt.r')
@@ -43,7 +44,7 @@ options(timeout = max(1500, getOption('timeout')))   # for download.file
 
 # ----------- Dependencies and API key for geolocation (must-have) ---------- #
 ## go to X-STILT dir and source functions and libraries
-homedir = '/central/home/dienwu'
+homedir = '/home/C830382435/model'
 xstilt_wd = file.path(homedir, 'X-STILT') 
 setwd(xstilt_wd); source('r/dependencies.r')
 
@@ -66,23 +67,26 @@ nf_dlat = 0.3
 
 # - automatically obtain lat/lon (requires Google API key in insert_ggAPI.csv)
 # - OR mannually insert coordinates, e.g., site.loc = data.frame(lon = , lat = )
-lon_lat = get.lon.lat(site, dlon, dlat, site.loc = NULL)
+lon_lat = get.lon.lat(site, dlon, dlat, site.loc = NULL, api.key = api.key)
 
 
 # ------------------------ I/O params (must-have) --------------------------- #
 # as a default, all input data are stored under input_path, change if you like
-input_path  = '/central/groups/POW'
-store_path  = file.path(input_path, 'XSTILT_output', site)
+input_path = '/home/C830382435/data'
+store_path = file.path('/home/C830382435/XSTILT_output', site)
 
-# *** modify the info path/directory that stores OCO-2/3 or TROPOMI data -------
-obs_sensor  = c('OCO-2', 'OCO-3', 'TROPOMI', NA)[4]
-obs_ver     = c('V11r', 'V10p4r', NA)[3]       # retrieval algo ver if there is
-obs_species = c('CO2', 'CO', 'NO2', 'CH4')[1]  # only 1 gas per run
-oco_path = file.path(input_path, obs_sensor, paste0('L2_Lite_FP_', obs_ver))
-sif_path = file.path(input_path, obs_sensor, paste0('L2_Lite_SIF_', obs_ver))
-trp_path = file.path(input_path, obs_sensor, obs_species, 'L2')
-store_path = file.path(input_path, 'XSTILT_output', site)
-if (!is.na(obs_ver)) store_path = file.path(store_path, obs_ver)
+# *** modify path/directory that stores OCO-2/3/TROPOMI/TEMPO data -------
+# !!! cannot work with TEMPO L3, since it does not have AK in the file
+obs_sensor = c('OCO-2', 'OCO-3', 'TROPOMI', 'TEMPO', NA)[3]
+obs_ver    = c('V11r', 'V10p4r', 'V04', NA)[4]   # retrieval algo ver
+obs_level  = c('L2_Lite_FP', 'L2')[2]                # data level
+
+# only 1 gas per run
+# arrange your input data as <sensor>/<level>/<species>, DW, 11/05/2026
+obs_species = c('CO2', 'CO', 'NO2', 'CH4', 'HCHO', 'TCWV')[6]
+obs_path    = file.path(input_path, obs_sensor, obs_level, obs_species)
+store_path  = file.path(store_path, obs_sensor) 
+print(store_path)
 
 
 # *** if obs_sensor is NA, perform ideal runs without satellite dependence, 
@@ -93,10 +97,7 @@ if (!is.na(obs_ver)) store_path = file.path(store_path, obs_ver)
 if (is.na(obs_sensor)) {   # X-simulations WOUT satellite data
   recp_fn = 'receptor_demo.csv'                               # <path/filename>
   obs_ver = obs_path = sif_path = NA
-} else {                   # X-simulations WITH satellite data
-  recp_fn = NA
-  obs_path = ifelse(obs_sensor == 'TROPOMI', trp_path, oco_path)
-}
+} else recp_fn = NA
 obs_fn = NA 
 
 # paths for radiosonde, ODIAC, chemical transport model (optional) -------------
@@ -110,7 +111,7 @@ odiac_path = file.path(input_path, 'ODIAC', paste0('ODIAC', odiac_ver))
 #' @param obs_sensor == TROPOMI - daily obs, time string provided by user
 #' @param obs_sensor == NA - ideal run w/o obs, time string provided by user
 #' @param timestr in format of YYYYMMDD or YYYYMMDDHH (either works)
-timestr = '20240912'    
+timestr = '2026060219' 
 if (is.na(obs_sensor)) timestr = unique(read.csv(recp_fn)$time)
 
 #' @param obs_sensor == OCO-2/3 - can help search for overpasses with #
@@ -127,7 +128,7 @@ cat('Done with choosing cities & overpasses...\n')
 # --------------------- Basis X-STILT flags (must-have) --------------------- #
 run_trajec    = T    # if to generate trajec; T: may overwrite existing trajec
 run_slant     = F    # recalc recp loc based on SZA, VZA, AZA by obs geometry
-run_foot      = T    # if to generate footprint
+run_foot      = F    # if to generate footprint
 run_hor_err   = F    # T: set error parameters
 run_ver_err   = F    # T: set error parameters
 run_emiss_err = F    # T: get XCO2 error due to prior emiss err
@@ -156,8 +157,9 @@ num_jitter = 5                # number of additional receptors per sounding
 
 #' Only place receptors for soundings that qualify @param obs_filter
 #' here are some choices for OCO-2/3 and TROPOMI (uncomment the one you need)
-#obs_filter = c('QF', 0)             # select OCO soundings with QF = 0
-#obs_filter = c('QA', 0.7)            # select TROPOMI soundings with QA >= 0.5 
+#' if @param obs_sensor == TEMPO, QA = 0, ECF < 0.1
+#obs_filter = c('QF', 0)            # select OCO soundings with QF = 0
+#obs_filter = c('QA', 0.7)          # select TROPOMI soundings with QA >= 0.7 
 obs_filter = NULL                   # use all soundings regardless of QF or QA
 
 #' evenly select soundings within near-field or far-field (background) regions
@@ -171,17 +173,22 @@ num_bg_lat = num_bg_lon = num_nf_lat = num_nf_lon = NA
 
 # ------------------- ARL format meteo params (must-have) -------------------- #
 # see STILTv2 https://uataq.github.io/stilt/#/configuration?id=meteorological-data-input
-met = c('gfs0p25', 'hrrr', 'wrf27km')[1]            # choose met fields
-met_file_tres = c('1 day', '6 hours', '1 hour')[1]  # met temporal resolution
+met = c('gfs0p25', 'HRRR', 'wrf27km')[2]            # choose met fields
+met_file_tres = c('1 day', '6 hours', '1 hour')[2]  # met temporal resolution
 met_path = file.path(homedir, met)     
 met_file_format = '%Y%m%d'                          # met file name convention
+download_method = c('ftp', 'aws')[2]                # whether ftp or aws
 
 #' if you prefer to use your own metfields without downloading files from ARL, 
 #' set @param n_met_min to the min # of files needed and @param selfTF to TRUE
 #' otherwise set @param n_met_min as NA and @param selfTF to FALSE
-n_met_min = download.met.arl(timestr, met_file_format, nhrs, met_path, met, 
-                             met_file_tres, run_trajec, n_met_min = NA, 
-                             selfTF = FALSE)
+n_met_min = download.met.arl(timestr, met_file_format, nhrs, met_path, 
+                             tolower(met), met_file_tres, run_trajec, 
+                             n_met_min = NA, selfTF = FALSE, download_method)
+
+#' Note that you need to have AWS CLI installed and configured on your system.
+#' AWS CLI download approach in terminal, an example is provided below:
+#' aws s3 cp s3://noaa-oar-arl-hysplit-pds/hrrr/2024/07/ ./ --recursive --exclude "*" --include "*20240723*" --no-sign-request
 
 # OPTION for subseting met fields if met_subgrid_enable is on, 
 # useful for large met fields like GFS or HRRR
@@ -265,8 +272,8 @@ n_cores = 10
 if (!slurm) n_nodes = n_cores = 1
 timeout = 12 * 60 * 60              # time allowed before terminations in sec
 job_time = '12:00:00'               # total job time
-slurm_account = 'pow'
-slurm_partition = 'expansion'
+slurm_account = ''
+slurm_partition = 'wu_all'
 
 # *** IF YOU EVER RAN INTO OOM-KILL ERROR, YOU CAN ENLARGE THE MAX MEM HERE *** 
 # The ammount of memory per node you need in MB, extending to 10 GB per core

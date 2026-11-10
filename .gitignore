@@ -55,3 +55,5 @@ archive
 *_debug.r
 r/src/chemv0
 r/src/chem_lifetime/EnKF_function
+
+*.pdf
